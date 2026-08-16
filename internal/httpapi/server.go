@@ -77,6 +77,7 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 		}))
 
 	s.registerGeoRoutes(mux)
+	s.registerMapRoute(mux) // faqat dev rejimda ro'yxatdan o'tadi
 }
 
 // securityHeaders — barcha javoblarga qo'llanadi.

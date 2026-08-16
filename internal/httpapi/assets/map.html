@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OnDexMap — dev</title>
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.css" rel="stylesheet">
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  #map { position:absolute; inset:0; }
+  .panel {
+    position:absolute; top:12px; left:12px; z-index:2; width:320px; max-width:calc(100vw - 24px);
+    background:#fff; border-radius:12px; box-shadow:0 6px 24px rgba(0,0,0,.18); overflow:hidden;
+  }
+  .panel h1 { margin:0; padding:12px 14px; font-size:14px; font-weight:600; background:#111; color:#fff; }
+  .panel .body { padding:12px 14px; }
+  input[type=search] {
+    width:100%; padding:9px 11px; font-size:14px; border:1px solid #ccc; border-radius:8px; outline:none;
+  }
+  input[type=search]:focus { border-color:#111; }
+  ul { list-style:none; margin:10px 0 0; padding:0; max-height:40vh; overflow:auto; }
+  li { padding:8px 10px; border-radius:8px; cursor:pointer; font-size:13px; }
+  li:hover { background:#f2f2f2; }
+  .type { font-size:11px; color:#666; }
+  .via { font-size:11px; color:#b45309; }
+  .hint { margin-top:10px; font-size:12px; color:#666; line-height:1.5; }
+  #resolve {
+    position:absolute; bottom:12px; left:12px; z-index:2; background:#fff; padding:10px 14px;
+    border-radius:12px; box-shadow:0 6px 24px rgba(0,0,0,.18); font-size:13px; max-width:340px;
+  }
+  .err { color:#b91c1c; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="panel">
+  <h1>OnDexMap — ishlab chiqish rejimi</h1>
+  <div class="body">
+    <input type="search" id="q" placeholder="Ko'cha yoki mahalla… (кирилча ham)" autocomplete="off">
+    <ul id="results"></ul>
+    <div class="hint">
+      Xaritani bosing — <code>/v1/resolve</code> chaqiriladi.<br>
+      Sinang: <b>навоий</b>, <b>katta kocha</b>, <b>amir</b>
+    </div>
+  </div>
+</div>
+
+<div id="resolve">Xaritani bosing…</div>
+
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.js"></script>
+<script>
+(async () => {
+  const $ = (id) => document.getElementById(id);
+  const resolveBox = $('resolve');
+
+  // Token frontend'ga YOZILMAGAN — serverdan olinadi (/v1/config).
+  // Shu tufayli uni almashtirish uchun qayta build kerak emas.
+  let token;
+  try {
+    const cfg = await (await fetch('/v1/config')).json();
+    token = cfg.mapbox_token;
+  } catch { /* pastda ushlanadi */ }
+
+  if (!token) {
+    resolveBox.innerHTML = '<span class="err">MAPBOX_TOKEN sozlanmagan (.env)</span>';
+    return;
+  }
+
+  mapboxgl.accessToken = token;
+  const map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/light-v11',
+    center: [71.2394, 41.0004],   // Chust
+    zoom: 14,
+  });
+  map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+  map.on('load', async () => {
+    // ── Bizning mahalla poligonlarimiz ────────────────────────────
+    const data = await (await fetch('/v1/mahallas')).json();
+    map.addSource('ondex-mahallas', { type: 'geojson', data });
+
+    map.addLayer({
+      id: 'mahalla-fill', type: 'fill', source: 'ondex-mahallas',
+      paint: { 'fill-color': '#ea580c', 'fill-opacity': 0.12 }
+    });
+    map.addLayer({
+      id: 'mahalla-line', type: 'line', source: 'ondex-mahallas',
+      paint: { 'line-color': '#ea580c', 'line-width': 2 }
+    });
+    map.addLayer({
+      id: 'mahalla-label', type: 'symbol', source: 'ondex-mahallas',
+      layout: {
+        'text-field': ['get', 'name'],
+        'text-size': 13,
+        'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular']
+      },
+      paint: { 'text-color': '#7c2d12', 'text-halo-color': '#fff', 'text-halo-width': 1.5 }
+    });
+  });
+
+  // ── Qidiruv ─────────────────────────────────────────────────────
+  let timer;
+  $('q').addEventListener('input', (e) => {
+    clearTimeout(timer);
+    const q = e.target.value.trim();
+    if (q.length < 2) { $('results').innerHTML = ''; return; }
+    // 250 ms debounce — har bosilgan harfda so'rov yubormaslik uchun
+    // (server tomonda rate limit bor, uni bekorga sarflamaymiz).
+    timer = setTimeout(() => search(q), 250);
+  });
+
+  async function search(q) {
+    const res = await fetch('/v1/search?q=' + encodeURIComponent(q));
+    if (!res.ok) {
+      $('results').innerHTML = '<li class="err">' + (await res.json()).error + '</li>';
+      return;
+    }
+    const { results } = await res.json();
+    if (!results.length) { $('results').innerHTML = '<li class="type">topilmadi</li>'; return; }
+
+    $('results').innerHTML = results.map((r) => {
+      const via = r.matched_via ? '<div class="via">topildi: ' + esc(r.matched_via) + '</div>' : '';
+      return '<li data-id="' + esc(r.id) + '">' + esc(r.name) +
+             '<div class="type">' + r.type + ' · ' + r.score.toFixed(2) + '</div>' + via + '</li>';
+    }).join('');
+  }
+
+  // ── Xaritani bosish → resolve ───────────────────────────────────
+  map.on('click', async (e) => {
+    const { lng, lat } = e.lngLat;
+    resolveBox.textContent = 'so’ralmoqda…';
+    const res = await fetch('/v1/resolve?lat=' + lat.toFixed(6) + '&lng=' + lng.toFixed(6));
+    const body = await res.json();
+    if (!res.ok) {
+      resolveBox.innerHTML = '<span class="err">' + esc(body.error) + '</span>';
+      return;
+    }
+    let html = '<b>' + esc(body.text) + '</b>';
+    if (body.street_distance_m !== undefined) {
+      html += '<br><span class="type">ko’chagacha ' + body.street_distance_m + ' m</span>';
+    }
+    resolveBox.innerHTML = html;
+  });
+
+  // Server matni HTML sifatida talqin qilinmasin — nomlar bazadan
+  // keladi va kelajakda foydalanuvchi hissasi ham shu yerga tushadi.
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, (c) => (
+      { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+    ));
+  }
+})();
+</script>
+</body>
+</html>
