@@ -32,6 +32,25 @@ func (s *Server) registerGeoRoutes(mux *http.ServeMux) {
 	// Himoya — rate limit va kiruvchi ma'lumot validatsiyasi.
 	mux.HandleFunc("GET /v1/search", s.rateLimit(s.requireScope(ScopePublic, s.handleSearch)))
 	mux.HandleFunc("GET /v1/resolve", s.rateLimit(s.requireScope(ScopePublic, s.handleResolve)))
+	mux.HandleFunc("GET /v1/mahallas", s.rateLimit(s.requireScope(ScopePublic, s.handleMahallas)))
+}
+
+// handleMahallas — xarita qatlami uchun poligonlar (GeoJSON).
+func (s *Server) handleMahallas(w http.ResponseWriter, r *http.Request) {
+	if s.db == nil {
+		httpError(w, http.StatusServiceUnavailable, "baza ulanmagan")
+		return
+	}
+	body, err := s.db.MahallasGeoJSON(r.Context())
+	if err != nil {
+		slog.Error("mahallalar so'rovi xatosi", "err", err)
+		httpError(w, http.StatusBadGateway, "so'rov bajarilmadi")
+		return
+	}
+	// Baza tayyor JSON qaytardi — qayta kodlamaymiz.
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(body)
 }
 
 // TARTIB MUHIM: avval VALIDATSIYA, keyin mavjudlik tekshiruvi.

@@ -187,6 +187,52 @@ func formatAddress(p Place) string {
 	return ""
 }
 
+// maxMahallas — GeoJSON javobidagi eng ko'p obyekt.
+//
+// Chust'da mahallalar soni o'nlab, shuning uchun 500 juda keng
+// zaxira. Chegara MAJBURIY: bu endpoint kalitsiz ochiq va poligon
+// geometriyasi og'ir — chegarasiz javob o'n megabaytga yetib,
+// serverning xotirasi va kanalini yeb qo'yardi.
+const maxMahallas = 500
+
+// MahallasGeoJSON — xarita qatlami uchun mahalla poligonlari.
+//
+// GeoJSON BAZADA yig'iladi (`ST_AsGeoJSON`): geometriyani Go tomonida
+// qayta qurish ortiqcha nusxa va xato manbai bo'lardi.
+//
+// Chegarasi hali chizilmagan mahallalar (`geom IS NULL`) tushmaydi —
+// ular xaritada chizilmaydi, lekin qidiruvda topiladi.
+func (p *Pool) MahallasGeoJSON(ctx context.Context) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
+	defer cancel()
+
+	const sql = `
+SELECT COALESCE(jsonb_build_object(
+    'type', 'FeatureCollection',
+    'features', COALESCE(jsonb_agg(f.feature), '[]'::jsonb)
+), '{}'::jsonb)::text
+FROM (
+    SELECT jsonb_build_object(
+        'type', 'Feature',
+        'geometry', ST_AsGeoJSON(geom)::jsonb,
+        -- DIQQAT: source ustuni ATAYLAB chiqarilmaydi. U ichki maydon
+        -- (provenans/litsenziya uchun) va ommaviy endpointda
+        -- oshkor qilinmaydi.
+        'properties', jsonb_build_object('id', id, 'name', name)
+    ) AS feature
+    FROM mahallas
+    WHERE geom IS NOT NULL
+    ORDER BY name
+    LIMIT $1
+) f;`
+
+	var out []byte
+	if err := p.QueryRow(ctx, sql, maxMahallas).Scan(&out); err != nil {
+		return nil, errQuery
+	}
+	return out, nil
+}
+
 // errQuery — bazadan kelgan HAR QANDAY xato uchun yagona javob.
 //
 // pgx xatosi tashqariga uzatilmaydi: unda jadval nomi, ustun nomi va
