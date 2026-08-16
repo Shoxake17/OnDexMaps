@@ -1,0 +1,65 @@
+# ─────────────────────────────────────────────────────────────────────
+# OnDexMap — lokal infratuzilma
+#
+# IZOLYATSIYA — bu faylning ASOSIY vazifasi.
+#
+# OnDexMap ChustApp bilan BIR VAQTDA, bir xil mashinada ishlaydi.
+# "ChustApp fayllariga tegmaslik" yetarli emas — umumiy resurs orqali
+# ham buzish mumkin. Shu sabab bu yerda har bir umumiy nuqta ataylab
+# ajratilgan:
+#
+#   1. `name:` — loyiha nomi. Usiz Compose papka nomidan oladi va
+#      konteyner/tarmoq nomlari to'qnashishi mumkin.
+#   2. Port — ChustApp: 5432/6380/27018/8080/3000.
+#      OnDexMap: 5433/8090/3100. Kesishmaydi.
+#   3. Volume — o'z nomi bilan. Tasodifan ChustApp ma'lumotiga
+#      yozib yuborish imkoni yo'q.
+#   4. `mem_limit` — import jarayoni RAM yeb, ChustApp konteynerini
+#      OOM-kill qilmasligi uchun.
+#
+# NEGA HAMMA PORT `127.0.0.1:` BILAN — ChustApp'dagi bilan bir xil
+# sabab: `- "5433:5432"` deb yozilsa Docker Windows Firewall'ni
+# chetlab o'tib portni BUTUN TARMOQQA ochadi (Wi-Fi'dagi har kim
+# bazaga ulana oladi). `127.0.0.1:` prefiksi buni faqat shu
+# mashinaga cheklaydi.
+# ─────────────────────────────────────────────────────────────────────
+
+name: ondexmap
+
+services:
+  postgis:
+    # ChustApp bilan AYNAN bir xil teg — F: diski kichik (20 GB),
+    # bir xil teg qo'shimcha joy egallamaydi, image qayta yuklanmaydi.
+    image: postgis/postgis:16-3.4
+    container_name: ondexmap_postgis
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?".env da POSTGRES_USER yo'q — .env.example dan ko'chiring"}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?".env da POSTGRES_PASSWORD yo'q — bo'sh parol bilan ishga tushirilmaydi"}
+      POSTGRES_DB: ${POSTGRES_DB:?".env da POSTGRES_DB yo'q"}
+      # Uzbek matni bilan ishlaymiz — solishtirish va indeks
+      # xatti-harakati muhitga bog'liq bo'lib qolmasin.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - ondexmap_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # Migratsiya va import baza TAYYOR bo'lgunicha kutishi kerak —
+      # aks holda "connection refused" bilan yiqiladi.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    mem_limit: 1g
+    networks:
+      - ondexmap
+
+volumes:
+  ondexmap_pgdata:
+    name: ondexmap_pgdata
+
+networks:
+  ondexmap:
+    name: ondexmap

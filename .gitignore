@@ -1,0 +1,74 @@
+# ─────────────────────────────────────────────────────────────────────
+# OnDexMap — .gitignore
+#
+# DIQQAT: bu fayl birinchi commit'dan OLDIN yaratilgan. Sabab —
+# `frontend/.env` ichida Mapbox tokeni ochiq turgan edi. Git tarixiga
+# tushgan sirni chiqarib tashlash butun tarixni qayta yozishni talab
+# qiladi (ChustApp'da bir marta boshdan kechirilgan). Shu sabab tartib
+# ataylab teskari: avval .gitignore, keyin `git init`.
+# ─────────────────────────────────────────────────────────────────────
+
+# ── Sirlar ───────────────────────────────────────────────────────────
+# `.env.example` ATAYLAB istisno qilingan: u shablon, ichida haqiqiy
+# qiymat bo'lmasligi SHART (gitleaks tekshiradi).
+.env
+.env.*
+!.env.example
+*.env
+secrets/
+*.pem
+*.key
+*.p8
+*.p12
+*.pfx
+*.cer
+id_rsa
+id_rsa.*
+
+# ── Go ───────────────────────────────────────────────────────────────
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# ── Node / frontend ──────────────────────────────────────────────────
+node_modules/
+dist/
+build/
+.vite/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+
+# ── Geo ma'lumot ishlab chiqish fayllari ─────────────────────────────
+# Xom OSM ekstraktlari va oraliq fayllar repoga tushmaydi — ular og'ir
+# va litsenziya jihatdan alohida ko'rib chiqiladi (README §5 ga qarang).
+*.osm
+*.osm.pbf
+*.mbtiles
+*.gpkg
+/data/raw/
+/data/tmp/
+
+# QGIS ish fayllari (loyiha fayli `data/qgis/` da SAQLANADI, faqat
+# vaqtinchalik fayllar chiqariladi)
+*.qgz~
+*.qgs~
+*.qgd
+
+# ── Docker / lokal holat ─────────────────────────────────────────────
+/pgdata/
+*.log
+
+# ── OS / IDE ─────────────────────────────────────────────────────────
+Thumbs.db
+Desktop.ini
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
