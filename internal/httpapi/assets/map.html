@@ -31,6 +31,14 @@
     border-radius:12px; box-shadow:0 6px 24px rgba(0,0,0,.18); font-size:13px; max-width:340px;
   }
   .err { color:#b91c1c; }
+
+  /* Mapbox logotipi va atributsiya bloki — yashirilgan.
+     `attributionControl: false` yozuvni o'chiradi, lekin LOGOTIP
+     alohida element va u baribir chiqadi — shu sabab CSS ham kerak. */
+  .mapboxgl-ctrl-logo,
+  .mapboxgl-ctrl-attrib,
+  .mapboxgl-ctrl-bottom-left,
+  a.mapboxgl-ctrl-logo { display: none !important; }
 </style>
 </head>
 <body>
@@ -75,17 +83,15 @@
     style: 'mapbox://styles/mapbox/light-v11',
     center: [71.2394, 41.0004],   // Chust
     zoom: 14,
-    // Standart atributsiya o'chirilib, o'rniga YIG'IQ (compact)
-    // varianti qo'yiladi — katta yozuv o'rniga kichik "i" tugmasi.
+    // Atributsiya o'chirilgan (loyiha egasining qarori).
     //
-    // DIQQAT: butunlay olib tashlanmaydi va olib tashlab BO'LMAYDI.
-    // Mapbox ToS standart tarifda atributsiyani talab qiladi, va
-    // undan ham muhimi: basemap OpenStreetMap'dan qurilgan, OSM
-    // atributsiyasi esa ODbL litsenziyasining talabi — u Mapbox
-    // tarifiga bog'liq emas.
+    // ESLATMA: Mapbox ToS standart tarifda atributsiyani talab
+    // qiladi, OSM atributsiyasi esa ODbL talabi. Bu sahifa lokal
+    // ishlab chiqish vositasi (prod'da ro'yxatdan o'tmaydi), lekin
+    // OMMAVIY saytga chiqishdan oldin bu qaror qayta ko'rilishi
+    // kerak — yoki Mapbox tarifi mos bo'lishi kerak.
     attributionControl: false,
   });
-  map.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
   map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
   map.on('load', async () => {
