@@ -1,9 +1,9 @@
 package httpapi
 
 import (
-	"crypto/sha256"
-	"crypto/subtle"
 	"net/http"
+
+	"ondexmap/internal/apikey"
 )
 
 // Scope — so'rov uchun talab qilinadigan huquq darajasi.
@@ -17,95 +17,49 @@ const (
 	ScopePublic Scope = iota
 	// ScopeRead — ChustApp'ning server-server o'qishi.
 	ScopeRead
-	// ScopeAdmin — yozish: import, moderatsiya.
+	// ScopeAdmin — yozish huquqi.
+	//
+	// ESLATMA: ommaviy API'da yozish endpointlari UMUMAN yo'q —
+	// ular alohida `cmd/admin` binarida (lokal). Bu daraja shu
+	// binarda ishlatiladi va bu yerda faqat to'liqlik uchun bor.
 	ScopeAdmin
 )
 
-// authenticator — kalitlarni SHA-256 xesh ko'rinishida saqlaydi.
-//
-// NEGA XESH, oddiy matn emas:
-//
-//  1. Solishtirish har doim QAT'IY 32 baytda bo'ladi. To'g'ridan-to'g'ri
-//     matn solishtirilganda `subtle.ConstantTimeCompare` uzunliklar
-//     har xil bo'lsa DARHOL 0 qaytaradi — ya'ni kalitning UZUNLIGI
-//     vaqt orqali sizib chiqadi. Xeshda bunday sizish yo'q.
-//
-//  2. Xotira dumpi yoki tasodifiy log'da xom kalit turmaydi.
+// apiKeyHeader — kalit FAQAT shu sarlavhada qabul qilinadi.
+const apiKeyHeader = apikey.Header
+
 type authenticator struct {
-	read  [][32]byte
-	admin [][32]byte
+	read  *apikey.Set
+	admin *apikey.Set
 }
 
 func newAuthenticator(readKey, readPrev, adminKey, adminPrev string) *authenticator {
 	return &authenticator{
-		read:  hashKeys(readKey, readPrev),
-		admin: hashKeys(adminKey, adminPrev),
+		read:  apikey.New(readKey, readPrev),
+		admin: apikey.New(adminKey, adminPrev),
 	}
-}
-
-// hashKeys — bo'sh qiymatlarni TASHLAB YUBORADI.
-//
-// XAVFSIZLIK: bu eng muhim qator. Agar bo'sh kalit ham ro'yxatga
-// tushsa, so'rovda `X-API-Key:` bo'sh yuborgan HAR KIM
-// autentifikatsiyadan o'tardi. Sozlanmagan kalit = o'chirilgan slot,
-// hammaga ochiq eshik EMAS.
-func hashKeys(keys ...string) [][32]byte {
-	var out [][32]byte
-	for _, k := range keys {
-		if k == "" {
-			continue
-		}
-		out = append(out, sha256.Sum256([]byte(k)))
-	}
-	return out
-}
-
-// matches — berilgan kalit ro'yxatdagilardan biriga mos keladimi.
-//
-// Sikl birinchi mos kelganda UZILMAYDI — barcha slotlar har doim
-// tekshiriladi. Aks holda "birinchi kalit to'g'ri" va "ikkinchi kalit
-// to'g'ri" holatlari turli vaqt olardi va qaysi slot ishlaganini
-// tashqaridan aniqlash mumkin bo'lardi.
-func matches(candidate string, allowed [][32]byte) bool {
-	if len(allowed) == 0 {
-		return false
-	}
-	sum := sha256.Sum256([]byte(candidate))
-	var ok int
-	for _, want := range allowed {
-		ok |= subtle.ConstantTimeCompare(sum[:], want[:])
-	}
-	return ok == 1
 }
 
 // allow — so'rovdagi kalit talab qilingan darajaga yetadimi.
 //
 // Admin kaliti o'qish huquqini HAM beradi (ustki to'plam) — aks holda
-// import vositasi ikkita kalit ko'tarib yurishi kerak bo'lardi.
-// Teskarisi ISHLAMAYDI: read kaliti hech qachon yozishga yetmaydi.
+// admin vositasi ikkita kalit ko'tarib yurishi kerak bo'lardi.
+// Teskarisi ISHLAMAYDI: read kaliti hech qachon admin darajasiga
+// yetmaydi.
 func (a *authenticator) allow(key string, need Scope) bool {
 	switch need {
 	case ScopePublic:
 		return true
 	case ScopeRead:
-		return matches(key, a.read) || matches(key, a.admin)
+		return a.read.Matches(key) || a.admin.Matches(key)
 	case ScopeAdmin:
-		return matches(key, a.admin)
+		return a.admin.Matches(key)
 	default:
 		// Noma'lum daraja — RAD ETILADI (fail-closed). Yangi Scope
 		// qo'shilib bu switch yangilanmasa, u ochiq qolib ketmasin.
 		return false
 	}
 }
-
-// apiKeyHeader — kalit FAQAT shu sarlavhada qabul qilinadi.
-//
-// URL so'rov qatorida (`?key=...`) ATAYLAB qabul qilinmaydi: query
-// string reverse-proxy kirish loglariga yoziladi, brauzer tarixida
-// qoladi va tashqi resurs so'ralganda `Referer` sarlavhasida chiqib
-// ketishi mumkin. ChustApp'da bu dars `mini_app_webview.dart` izohida
-// yozilgan — bir marta shu sabab token URL'dan POST tanasiga ko'chirilgan.
-const apiKeyHeader = "X-API-Key"
 
 // requireScope — himoya middleware'i.
 func (s *Server) requireScope(need Scope, next http.HandlerFunc) http.HandlerFunc {

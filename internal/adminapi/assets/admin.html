@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OnDexMap — ma'lumot kiritish</title>
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.css" rel="stylesheet">
+<link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.css" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --line:#252a34; --text:#e8eaed; --muted:#9aa4b2;
+    --accent:#ea580c; --accent-soft:#7c2d12; --ok:#16a34a; --err:#ef4444; --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px}
+  #map{position:absolute;inset:0 0 0 340px}
+  @media (max-width:860px){ #map{inset:auto 0 0 0;height:55%} #side{width:100%;height:45%} }
+
+  #side{position:absolute;left:0;top:0;bottom:0;width:340px;background:var(--panel);
+    border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+  header{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;
+    align-items:center;justify-content:space-between;gap:8px}
+  header b{font-size:13px;letter-spacing:.02em}
+  .badge{font-size:11px;color:var(--muted);border:1px solid var(--line);
+    padding:2px 7px;border-radius:99px}
+
+  .tabs{display:flex;padding:10px 14px 0;gap:6px}
+  .tab{flex:1;padding:8px;text-align:center;border:1px solid var(--line);border-bottom:none;
+    border-radius:8px 8px 0 0;cursor:pointer;color:var(--muted);font-size:13px;user-select:none}
+  .tab.on{background:var(--bg);color:var(--text);border-color:var(--accent)}
+
+  .scroll{flex:1;overflow:auto;padding:14px}
+  label{display:block;font-size:11px;color:var(--muted);margin:10px 0 4px;
+    text-transform:uppercase;letter-spacing:.04em}
+  input,select{width:100%;padding:9px 10px;background:var(--bg);color:var(--text);
+    border:1px solid var(--line);border-radius:8px;font-size:14px;outline:none;font-family:inherit}
+  input:focus,select:focus{border-color:var(--accent)}
+
+  button{width:100%;padding:10px;border:none;border-radius:8px;font-size:14px;
+    cursor:pointer;font-weight:600;font-family:inherit;margin-top:10px}
+  .primary{background:var(--accent);color:#fff}
+  .primary:disabled{background:#3a3f4a;color:var(--muted);cursor:not-allowed}
+  .ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+  .danger{background:transparent;color:var(--err);border:1px solid var(--err)}
+  .row{display:flex;gap:8px}
+  .row button{margin-top:10px}
+
+  ul{list-style:none;margin:8px 0 0;padding:0}
+  li{padding:9px 10px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;
+    cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  li:hover{border-color:var(--accent)}
+  li.on{border-color:var(--accent);background:#1d2027}
+  li .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  li .s{font-size:10px;color:var(--muted);border:1px solid var(--line);
+    padding:1px 6px;border-radius:99px;flex:none}
+
+  .msg{padding:9px 11px;border-radius:8px;font-size:13px;margin-top:10px;display:none;line-height:1.45}
+  .msg.show{display:block}
+  .msg.ok{background:rgba(22,163,74,.14);color:#4ade80}
+  .msg.err{background:rgba(239,68,68,.14);color:#fca5a5}
+  .hint{font-size:12px;color:var(--muted);line-height:1.55;margin-top:10px}
+  .empty{color:var(--muted);font-size:13px;padding:14px 0;text-align:center}
+
+  #gate{position:absolute;inset:0;background:var(--bg);z-index:9;display:flex;
+    align-items:center;justify-content:center;padding:20px}
+  #gate .box{width:100%;max-width:360px;background:var(--panel);
+    border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+  #gate h1{margin:0 0 6px;font-size:17px}
+  #gate p{margin:0;color:var(--muted);font-size:13px;line-height:1.55}
+  .mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="box">
+    <h1>OnDexMap admin</h1>
+    <p>Yozish huquqi uchun admin kaliti kerak — <span class="mono">.env</span> dagi
+       <span class="mono">ONDEXMAP_ADMIN_KEY</span>.</p>
+    <label for="key">Admin kaliti</label>
+    <input type="password" id="key" autocomplete="off" spellcheck="false">
+    <button class="primary" id="enter">Kirish</button>
+    <div class="msg err" id="gateMsg"></div>
+    <p class="hint">Bu vosita faqat <span class="mono">127.0.0.1</span> da ishlaydi
+       va internetdan ochilmaydi.</p>
+  </div>
+</div>
+
+<div id="side">
+  <header>
+    <b>Ma'lumot kiritish</b>
+    <span class="badge" id="count">—</span>
+  </header>
+
+  <div class="tabs">
+    <div class="tab on" data-layer="mahalla">Mahalla</div>
+    <div class="tab" data-layer="street">Ko'cha</div>
+  </div>
+
+  <div class="scroll">
+    <button class="primary" id="draw">+ Xaritada chizish</button>
+    <div class="hint" id="drawHint">
+      Tugmani bosing va xaritada chegarani chizing. Yakunlash uchun
+      birinchi nuqtani yoki ikki marta bosing.
+    </div>
+
+    <div id="form" style="display:none">
+      <label for="name">Nomi</label>
+      <input id="name" placeholder="masalan: Chorsu mahallasi" autocomplete="off">
+
+      <div id="kindWrap" style="display:none">
+        <label for="kind">Turi</label>
+        <select id="kind">
+          <option value="kocha">Ko'cha</option>
+          <option value="shox_kocha">Shox ko'cha</option>
+          <option value="tor_kocha">Tor ko'cha</option>
+          <option value="xiyobon">Xiyobon</option>
+          <option value="maydon">Maydon</option>
+        </select>
+      </div>
+
+      <label for="source">Manba (provenans)</label>
+      <select id="source">
+        <option value="official">Rasmiy (hokimlik)</option>
+        <option value="survey">Dala survey (o'zim yurib oldim)</option>
+        <option value="community">Jamoa (aholi aytdi)</option>
+        <option value="osm">OpenStreetMap</option>
+      </select>
+      <div class="hint">
+        Manbani to'g'ri tanlang — litsenziya qarori keyin shu ustunga tayanadi.
+      </div>
+
+      <button class="primary" id="save">Saqlash</button>
+      <div class="row">
+        <button class="ghost" id="cancel">Bekor</button>
+        <button class="danger" id="del" style="display:none">O'chirish</button>
+      </div>
+      <div class="msg" id="formMsg"></div>
+    </div>
+
+    <div id="aliasWrap" style="display:none">
+      <label for="alias">Muqobil nom qo'shish</label>
+      <input id="alias" placeholder="masalan: Katta ko'cha" autocomplete="off">
+      <select id="aliasKind">
+        <option value="xalq">Xalq nomi</option>
+        <option value="eski">Eski nom</option>
+        <option value="kirill">Kirill yozuvi</option>
+        <option value="official">Rasmiy</option>
+      </select>
+      <button class="ghost" id="addAlias">Qo'shish</button>
+      <div class="msg" id="aliasMsg"></div>
+    </div>
+
+    <label style="margin-top:18px">Mavjud yozuvlar</label>
+    <ul id="list"></ul>
+    <div class="empty" id="empty">Hali yozuv yo'q</div>
+  </div>
+</div>
+
+<div id="map"></div>
+
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.js"></script>
+<script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.js"></script>
+<script>
+(() => {
+"use strict";
+const $ = (id) => document.getElementById(id);
+const CHUST = [71.2394, 41.0004];
+
+let KEY = sessionStorage.getItem('ondexmap_admin_key') || '';
+let layer = 'mahalla';
+let map, draw, selectedId = null, features = {};
+
+// ── API ────────────────────────────────────────────────────────────
+// Kalit har so'rovda X-API-Key sarlavhasida ketadi, URL'da EMAS.
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    ...opts,
+    headers: { 'X-API-Key': KEY, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error || ('xato ' + res.status));
+  return body;
+}
+
+function msg(el, text, kind) {
+  el.textContent = text;
+  el.className = 'msg show ' + kind;
+  if (kind === 'ok') setTimeout(() => { el.className = 'msg'; }, 2600);
+}
+
+// ── Kirish ─────────────────────────────────────────────────────────
+async function unlock(key) {
+  KEY = key;
+  await api('/api/verify');
+  sessionStorage.setItem('ondexmap_admin_key', key);
+  $('gate').style.display = 'none';
+  await boot();
+}
+
+$('enter').onclick = async () => {
+  try { await unlock($('key').value.trim()); }
+  catch (e) { msg($('gateMsg'), e.message, 'err'); }
+};
+$('key').onkeydown = (e) => { if (e.key === 'Enter') $('enter').click(); };
+
+// ── Xarita ─────────────────────────────────────────────────────────
+async function boot() {
+  const cfg = await api('/api/config');
+  mapboxgl.accessToken = cfg.mapbox_token;
+
+  map = new mapboxgl.Map({
+    container: 'map', style: 'mapbox://styles/mapbox/dark-v11',
+    center: CHUST, zoom: 14,
+  });
+  map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+  draw = new MapboxDraw({ displayControlsDefault: false, controls: {} });
+  map.addControl(draw);
+
+  map.on('draw.create', (e) => onDrawn(e.features[0]));
+  map.on('load', () => { addLayers(); refresh(); });
+}
+
+function addLayers() {
+  map.addSource('saved', { type: 'geojson', data: emptyFC() });
+  map.addLayer({ id:'saved-fill', type:'fill', source:'saved',
+    filter:['==',['geometry-type'],'Polygon'],
+    paint:{ 'fill-color':'#ea580c', 'fill-opacity':0.14 } });
+  map.addLayer({ id:'saved-line', type:'line', source:'saved',
+    paint:{ 'line-color':'#ea580c',
+      'line-width':['case',['==',['get','id'],['literal','']],3,2.5] } });
+  map.addLayer({ id:'saved-label', type:'symbol', source:'saved',
+    layout:{ 'text-field':['get','name'], 'text-size':12,
+      'symbol-placement':['case',['==',['geometry-type'],'LineString'],'line','point'] },
+    paint:{ 'text-color':'#fdba74','text-halo-color':'#0f1115','text-halo-width':1.5 } });
+
+  map.on('click', 'saved-fill', (e) => select(e.features[0].properties.id));
+  map.on('click', 'saved-line', (e) => select(e.features[0].properties.id));
+  for (const l of ['saved-fill','saved-line']) {
+    map.on('mouseenter', l, () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', l, () => map.getCanvas().style.cursor = '');
+  }
+}
+
+const emptyFC = () => ({ type:'FeatureCollection', features:[] });
+
+// ── Ro'yxatni yuklash ──────────────────────────────────────────────
+async function refresh() {
+  const fc = await api('/api/features?kind=' + layer);
+  const list = fc.features || [];
+  features = {};
+  for (const f of list) features[f.properties.id] = f;
+
+  map.getSource('saved').setData(fc.features ? fc : emptyFC());
+  $('count').textContent = list.length + ' ta';
+  $('empty').style.display = list.length ? 'none' : 'block';
+
+  $('list').innerHTML = list.map((f) => {
+    const p = f.properties;
+    return '<li data-id="' + esc(p.id) + '"' + (p.id === selectedId ? ' class="on"' : '') + '>' +
+           '<span class="n">' + esc(p.name) + '</span>' +
+           '<span class="s">' + esc(p.source) + '</span></li>';
+  }).join('');
+
+  for (const li of $('list').children) {
+    li.onclick = () => select(li.dataset.id);
+  }
+}
+
+// ── Tanlash / tahrirlash ───────────────────────────────────────────
+function select(id) {
+  const f = features[id];
+  if (!f) return;
+  selectedId = id;
+  draw.deleteAll();
+
+  const p = f.properties;
+  $('form').style.display = 'block';
+  $('name').value = p.name;
+  $('source').value = p.source;
+  if (layer === 'street') $('kind').value = p.kind || 'kocha';
+  $('del').style.display = 'block';
+  $('aliasWrap').style.display = layer === 'street' ? 'block' : 'none';
+  $('drawHint').textContent = 'Tahrirlanmoqda. Geometriyani o\'zgartirish uchun qaytadan chizing.';
+
+  refresh();
+  fitTo(f);
+}
+
+function fitTo(f) {
+  const coords = flatten(f.geometry.coordinates);
+  if (!coords.length) return;
+  const b = coords.reduce((acc, c) => acc.extend(c),
+    new mapboxgl.LngLatBounds(coords[0], coords[0]));
+  map.fitBounds(b, { padding: 80, maxZoom: 16 });
+}
+
+function flatten(c) {
+  if (typeof c[0] === 'number') return [c];
+  return c.flatMap(flatten);
+}
+
+// ── Chizish ────────────────────────────────────────────────────────
+$('draw').onclick = () => {
+  draw.deleteAll();
+  draw.changeMode(layer === 'mahalla' ? 'draw_polygon' : 'draw_line_string');
+  $('drawHint').textContent = layer === 'mahalla'
+    ? 'Chegarani chizing. Yakunlash: birinchi nuqtani yoki ikki marta bosing.'
+    : 'Ko\'cha chizig\'ini chizing. Yakunlash: ikki marta bosing.';
+};
+
+function onDrawn() {
+  $('form').style.display = 'block';
+  $('aliasWrap').style.display = 'none';
+  $('del').style.display = selectedId ? 'block' : 'none';
+  $('name').focus();
+}
+
+// ── Saqlash ────────────────────────────────────────────────────────
+$('save').onclick = async () => {
+  const name = $('name').value.trim();
+  if (!name) { msg($('formMsg'), 'Nom kiritilmagan', 'err'); return; }
+
+  const drawn = draw.getAll().features[0];
+  const existing = selectedId ? features[selectedId] : null;
+  const geometry = drawn ? drawn.geometry : (existing ? existing.geometry : null);
+  if (!geometry) { msg($('formMsg'), 'Geometriya yo\'q — avval xaritada chizing', 'err'); return; }
+
+  const payload = {
+    id: selectedId || '',
+    name,
+    source: $('source').value,
+    geometry: JSON.stringify(geometry),
+  };
+  if (layer === 'street') payload.kind = $('kind').value;
+
+  $('save').disabled = true;
+  try {
+    await api('/api/' + layer, { method:'POST', body: JSON.stringify(payload) });
+    msg($('formMsg'), 'Saqlandi', 'ok');
+    draw.deleteAll();
+    selectedId = null;
+    $('form').style.display = 'none';
+    $('name').value = '';
+    await refresh();
+  } catch (e) {
+    msg($('formMsg'), e.message, 'err');
+  } finally {
+    $('save').disabled = false;
+  }
+};
+
+$('cancel').onclick = () => {
+  draw.deleteAll();
+  selectedId = null;
+  $('form').style.display = 'none';
+  $('aliasWrap').style.display = 'none';
+  $('name').value = '';
+  refresh();
+};
+
+$('del').onclick = async () => {
+  if (!selectedId) return;
+  try {
+    await api('/api/delete', { method:'POST',
+      body: JSON.stringify({ kind: layer, id: selectedId }) });
+    draw.deleteAll();
+    selectedId = null;
+    $('form').style.display = 'none';
+    $('aliasWrap').style.display = 'none';
+    await refresh();
+  } catch (e) { msg($('formMsg'), e.message, 'err'); }
+};
+
+// ── Alias ──────────────────────────────────────────────────────────
+$('addAlias').onclick = async () => {
+  const alias = $('alias').value.trim();
+  if (!alias || !selectedId) return;
+  try {
+    await api('/api/alias', { method:'POST', body: JSON.stringify({
+      street_id: selectedId, alias, kind: $('aliasKind').value,
+      source: $('source').value,
+    })});
+    msg($('aliasMsg'), 'Qo\'shildi: ' + alias, 'ok');
+    $('alias').value = '';
+  } catch (e) { msg($('aliasMsg'), e.message, 'err'); }
+};
+
+// ── Qatlam almashtirish ────────────────────────────────────────────
+for (const tab of document.querySelectorAll('.tab')) {
+  tab.onclick = () => {
+    document.querySelector('.tab.on').classList.remove('on');
+    tab.classList.add('on');
+    layer = tab.dataset.layer;
+    selectedId = null;
+    draw.deleteAll();
+    $('form').style.display = 'none';
+    $('aliasWrap').style.display = 'none';
+    $('kindWrap').style.display = layer === 'street' ? 'block' : 'none';
+    refresh();
+  };
+}
+
+// Bazadan kelgan matn HTML sifatida talqin qilinmasin.
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g,
+    (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+// Saqlangan kalit bo'lsa darhol kiramiz.
+if (KEY) {
+  unlock(KEY).catch(() => {
+    sessionStorage.removeItem('ondexmap_admin_key');
+    KEY = '';
+  });
+}
+})();
+</script>
+</body>
+</html>

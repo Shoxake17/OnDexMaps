@@ -1,0 +1,97 @@
+// OnDexMap admin vositasi — ma'lumot kiritish uchun LOKAL server.
+//
+// ⚠️ Bu binar YOZISH huquqiga ega va ATAYLAB faqat 127.0.0.1 da
+// tinglaydi. U hech qachon internetga chiqarilmaydi, reverse-proxy
+// orqasiga qo'yilmaydi va prod'da ishga tushirilmaydi.
+//
+// Ishga tushirish:
+//
+//	go run ./cmd/admin
+//	# keyin: http://127.0.0.1:8091
+package main
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+	"time"
+
+	"ondexmap/internal/adminapi"
+	"ondexmap/internal/config"
+	"ondexmap/internal/storage"
+)
+
+// adminAddr — QAT'IY 127.0.0.1.
+//
+// `:8091` deb yozilsa Go barcha interfeyslarda (0.0.0.0) tinglaydi va
+// vosita Wi-Fi tarmog'idagi har kimga ochiq bo'lardi. Bu manzil
+// sozlanmaydi — noto'g'ri sozlash imkoniyatining o'zi bo'lmasin.
+const adminAddr = "127.0.0.1:8091"
+
+func main() {
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
+
+	cfg, err := config.Load(".env")
+	if err != nil {
+		slog.Error("sozlama xatosi", "err", err)
+		os.Exit(1)
+	}
+
+	if !cfg.DevMode {
+		// Fail-closed: admin vositasi production sozlamasi bilan
+		// ishga tushmaydi. Uni jonli serverda ochish — yozish
+		// huquqini o'sha mashinaga olib kirish degani.
+		slog.Error("admin vositasi FAQAT dev rejimda ishlaydi (APP_ENV=development)")
+		os.Exit(1)
+	}
+	if strings.TrimSpace(cfg.AdminKey) == "" {
+		slog.Error("ONDEXMAP_ADMIN_KEY yo'q (.env) — yozish huquqi kalitsiz ochilmaydi")
+		os.Exit(1)
+	}
+	if cfg.DatabaseURLMigrate == "" {
+		slog.Error("DATABASE_URL_MIGRATE yo'q — admin vositasi yozuvchi ulanishni talab qiladi")
+		os.Exit(1)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	pool, err := storage.ReadWrite(ctx, cfg.DatabaseURLMigrate)
+	cancel()
+	if err != nil {
+		slog.Error("bazaga ulanib bo'lmadi", "err", err)
+		os.Exit(1)
+	}
+	defer pool.Close()
+
+	srv := &http.Server{
+		Addr:              adminAddr,
+		Handler:           adminapi.New(cfg, pool).Handler(),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    1 << 16,
+	}
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		slog.Info("admin vositasi tayyor", "url", "http://"+adminAddr)
+		slog.Warn("bu vosita YOZISH huquqiga ega — faqat lokal, internetga chiqarilmaydi")
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("server xatosi", "err", err)
+			os.Exit(1)
+		}
+	}()
+
+	<-stop
+	shutCtx, shutCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutCancel()
+	_ = srv.Shutdown(shutCtx)
+	slog.Info("to'xtatildi")
+}
