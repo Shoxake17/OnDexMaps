@@ -32,8 +32,21 @@ type Config struct {
 	// AppEnv — xom qiymat (loglash uchun).
 	AppEnv string
 
-	HTTPAddr    string
+	HTTPAddr string
+
+	// DatabaseURL — HTTP API ishlatadigan ulanish. `ondexmap_app` roli,
+	// FAQAT SELECT huquqi bilan.
+	//
+	// XAVFSIZLIK: API — internetga qaragan yagona jarayon. U baza EGASI
+	// sifatida ulansa, bitta SQL inyeksiya `DROP TABLE` qila olardi.
+	// Eng kam imtiyozli rol bilan esa API'ni to'liq egallab olgan
+	// hujumchi ham ma'lumotni o'zgartira olmaydi.
 	DatabaseURL string
+
+	// DatabaseURLMigrate — migratsiya va import uchun (baza egasi).
+	// Bu ulanish HTTP serverida UMUMAN ishlatilmaydi — faqat lokal
+	// vositalarda (`cmd/migrate`, `cmd/geoimport`).
+	DatabaseURLMigrate string
 
 	// ReadKey/AdminKey — API kalitlari.
 	//
@@ -72,8 +85,9 @@ func Load(envPath string) (*Config, error) {
 
 	c := &Config{
 		AppEnv:         strings.TrimSpace(strings.ToLower(os.Getenv("APP_ENV"))),
-		HTTPAddr:       envOr("HTTP_ADDR", ":8090"),
-		DatabaseURL:    os.Getenv("DATABASE_URL"),
+		HTTPAddr:           envOr("HTTP_ADDR", ":8090"),
+		DatabaseURL:        os.Getenv("DATABASE_URL"),
+		DatabaseURLMigrate: os.Getenv("DATABASE_URL_MIGRATE"),
 		ReadKey:        os.Getenv("ONDEXMAP_READ_KEY"),
 		ReadKeyPrev:    os.Getenv("ONDEXMAP_READ_KEY_PREV"),
 		AdminKey:       os.Getenv("ONDEXMAP_ADMIN_KEY"),
@@ -125,6 +139,18 @@ func (c *Config) validate() error {
 	// ── FAQAT PRODUCTION uchun ───────────────────────────────────────
 	if c.DatabaseURL == "" {
 		problems = append(problems, "DATABASE_URL yo'q")
+	} else if strings.Contains(c.DatabaseURL, "sslmode=disable") {
+		// Prod'da baza bilan aloqa shifrlanmasa, tarmoqni tinglayotgan
+		// odam so'rovlarni ham, parolni ham o'qiy oladi. Lokal
+		// `127.0.0.1` da bu muhim emas, prod'da esa halokatli.
+		problems = append(problems,
+			"DATABASE_URL da sslmode=disable — production'da baza aloqasi shifrlanishi SHART")
+	}
+	// API baza EGASI sifatida ulanmasligi kerak: bu eng kam imtiyoz
+	// tamoyilini bekor qiladi (0002_least_privilege.sql ga qarang).
+	if c.DatabaseURL != "" && c.DatabaseURL == c.DatabaseURLMigrate {
+		problems = append(problems,
+			"DATABASE_URL va DATABASE_URL_MIGRATE BIR XIL — API baza egasi sifatida ulanadi va SQL inyeksiya DROP TABLE qila oladi")
 	}
 	if len(c.AllowedOrigins) == 0 {
 		problems = append(problems,

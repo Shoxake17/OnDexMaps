@@ -37,9 +37,17 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?".env da POSTGRES_USER yo'q — .env.example dan ko'chiring"}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?".env da POSTGRES_PASSWORD yo'q — bo'sh parol bilan ishga tushirilmaydi"}
       POSTGRES_DB: ${POSTGRES_DB:?".env da POSTGRES_DB yo'q"}
-      # Uzbek matni bilan ishlaymiz — solishtirish va indeks
-      # xatti-harakati muhitga bog'liq bo'lib qolmasin.
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      # `C.UTF-8`, oddiy `C` EMAS — bu farq qidiruvni buzadi.
+      #
+      # Sof `C` locale'da `lower()` faqat ASCII bilan ishlaydi:
+      #   lower('ЎЗБЕК ҚҒҲ ShAHAR') → 'ЎЗБЕК ҚҒҲ shahar'
+      # ya'ni kirillcha yozgan foydalanuvchi hech narsa topmasdi va
+      # xato JIMGINA yuz berardi — na log, na ogohlantirish.
+      #
+      # `C.UTF-8` ikkalasini beradi: Unicode registr almashtirishi
+      # to'g'ri ishlaydi, solishtirish esa bayt tartibida qoladi —
+      # ya'ni indekslar aniq va muhitga bog'liq emas.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C.UTF-8"
     ports:
       - "127.0.0.1:5433:5432"
     volumes:

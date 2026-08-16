@@ -9,7 +9,7 @@ import (
 func setEnv(t *testing.T, kv map[string]string) {
 	t.Helper()
 	for _, k := range []string{
-		"APP_ENV", "HTTP_ADDR", "DATABASE_URL",
+		"APP_ENV", "HTTP_ADDR", "DATABASE_URL", "DATABASE_URL_MIGRATE",
 		"ONDEXMAP_READ_KEY", "ONDEXMAP_READ_KEY_PREV",
 		"ONDEXMAP_ADMIN_KEY", "ONDEXMAP_ADMIN_KEY_PREV",
 		"ALLOWED_ORIGINS", "TRUSTED_PROXIES", "MAPBOX_TOKEN",
@@ -108,6 +108,44 @@ func TestSameKeyForReadAndAdminRejected(t *testing.T) {
 	_, err := Load("yo'q-fayl.env")
 	if err == nil {
 		t.Fatal("bir xil kalit qabul qilindi — ChustApp'ga berilgan read kaliti yozish huquqini ham berardi")
+	}
+	if !strings.Contains(err.Error(), "BIR XIL") {
+		t.Errorf("xato sababi tushunarsiz: %v", err)
+	}
+}
+
+// Production'da shifrlanmagan baza ulanishi rad etiladi.
+func TestProductionRejectsUnencryptedDatabase(t *testing.T) {
+	setEnv(t, map[string]string{
+		"APP_ENV":            "production",
+		"DATABASE_URL":       "postgres://app@db:5433/ondexmap?sslmode=disable",
+		"ONDEXMAP_READ_KEY":  okReadKey,
+		"ONDEXMAP_ADMIN_KEY": okAdminKey,
+		"ALLOWED_ORIGINS":    "https://map-ondex.shoxpro.uz",
+	})
+	_, err := Load("yo'q-fayl.env")
+	if err == nil {
+		t.Fatal("sslmode=disable production'da qabul qilindi")
+	}
+	if !strings.Contains(err.Error(), "sslmode") {
+		t.Errorf("xato sababi tushunarsiz: %v", err)
+	}
+}
+
+// API baza EGASI sifatida ulanmasligi kerak — eng kam imtiyoz.
+func TestProductionRejectsOwnerConnectionForAPI(t *testing.T) {
+	const ownerURL = "postgres://ondexmap@db:5433/ondexmap?sslmode=require"
+	setEnv(t, map[string]string{
+		"APP_ENV":              "production",
+		"DATABASE_URL":         ownerURL,
+		"DATABASE_URL_MIGRATE": ownerURL, // AYNAN bir xil
+		"ONDEXMAP_READ_KEY":    okReadKey,
+		"ONDEXMAP_ADMIN_KEY":   okAdminKey,
+		"ALLOWED_ORIGINS":      "https://map-ondex.shoxpro.uz",
+	})
+	_, err := Load("yo'q-fayl.env")
+	if err == nil {
+		t.Fatal("API baza egasi sifatida ulanishi qabul qilindi — SQL inyeksiya DROP TABLE qila olardi")
 	}
 	if !strings.Contains(err.Error(), "BIR XIL") {
 		t.Errorf("xato sababi tushunarsiz: %v", err)
