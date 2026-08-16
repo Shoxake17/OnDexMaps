@@ -6,18 +6,26 @@ import (
 	"slices"
 
 	"ondexmap/internal/config"
+	"ondexmap/internal/storage"
 )
 
 // Server — HTTP qatlami. Barcha marshrutlar shu yerda ro'yxatdan o'tadi.
 type Server struct {
 	cfg  *config.Config
 	auth *authenticator
+	// db — FAQAT O'QISH huquqiga ega hovuz (`ondexmap_app` roli).
+	// `nil` bo'lishi mumkin: baza ulanmagan holatda ham server
+	// ko'tariladi va `/healthz` javob beradi.
+	db      *storage.Pool
+	limiter *rateLimiter
 }
 
-func New(cfg *config.Config) *Server {
+func New(cfg *config.Config, db *storage.Pool) *Server {
 	return &Server{
-		cfg:  cfg,
-		auth: newAuthenticator(cfg.ReadKey, cfg.ReadKeyPrev, cfg.AdminKey, cfg.AdminKeyPrev),
+		cfg:     cfg,
+		auth:    newAuthenticator(cfg.ReadKey, cfg.ReadKeyPrev, cfg.AdminKey, cfg.AdminKeyPrev),
+		db:      db,
+		limiter: newRateLimiter(),
 	}
 }
 
@@ -67,6 +75,8 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 		func(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusOK, map[string]string{"scope": "admin"})
 		}))
+
+	s.registerGeoRoutes(mux)
 }
 
 // securityHeaders — barcha javoblarga qo'llanadi.

@@ -1,0 +1,92 @@
+// Package storage — PostGIS bilan ishlash qatlami.
+//
+// XAVFSIZLIK TAMOYILLARI (butun paket bo'ylab):
+//
+//  1. Barcha so'rovlar PARAMETRLI ($1, $2). SQL satriga foydalanuvchi
+//     kiritgan qiymat HECH QACHON qo'shilmaydi.
+//  2. Har bir so'rovda kontekst muddati bor — sekin so'rov serverni
+//     ushlab tura olmaydi.
+//  3. Natija soni CHEKLANGAN — chaqiruvchi million qator so'rab
+//     xotirani to'ldira olmaydi.
+//  4. SQL xatolari tashqariga chiqmaydi (jadval nomi, ustun nomi,
+//     so'rov matni — hujumchi uchun xarita).
+package storage
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// Pool — pgx ulanish hovuzi ustidagi ingichka qobiq.
+type Pool struct {
+	*pgxpool.Pool
+}
+
+// ReadOnly — API uchun hovuz.
+//
+// `default_transaction_read_only=on` — HIMOYANING IKKINCHI QATLAMI.
+// Birinchi qatlam bazadagi rol grantlari (`0002_least_privilege.sql`):
+// `ondexmap_app` da yozish huquqi umuman yo'q. Bu sozlama esa
+// kod darajasida ham qulflaydi — kimdir kelajakda rolga tasodifan
+// INSERT huquqi bersa, ulanish baribir yozishga ruxsat bermaydi.
+//
+// Ikkalasi mustaqil ishlaydi: bittasi buzilsa ikkinchisi ushlab qoladi.
+func ReadOnly(ctx context.Context, dsn string) (*Pool, error) {
+	return newPool(ctx, dsn, true)
+}
+
+// ReadWrite — FAQAT lokal vositalar uchun (migratsiya, import).
+// HTTP serverida ishlatilmaydi.
+func ReadWrite(ctx context.Context, dsn string) (*Pool, error) {
+	return newPool(ctx, dsn, false)
+}
+
+func newPool(ctx context.Context, dsn string, readOnly bool) (*Pool, error) {
+	cfg, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		// DIQQAT: `err` da ulanish satri (parol bilan) bo'lishi mumkin —
+		// shuning uchun u O'RALMAYDI va tashqariga uzatilmaydi.
+		return nil, fmt.Errorf("DATABASE_URL noto'g'ri formatda")
+	}
+
+	// ── Hovuz chegaralari ────────────────────────────────────────────
+	// Chegarasiz hovuz sekin so'rovlar oqimida bazadagi barcha
+	// ulanishlarni yeb qo'yadi (Postgres standarti — 100 ta) va
+	// ADMIN ham ulana olmay qoladi.
+	cfg.MaxConns = 10
+	cfg.MinConns = 1
+	cfg.MaxConnLifetime = 30 * time.Minute
+	cfg.MaxConnIdleTime = 5 * time.Minute
+	cfg.HealthCheckPeriod = 30 * time.Second
+	cfg.ConnConfig.ConnectTimeout = 5 * time.Second
+
+	// ── Har bir ulanish uchun sessiya sozlamalari ────────────────────
+	params := cfg.ConnConfig.RuntimeParams
+	// Sekin so'rov himoyasi: 10 soniyadan uzun so'rov BAZA tomonidan
+	// uziladi. Go tomondagi kontekst muddatiga qo'shimcha — klient
+	// uzilib ketsa ham so'rov serverda osilib qolmaydi.
+	params["statement_timeout"] = "10000"
+	// Bo'sh tranzaksiya ochiq qolmasin.
+	params["idle_in_transaction_session_timeout"] = "30000"
+	params["application_name"] = "ondexmap-api"
+	if readOnly {
+		params["default_transaction_read_only"] = "on"
+		params["application_name"] = "ondexmap-api-ro"
+	}
+
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("bazaga ulanib bo'lmadi")
+	}
+
+	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	if err := pool.Ping(pingCtx); err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("baza javob bermayapti (docker compose up -d qilinganmi?)")
+	}
+	return &Pool{Pool: pool}, nil
+}

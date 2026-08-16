@@ -17,7 +17,9 @@ const (
 
 func testServer(t *testing.T, cfg *config.Config) http.Handler {
 	t.Helper()
-	return New(cfg).Handler()
+	// db = nil: bu testlar huquq va sarlavhalarni tekshiradi, baza
+	// kerak emas. Geo endpointlar `nil` da 503 qaytaradi.
+	return New(cfg, nil).Handler()
 }
 
 func baseCfg() *config.Config {
@@ -30,6 +32,10 @@ func baseCfg() *config.Config {
 		AllowedOrigins: []string{"http://localhost:3100"},
 		MapboxToken:    "pk.test",
 	}
+}
+
+func mustRequest(method, path string) *http.Request {
+	return httptest.NewRequest(method, path, nil)
 }
 
 func do(h http.Handler, method, path, key string) *httptest.ResponseRecorder {

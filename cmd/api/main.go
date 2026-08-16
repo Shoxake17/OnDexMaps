@@ -13,6 +13,7 @@ import (
 
 	"ondexmap/internal/config"
 	"ondexmap/internal/httpapi"
+	"ondexmap/internal/storage"
 )
 
 func main() {
@@ -32,9 +33,31 @@ func main() {
 		slog.Info("production rejim", "app_env", cfg.AppEnv)
 	}
 
+	// ── Baza: FAQAT O'QISH ───────────────────────────────────────────
+	// API `ondexmap_app` roli bilan ulanadi — unda yozish huquqi
+	// umuman yo'q (migrations/0002_least_privilege.sql).
+	//
+	// DIQQAT: bu yerda `DATABASE_URL_MIGRATE` ATAYLAB ISHLATILMAYDI.
+	// Baza egasi bilan ulanish HTTP serverida hech qachon ochilmaydi.
+	var db *storage.Pool
+	if cfg.DatabaseURL != "" {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		pool, err := storage.ReadOnly(ctx, cfg.DatabaseURL)
+		cancel()
+		if err != nil {
+			slog.Error("bazaga ulanib bo'lmadi", "err", err)
+			os.Exit(1)
+		}
+		defer pool.Close()
+		db = pool
+		slog.Info("bazaga ulandi (faqat o'qish)")
+	} else {
+		slog.Warn("DATABASE_URL yo'q — geo endpointlar ishlamaydi")
+	}
+
 	srv := &http.Server{
 		Addr:    cfg.HTTPAddr,
-		Handler: httpapi.New(cfg).Handler(),
+		Handler: httpapi.New(cfg, db).Handler(),
 		// ANIQ timeout'lar — nol qiymatli `http.Server` ularsiz keladi,
 		// ya'ni sekin klient ulanishni CHEKSIZ ushlab tura oladi va
 		// ochiq ulanishlar to'planib serverni bo'g'adi (slowloris).
