@@ -213,7 +213,12 @@ async function boot() {
   map = new mapboxgl.Map({
     container: 'map', style: 'mapbox://styles/mapbox/dark-v11',
     center: CHUST, zoom: 14,
+    // Yig'iq atributsiya — katta yozuv o'rniga kichik "i" tugmasi.
+    // Butunlay olib tashlanmaydi: Mapbox ToS talabi, va basemap
+    // OSM'dan qurilgani uchun ODbL talabi ham.
+    attributionControl: false,
   });
+  map.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
   map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
   draw = new MapboxDraw({ displayControlsDefault: false, controls: {} });

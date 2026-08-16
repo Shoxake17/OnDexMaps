@@ -75,7 +75,17 @@
     style: 'mapbox://styles/mapbox/light-v11',
     center: [71.2394, 41.0004],   // Chust
     zoom: 14,
+    // Standart atributsiya o'chirilib, o'rniga YIG'IQ (compact)
+    // varianti qo'yiladi — katta yozuv o'rniga kichik "i" tugmasi.
+    //
+    // DIQQAT: butunlay olib tashlanmaydi va olib tashlab BO'LMAYDI.
+    // Mapbox ToS standart tarifda atributsiyani talab qiladi, va
+    // undan ham muhimi: basemap OpenStreetMap'dan qurilgan, OSM
+    // atributsiyasi esa ODbL litsenziyasining talabi — u Mapbox
+    // tarifiga bog'liq emas.
+    attributionControl: false,
   });
+  map.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
   map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
   map.on('load', async () => {
