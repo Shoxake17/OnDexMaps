@@ -71,7 +71,9 @@ func TestSharedModuleExposesRequiredAPI(t *testing.T) {
 		"beforeLayer", // qatlam tartibi (binolardan past)
 		"fitTo",
 		"esc",
-		"style.load", // uslub almashtirilganda qatlamlarni qayta qo'shish
+		"style.load",       // uslub almashtirilganda qatlamlarni qayta qo'shish
+		"arcgisonline.com", // ikkinchi tasvir manbasi (Sputnik 2)
+		"_applyImagery",    // tasvir almashtirish
 	} {
 		if !strings.Contains(body, needed) {
 			t.Errorf("umumiy modulda %q yo'q", needed)

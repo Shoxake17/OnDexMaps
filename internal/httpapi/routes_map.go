@@ -44,12 +44,18 @@ func (s *Server) registerMapRoute(mux *http.ServeMux) {
 		//
 		// `'unsafe-inline'` skript uchun ATAYLAB berilgan va bu — bu
 		// marshrut nega faqat dev'da qolishining asosiy sababi.
+		//
+		// `server.arcgisonline.com` — Esri World Imagery ("Sputnik 2").
+		// Mapbox GL raster tayllarni `fetch` orqali oladi, shuning
+		// uchun `connect-src` da ham, `img-src` da ham bo'lishi kerak.
+		// Faqat bittasi berilsa tasvir JIMGINA bloklanadi.
 		w.Header().Set("Content-Security-Policy",
 			"default-src 'none'; "+
 				"script-src 'self' 'unsafe-inline' https://api.mapbox.com; "+
 				"style-src 'self' 'unsafe-inline' https://api.mapbox.com; "+
-				"connect-src 'self' https://api.mapbox.com https://events.mapbox.com; "+
-				"img-src 'self' data: blob:; "+
+				"connect-src 'self' https://api.mapbox.com https://events.mapbox.com "+
+				"https://server.arcgisonline.com; "+
+				"img-src 'self' data: blob: https://server.arcgisonline.com; "+
 				"worker-src blob:; child-src blob:; "+
 				"font-src 'self' data:; "+
 				"frame-ancestors 'none'")

@@ -219,12 +219,18 @@ func securityHeaders(next http.Handler) http.Handler {
 		h.Set("Cache-Control", "no-store")
 		// Mapbox va chizish kutubxonasi uchun zarur minimum.
 		// Bu vosita FAQAT lokal ishlaydi, internetga chiqmaydi.
+		// `server.arcgisonline.com` — Esri World Imagery ("Sputnik 2").
+		// Raster tayllar `fetch` orqali olinadi, shuning uchun ham
+		// `connect-src`, ham `img-src` kerak; bittasi yetishmasa
+		// tasvir jimgina bloklanadi.
 		h.Set("Content-Security-Policy",
 			"default-src 'none'; "+
 				"script-src 'self' 'unsafe-inline' https://api.mapbox.com; "+
 				"style-src 'self' 'unsafe-inline' https://api.mapbox.com; "+
-				"connect-src 'self' https://api.mapbox.com https://events.mapbox.com; "+
-				"img-src 'self' data: blob:; worker-src blob:; child-src blob:; "+
+				"connect-src 'self' https://api.mapbox.com https://events.mapbox.com "+
+				"https://server.arcgisonline.com; "+
+				"img-src 'self' data: blob: https://server.arcgisonline.com; "+
+				"worker-src blob:; child-src blob:; "+
 				"font-src 'self' data:; frame-ancestors 'none'")
 		next.ServeHTTP(w, r)
 	})

@@ -19,12 +19,29 @@
   // Asos xaritalar. `satellite-streets` ATAYLAB sof sputnik emas —
   // unda ko'cha nomlari tasvir ustida chiqadi va mo'ljal olish
   // ancha oson bo'ladi.
+  //
+  // `esri` — AYNAN shu uslub, lekin tasvir Mapbox'niki emas, Esri
+  // World Imagery'niki. Sabab: sputnik tasviri "jonli" emas, u
+  // mozaika va Chust kabi kichik shaharlar kamdan-kam yangilanadi.
+  // Ikki manba ikki xil sanaga ega bo'ladi — qaysi biri yangiroq
+  // ekanini KO'Z BILAN solishtirib tanlaysiz.
   var STYLES = {
     streets:   "mapbox://styles/mapbox/streets-v12",
     satellite: "mapbox://styles/mapbox/satellite-streets-v12",
+    esri:      "mapbox://styles/mapbox/satellite-streets-v12",
   };
 
-  var LABELS = { streets: "Xarita", satellite: "Sputnik" };
+  var LABELS = { streets: "Xarita", satellite: "Sputnik", esri: "Sputnik 2" };
+
+  // Esri World Imagery — ochiq tayl xizmati.
+  //
+  // DIQQAT (Mapbox atributsiyasi bilan bir xil masala): Esri ham
+  // atributsiya talab qiladi va tijorat foydalanishning o'z shartlari
+  // bor. Bu hozircha LOKAL vositalarda ishlatilyapti; ommaviy saytga
+  // chiqishdan oldin shartlar tekshirilishi kerak.
+  var ESRI_TILES =
+    "https://server.arcgisonline.com/ArcGIS/rest/services/" +
+    "World_Imagery/MapServer/tile/{z}/{y}/{x}";
 
   /* ── Asos xarita almashtirgichi (Mapbox boshqaruvi) ────────────── */
   function BasemapControl(om) {
@@ -87,12 +104,57 @@
     // `style.load` — birinchi yuklanishda HAM, uslub
     // almashtirilganda HAM ishlaydi. `load` esa faqat birinchi marta.
     this.map.on("style.load", function () {
+      self._applyImagery();
       self._add3D();
       self.onReady(self.map, self);
     });
 
     if (opts.dimToggle !== false) this._addDimToggle();
   }
+
+  /* Esri tasviri — Mapbox sputnik qatlamining O'RNIGA.
+
+     Nima qilinadi: Esri raster manbasi qo'shiladi va Mapbox'ning
+     o'z `satellite` qatlami YASHIRILADI (o'chirilmaydi — qaytishda
+     yana yoqiladi). Ko'cha nomlari va yorliqlar Mapbox uslubidan
+     qolaveradi, faqat TASVIR almashadi.
+
+     Shu tufayli "Sputnik" va "Sputnik 2" bir xil yorliqlarga ega
+     bo'ladi va farq faqat tasvirda ko'rinadi — solishtirish uchun
+     aynan shu kerak. */
+  OndexMap.prototype._applyImagery = function () {
+    var map = this.map;
+    var wantEsri = this.mode === "esri";
+
+    // Mapbox'ning o'z sputnik qatlami (uslubda `satellite` deb ataladi).
+    if (map.getLayer("satellite")) {
+      map.setLayoutProperty("satellite", "visibility", wantEsri ? "none" : "visible");
+    }
+    if (!wantEsri) return;
+
+    if (!map.getSource("om-esri")) {
+      map.addSource("om-esri", {
+        type: "raster",
+        tiles: [ESRI_TILES],
+        tileSize: 256,
+        maxzoom: 19,
+      });
+    }
+    if (map.getLayer("om-esri")) return;
+
+    // Tasvir eng PASTGA qo'yiladi — barcha yorliq va chiziqlar
+    // uning ustida qolsin. Fon qatlamidan keyingi birinchi qatlam
+    // o'rniga suriladi.
+    var layers = map.getStyle().layers || [];
+    var firstAbove;
+    for (var i = 0; i < layers.length; i++) {
+      if (layers[i].type !== "background" && layers[i].id !== "satellite") {
+        firstAbove = layers[i].id;
+        break;
+      }
+    }
+    map.addLayer({ id: "om-esri", type: "raster", source: "om-esri" }, firstAbove);
+  };
 
   /* 3D binolar.
      Qatlam YORLIQLARDAN PASTGA qo'yiladi: aks holda binolar ko'cha
@@ -111,7 +173,8 @@
 
     // Sputnik rejimida binolar tasvir ustida turadi, shuning uchun
     // ular biroz shaffofroq — tomlar tasvirda ham ko'rinib tursin.
-    var sat = this.mode === "satellite";
+    // Ikkala sputnik varianti ham shu qoidaga kiradi.
+    var sat = this.mode === "satellite" || this.mode === "esri";
 
     map.addLayer({
       id: "om-3d",
@@ -141,10 +204,20 @@
 
   OndexMap.prototype.setBasemap = function (mode) {
     if (!STYLES[mode] || mode === this.mode) return;
+    var sameStyle = STYLES[mode] === STYLES[this.mode];
     this.mode = mode;
-    // Uslub almashtirilishi barcha qatlamlarni o'chiradi; `style.load`
-    // hodisasi ularni qayta qo'shadi (yuqoridagi izohga qarang).
-    this.map.setStyle(STYLES[mode]);
+
+    if (sameStyle) {
+      // "Sputnik" va "Sputnik 2" bir xil uslubdan foydalanadi —
+      // faqat tasvir qatlami almashadi. `setStyle` ni chaqirish
+      // barcha qatlamlarni bekorga qayta qurar va ekran miltillardi.
+      this._applyImagery();
+      this._add3D();
+    } else {
+      // Uslub almashtirilishi barcha qatlamlarni o'chiradi;
+      // `style.load` hodisasi ularni qayta qo'shadi.
+      this.map.setStyle(STYLES[mode]);
+    }
 
     if (this._basemapBox) {
       var btns = this._basemapBox.querySelectorAll("button");
