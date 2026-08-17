@@ -6,6 +6,10 @@
 <title>OnDexMap — ma'lumot kiritish</title>
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.css" rel="stylesheet">
 <link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.css" rel="stylesheet">
+<!-- UMUMIY xarita uslublari — ommaviy /map sahifasi ham AYNAN shu
+     faylni yuklaydi (internal/mapui). Brend yashirish, asos xarita
+     almashtirgichi va 2D/3D tugmasi shu yerda. -->
+<link href="/assets/ondexmap.css" rel="stylesheet">
 <style>
   :root{
     --bg:#0f1115; --panel:#171a21; --line:#252a34; --text:#e8eaed; --muted:#9aa4b2;
@@ -73,17 +77,8 @@
   /* Mapbox logotipi va atributsiya — yashirilgan.
      `attributionControl:false` yozuvni o'chiradi, LOGOTIP esa alohida
      element va u baribir chiqadi — shu sabab CSS ham kerak. */
-  .mapboxgl-ctrl-logo,
-  .mapboxgl-ctrl-attrib,
-  .mapboxgl-ctrl-attrib-inner,
-  .mapboxgl-ctrl-bottom-left,
-  .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-attrib,
-  a.mapboxgl-ctrl-logo{display:none !important}
-
-  #dim{position:absolute;right:12px;bottom:12px;z-index:3;background:var(--panel);
-    color:var(--text);border:1px solid var(--line);border-radius:9px;padding:8px 13px;
-    font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
-  #dim:hover{border-color:var(--accent)}
+  /* Brend yashirish va 2D/3D tugmasi UMUMIY faylga ko'chirildi:
+     /assets/ondexmap.css (internal/mapui). Bu yerda takrorlanmaydi. */
 </style>
 </head>
 <body>
@@ -174,19 +169,23 @@
 </div>
 
 <div id="map"></div>
-<button id="dim">3D</button>
 
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.js"></script>
 <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.js"></script>
+<!-- UMUMIY xarita moduli — ommaviy /map sahifasi ham shu faylni
+     yuklaydi. Xarita yaratish, 3D binolar, Xarita/Sputnik
+     almashtirgichi va 2D/3D tugmasi shu yerda. -->
+<script src="/assets/ondexmap.js"></script>
 <script>
 (() => {
 "use strict";
 const $ = (id) => document.getElementById(id);
-const CHUST = [71.2394, 41.0004];
+// Umumiy moduldan (internal/mapui) — sahifada takrorlanmaydi.
+const esc = OndexMap.esc;
 
 let KEY = sessionStorage.getItem('ondexmap_admin_key') || '';
 let layer = 'mahalla';
-let map, draw, selectedId = null, features = {};
+let om, map, draw, selectedId = null, features = {};
 
 // ── API ────────────────────────────────────────────────────────────
 // Kalit har so'rovda X-API-Key sarlavhasida ketadi, URL'da EMAS.
@@ -224,60 +223,39 @@ $('key').onkeydown = (e) => { if (e.key === 'Enter') $('enter').click(); };
 // ── Xarita ─────────────────────────────────────────────────────────
 async function boot() {
   const cfg = await api('/api/config');
-  mapboxgl.accessToken = cfg.mapbox_token;
 
-  map = new mapboxgl.Map({
+  // UMUMIY modul (internal/mapui) — ommaviy /map sahifasi ham
+  // AYNAN shuni ishlatadi. Uslub, 3D binolar, Xarita/Sputnik
+  // almashtirgichi va 2D/3D tugmasi shu yerdan keladi.
+  om = OndexMap.create({
     container: 'map',
-    // Ommaviy xarita (`/map`) bilan AYNAN bir xil uslub — muharrir
-    // nima chizsa, foydalanuvchi ko'radigan ko'rinishda ko'radi.
-    style: 'mapbox://styles/mapbox/streets-v12',
-    center: CHUST, zoom: 16,
+    token: cfg.mapbox_token,
+    zoom: 16,
     // Chizish uchun pitch=0 (ustdan ko'rinish) ANIQROQ: qiya
     // ko'rinishda sichqoncha nuqtasi yer sathiga boshqa joyga
-    // tushadi va chegara siljib ketadi. 3D ni "3D" tugmasi yoqadi —
+    // tushadi va chegara siljib ketadi. 3D tugmasi bilan yoqiladi —
     // bino konturlari mo'ljal sifatida kerak bo'lganda.
     pitch: 0,
-    antialias: true,
-    attributionControl: false,
+    // Uslub HAR SAFAR yuklanganda (sputnikka o'tilganda ham)
+    // qatlamlarni qayta qo'shamiz — Mapbox uslub almashtirilganda
+    // ularni o'chirib yuboradi.
+    onReady: () => { addLayers(); refresh(); },
   });
-  map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right');
+  map = om.map;
 
   draw = new MapboxDraw({ displayControlsDefault: false, controls: {} });
   map.addControl(draw);
-
   map.on('draw.create', (e) => onDrawn(e.features[0]));
-  map.on('load', () => { add3D(); addLayers(); refresh(); });
-}
-
-// 3D binolar — chizishda mo'ljal sifatida. Yorliqlardan pastga
-// qo'yiladi, aks holda ko'cha nomlarini yopib qo'yadi.
-function add3D() {
-  if (!map.getSource('composite')) return;
-  const layers = map.getStyle().layers || [];
-  const firstLabel = layers.find(
-    (l) => l.type === 'symbol' && l.layout && l.layout['text-field']);
-
-  map.addLayer({
-    id: 'b3d', source: 'composite', 'source-layer': 'building',
-    filter: ['==', 'extrude', 'true'], type: 'fill-extrusion', minzoom: 14,
-    paint: {
-      // Ommaviy xarita bilan bir xil: balandlik bo'yicha ranglash.
-      'fill-extrusion-color': [
-        'interpolate', ['linear'], ['get', 'height'],
-        0, '#e6e8ec', 20, '#d3d7de', 60, '#bcc2cc'
-      ],
-      'fill-extrusion-height': ['interpolate',['linear'],['zoom'],14,0,15.5,['get','height']],
-      'fill-extrusion-base':   ['interpolate',['linear'],['zoom'],14,0,15.5,['get','min_height']],
-      'fill-extrusion-opacity': 0.92,
-    },
-  }, firstLabel ? firstLabel.id : undefined);
 }
 
 function addLayers() {
-  map.addSource('saved', { type: 'geojson', data: emptyFC() });
+  if (map.getLayer('saved-fill')) return;
+  if (!map.getSource('saved')) {
+    map.addSource('saved', { type: 'geojson', data: emptyFC() });
+  }
   // Chizilgan obyektlar binolardan PASTGA — aks holda to'q sariq
   // to'ldirish binolarni yopib qo'yadi.
-  const under = map.getLayer('b3d') ? 'b3d' : undefined;
+  const under = om.beforeLayer();
 
   map.addLayer({ id:'saved-fill', type:'fill', source:'saved',
     filter:['==',['geometry-type'],'Polygon'],
@@ -341,20 +319,7 @@ function select(id) {
   $('drawHint').textContent = 'Tahrirlanmoqda. Geometriyani o\'zgartirish uchun qaytadan chizing.';
 
   refresh();
-  fitTo(f);
-}
-
-function fitTo(f) {
-  const coords = flatten(f.geometry.coordinates);
-  if (!coords.length) return;
-  const b = coords.reduce((acc, c) => acc.extend(c),
-    new mapboxgl.LngLatBounds(coords[0], coords[0]));
-  map.fitBounds(b, { padding: 80, maxZoom: 16 });
-}
-
-function flatten(c) {
-  if (typeof c[0] === 'number') return [c];
-  return c.flatMap(flatten);
+  om.fitTo(f.geometry);   // umumiy moduldan
 }
 
 // ── Chizish ────────────────────────────────────────────────────────
@@ -458,20 +423,8 @@ for (const tab of document.querySelectorAll('.tab')) {
   };
 }
 
-// ── 2D / 3D almashtirgich ──────────────────────────────────────────
-// Chizish PITCH=0 da aniqroq, shuning uchun standart holat 2D.
-$('dim').onclick = () => {
-  if (!map) return;
-  const flat = map.getPitch() < 10;
-  map.easeTo({ pitch: flat ? 55 : 0, bearing: flat ? -17 : 0, duration: 600 });
-  $('dim').textContent = flat ? '2D' : '3D';
-};
-
-// Bazadan kelgan matn HTML sifatida talqin qilinmasin.
-function esc(s) {
-  return String(s ?? '').replace(/[&<>"']/g,
-    (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-}
+// 2D/3D almashtirgich, Xarita/Sputnik tugmalari va `esc()` UMUMIY
+// modulda (internal/mapui) — bu yerda takrorlanmaydi.
 
 // Saqlangan kalit bo'lsa darhol kiramiz.
 if (KEY) {

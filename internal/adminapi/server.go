@@ -22,6 +22,7 @@ import (
 
 	"ondexmap/internal/apikey"
 	"ondexmap/internal/config"
+	"ondexmap/internal/mapui"
 	"ondexmap/internal/storage"
 )
 
@@ -49,6 +50,12 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /", s.serveUI)
+
+	// Umumiy xarita resurslari — ommaviy `/map` sahifasi ham AYNAN
+	// shu paketdan oladi (internal/mapui). Kalit talab qilinmaydi:
+	// bu statik JS/CSS, ma'lumot emas, va vosita baribir faqat
+	// 127.0.0.1 da ishlaydi.
+	mapui.Register(mux)
 
 	// Barcha ma'lumot endpointlari admin kalitini talab qiladi.
 	// Lokal bog'lanish (127.0.0.1) — birinchi qatlam, kalit — ikkinchi.

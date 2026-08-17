@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OnDexMap — dev</title>
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.css" rel="stylesheet">
+<!-- UMUMIY xarita uslublari: brend yashirish, asos xarita
+     almashtirgichi, 2D/3D tugmasi. Admin muharriri ham AYNAN shu
+     faylni yuklaydi (internal/mapui). -->
+<link href="/assets/ondexmap.css" rel="stylesheet">
 <style>
   /* ⚠️ `color-scheme: light` ATAYLAB qat'iy.
      Ilgari bu yerda `light dark` turgan edi va oqibati og'ir bo'lgan:
@@ -72,30 +76,6 @@
     font-size:13px; max-width:340px; line-height:1.5;
   }
   .err { color:var(--err); }
-
-  /* Mapbox logotipi va atributsiya bloki — yashirilgan.
-     `attributionControl: false` yozuvni o'chiradi, lekin LOGOTIP
-     alohida element va u baribir chiqadi — shu sabab CSS ham kerak.
-
-     ESLATMA: bu fayl `go:embed` orqali binarga KOMPILYATSIYA
-     qilinadi. O'zgarish ko'rinishi uchun serverni qayta ishga
-     tushirish SHART — brauzerni yangilash yetarli emas. */
-  .mapboxgl-ctrl-logo,
-  .mapboxgl-ctrl-attrib,
-  .mapboxgl-ctrl-attrib-inner,
-  .mapboxgl-ctrl-bottom-left,
-  .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-attrib,
-  a.mapboxgl-ctrl-logo { display: none !important; }
-
-  /* 2D / 3D almashtirgich */
-  #dim {
-    position:absolute; right:12px; bottom:12px; z-index:2;
-    background:var(--card); color:var(--ink);
-    border:1px solid var(--line); border-radius:10px; padding:9px 15px;
-    font-size:13px; font-weight:600; cursor:pointer;
-    box-shadow:var(--shadow); font-family:inherit;
-  }
-  #dim:hover { background:var(--tint); border-color:var(--accent); }
 </style>
 </head>
 <body>
@@ -108,18 +88,20 @@
     <ul id="results"></ul>
     <div class="hint">
       Xaritani bosing — <code>/v1/resolve</code> chaqiriladi.<br>
-      Sinang: <b>навоий</b>, <b>katta kocha</b>, <b>amir</b>
+      Yuqori o'ngda <b>Xarita / Sputnik</b> almashtirgichi.
     </div>
   </div>
 </div>
 
 <div id="resolve">Xaritani bosing…</div>
-<button id="dim">2D</button>
 
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.js"></script>
+<!-- UMUMIY xarita moduli — admin muharriri ham shu faylni yuklaydi. -->
+<script src="/assets/ondexmap.js"></script>
 <script>
 (async () => {
   const $ = (id) => document.getElementById(id);
+  const esc = OndexMap.esc;
   const resolveBox = $('resolve');
 
   // Token frontend'ga YOZILMAGAN — serverdan olinadi (/v1/config).
@@ -135,42 +117,29 @@
     return;
   }
 
-  mapboxgl.accessToken = token;
-  const map = new mapboxgl.Map({
+  const om = OndexMap.create({
     container: 'map',
-    // `streets-v12` — Google Maps'ga eng yaqin ko'rinish: ko'chalar,
-    // POI belgilar va 3D bino geometriyasi bor (`composite` manbasi).
-    style: 'mapbox://styles/mapbox/streets-v12',
-    center: [71.2394, 41.0004],   // Chust
+    token,
     zoom: 16,
-    // Qiya ko'rinish — binolar bo'rtib turishi uchun. 0 bo'lsa
-    // ekstruziya bor bo'lsa ham tekis ko'rinadi.
     pitch: 55,
     bearing: -17,
-    antialias: true,   // ekstruziya qirralari tekis chiqishi uchun
-    // Atributsiya o'chirilgan (loyiha egasining qarori).
-    //
-    // ESLATMA: Mapbox ToS standart tarifda atributsiyani talab
-    // qiladi, OSM atributsiyasi esa ODbL talabi. Bu sahifa lokal
-    // ishlab chiqish vositasi (prod'da ro'yxatdan o'tmaydi), lekin
-    // OMMAVIY saytga chiqishdan oldin bu qaror qayta ko'rilishi
-    // kerak — yoki Mapbox tarifi mos bo'lishi kerak.
-    attributionControl: false,
+    // `onReady` uslub HAR SAFAR yuklanganda chaqiriladi — sputnikka
+    // o'tilganda ham. Mapbox uslub almashtirilganda barcha
+    // qo'shimcha qatlamlarni o'chiradi, shuning uchun ularni shu
+    // yerda qayta qo'shamiz.
+    onReady: (map, om) => addMahallaLayers(map, om),
   });
-  // `visualizePitch` — kompas qiyalikni ham ko'rsatadi va sichqoncha
-  // o'ng tugmasi bilan aylantirish mumkinligini bildiradi.
-  map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right');
+  const map = om.map;
 
-  map.on('load', async () => {
-    add3DBuildings();
+  async function addMahallaLayers(map, om) {
+    if (!map.getSource('ondex-mahallas')) {
+      const data = await (await fetch('/v1/mahallas')).json();
+      map.addSource('ondex-mahallas', { type: 'geojson', data });
+    }
+    if (map.getLayer('mahalla-fill')) return;
 
-    // ── Bizning mahalla poligonlarimiz ────────────────────────────
-    const data = await (await fetch('/v1/mahallas')).json();
-    map.addSource('ondex-mahallas', { type: 'geojson', data });
-
-    // Mahalla qatlamlari binolardan PASTGA qo'yiladi — aks holda
-    // to'q sariq to'ldirish binolarni yopib qo'yardi.
-    const under = map.getLayer('ondex-3d-buildings') ? 'ondex-3d-buildings' : undefined;
+    // Binolardan PASTGA — aks holda to'ldirish ularni yopib qo'yadi.
+    const under = om.beforeLayer();
 
     map.addLayer({
       id: 'mahalla-fill', type: 'fill', source: 'ondex-mahallas',
@@ -190,61 +159,7 @@
       },
       paint: { 'text-color': '#7c2d12', 'text-halo-color': '#fff', 'text-halo-width': 2 }
     });
-  });
-
-  // ── 3D binolar ────────────────────────────────────────────────────
-  //
-  // Mapbox uslubidagi `composite` manbasining `building` qatlamida
-  // bino balandligi (`height`) bor, lekin u standart holatda TEKIS
-  // chiziladi. `fill-extrusion` uni bo'rttiradi.
-  //
-  // Qatlam YORLIQLARDAN PASTGA qo'yiladi: aks holda binolar ko'cha
-  // nomlarini yopib qo'yadi va xarita o'qilmay qoladi.
-  function add3DBuildings() {
-    const layers = map.getStyle().layers || [];
-    const firstLabel = layers.find(
-      (l) => l.type === 'symbol' && l.layout && l.layout['text-field']
-    );
-
-    // Uslub o'zgarsa `composite` manbasi bo'lmasligi mumkin —
-    // o'shanda xarita 2D bo'lib ishlayveradi, yiqilmaydi.
-    if (!map.getSource('composite')) return;
-
-    map.addLayer({
-      id: 'ondex-3d-buildings',
-      source: 'composite',
-      'source-layer': 'building',
-      filter: ['==', 'extrude', 'true'],
-      type: 'fill-extrusion',
-      minzoom: 14,
-      paint: {
-        'fill-extrusion-color': [
-          'interpolate', ['linear'], ['get', 'height'],
-          0, '#e6e8ec',      // past binolar — och
-          20, '#d3d7de',
-          60, '#bcc2cc'      // baland binolar — to'qroq (hajm sezilsin)
-        ],
-        // Zoom 14 dan 15.5 gacha binolar "o'sib chiqadi" — keskin
-        // paydo bo'lish o'rniga silliq o'tish.
-        'fill-extrusion-height': [
-          'interpolate', ['linear'], ['zoom'],
-          14, 0, 15.5, ['get', 'height']
-        ],
-        'fill-extrusion-base': [
-          'interpolate', ['linear'], ['zoom'],
-          14, 0, 15.5, ['get', 'min_height']
-        ],
-        'fill-extrusion-opacity': 0.92,
-      },
-    }, firstLabel ? firstLabel.id : undefined);
   }
-
-  // ── 2D / 3D almashtirgich ─────────────────────────────────────────
-  $('dim').onclick = () => {
-    const flat = map.getPitch() < 10;
-    map.easeTo({ pitch: flat ? 55 : 0, bearing: flat ? -17 : 0, duration: 700 });
-    $('dim').textContent = flat ? '2D' : '3D';
-  };
 
   // ── Qidiruv ─────────────────────────────────────────────────────
   let timer;
@@ -253,14 +168,14 @@
     const q = e.target.value.trim();
     if (q.length < 2) { $('results').innerHTML = ''; return; }
     // 250 ms debounce — har bosilgan harfda so'rov yubormaslik uchun
-    // (server tomonda rate limit bor, uni bekorga sarflamaymiz).
+    // (serverda rate limit bor, uni bekorga sarflamaymiz).
     timer = setTimeout(() => search(q), 250);
   });
 
   async function search(q) {
     const res = await fetch('/v1/search?q=' + encodeURIComponent(q));
     if (!res.ok) {
-      $('results').innerHTML = '<li class="err">' + (await res.json()).error + '</li>';
+      $('results').innerHTML = '<li class="err">' + esc((await res.json()).error) + '</li>';
       return;
     }
     const { results } = await res.json();
@@ -269,7 +184,7 @@
     $('results').innerHTML = results.map((r) => {
       const via = r.matched_via ? '<div class="via">topildi: ' + esc(r.matched_via) + '</div>' : '';
       return '<li data-id="' + esc(r.id) + '">' + esc(r.name) +
-             '<div class="type">' + r.type + ' · ' + r.score.toFixed(2) + '</div>' + via + '</li>';
+             '<div class="type">' + esc(r.type) + ' · ' + r.score.toFixed(2) + '</div>' + via + '</li>';
     }).join('');
   }
 
@@ -285,18 +200,10 @@
     }
     let html = '<b>' + esc(body.text) + '</b>';
     if (body.street_distance_m !== undefined) {
-      html += '<br><span class="type">ko’chagacha ' + body.street_distance_m + ' m</span>';
+      html += '<br><span class="type">ko’chagacha ' + esc(body.street_distance_m) + ' m</span>';
     }
     resolveBox.innerHTML = html;
   });
-
-  // Server matni HTML sifatida talqin qilinmasin — nomlar bazadan
-  // keladi va kelajakda foydalanuvchi hissasi ham shu yerga tushadi.
-  function esc(s) {
-    return String(s).replace(/[&<>"']/g, (c) => (
-      { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
-    ));
-  }
 })();
 </script>
 </body>

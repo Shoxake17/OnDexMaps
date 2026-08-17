@@ -1,0 +1,66 @@
+/* ═══════════════════════════════════════════════════════════════════
+   OnDexMap — UMUMIY xarita uslublari
+
+   Bu fayl IKKALA sahifada ham ishlatiladi:
+     /map        (ommaviy ko'rinish, internal/httpapi)
+     /           (admin muharriri, internal/adminapi)
+
+   Sahifaga XOS uslublar (yon panel, forma) o'z sahifasida qoladi.
+   Bu yerda faqat XARITAGA tegishli narsa turadi — aks holda ikkala
+   sahifa bir-biridan uzoqlashib ketadi va tuzatish faqat bittasiga
+   tushadi.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Mapbox brend elementlari — yashirilgan ────────────────────────
+   `attributionControl: false` yozuvni o'chiradi, lekin LOGOTIP
+   alohida element va u baribir chiqadi — shu sabab CSS ham kerak. */
+.mapboxgl-ctrl-logo,
+.mapboxgl-ctrl-attrib,
+.mapboxgl-ctrl-attrib-inner,
+.mapboxgl-ctrl-bottom-left,
+.mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-attrib,
+a.mapboxgl-ctrl-logo { display: none !important; }
+
+/* ── Asos xarita almashtirgichi (Xarita / Sputnik) ─────────────────
+   Mapbox'ning o'z boshqaruv konteyneri ichida turadi, shuning uchun
+   joylashuvi navigatsiya tugmalari bilan avtomatik moslashadi. */
+.om-basemap {
+  display: flex;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(15, 20, 30, .28);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.om-basemap button {
+  border: none;
+  background: #fff;
+  color: #111418;
+  padding: 8px 13px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1;
+}
+.om-basemap button + button { border-left: 1px solid #e3e6ea; }
+.om-basemap button:hover { background: #f4f5f7; }
+.om-basemap button.on { background: #111418; color: #fff; }
+
+/* ── 2D / 3D tugmasi ──────────────────────────────────────────────── */
+.om-dim {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 3;
+  background: #fff;
+  color: #111418;
+  border: 1px solid #e3e6ea;
+  border-radius: 10px;
+  padding: 9px 15px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 24px rgba(15, 20, 30, .16);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.om-dim:hover { background: #f4f5f7; border-color: #ea580c; }

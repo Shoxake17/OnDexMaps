@@ -3,6 +3,8 @@ package httpapi
 import (
 	_ "embed"
 	"net/http"
+
+	"ondexmap/internal/mapui"
 )
 
 //go:embed assets/map.html
@@ -22,6 +24,10 @@ func (s *Server) registerMapRoute(mux *http.ServeMux) {
 	if !s.cfg.DevMode {
 		return
 	}
+	// Umumiy xarita resurslari (`/assets/ondexmap.js|css`) — admin
+	// vositasi ham AYNAN shu paketdan beradi.
+	mapui.Register(mux)
+
 	mux.HandleFunc("GET /map", func(w http.ResponseWriter, r *http.Request) {
 		// ── CSP shu marshrut uchun ALMASHTIRILADI ────────────────────
 		//
