@@ -34,11 +34,26 @@
 
   /* Mapbox logotipi va atributsiya bloki — yashirilgan.
      `attributionControl: false` yozuvni o'chiradi, lekin LOGOTIP
-     alohida element va u baribir chiqadi — shu sabab CSS ham kerak. */
+     alohida element va u baribir chiqadi — shu sabab CSS ham kerak.
+
+     ESLATMA: bu fayl `go:embed` orqali binarga KOMPILYATSIYA
+     qilinadi. O'zgarish ko'rinishi uchun serverni qayta ishga
+     tushirish SHART — brauzerni yangilash yetarli emas. */
   .mapboxgl-ctrl-logo,
   .mapboxgl-ctrl-attrib,
+  .mapboxgl-ctrl-attrib-inner,
   .mapboxgl-ctrl-bottom-left,
+  .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-attrib,
   a.mapboxgl-ctrl-logo { display: none !important; }
+
+  /* 2D / 3D almashtirgich */
+  #dim {
+    position:absolute; right:12px; bottom:12px; z-index:2;
+    background:#fff; border:none; border-radius:10px; padding:9px 14px;
+    font-size:13px; font-weight:600; cursor:pointer;
+    box-shadow:0 4px 16px rgba(0,0,0,.18); font-family:inherit;
+  }
+  #dim:hover { background:#f4f4f5; }
 </style>
 </head>
 <body>
@@ -57,6 +72,7 @@
 </div>
 
 <div id="resolve">Xaritani bosing…</div>
+<button id="dim">2D</button>
 
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.js"></script>
 <script>
@@ -80,9 +96,16 @@
   mapboxgl.accessToken = token;
   const map = new mapboxgl.Map({
     container: 'map',
-    style: 'mapbox://styles/mapbox/light-v11',
+    // `streets-v12` — Google Maps'ga eng yaqin ko'rinish: ko'chalar,
+    // POI belgilar va 3D bino geometriyasi bor (`composite` manbasi).
+    style: 'mapbox://styles/mapbox/streets-v12',
     center: [71.2394, 41.0004],   // Chust
-    zoom: 14,
+    zoom: 16,
+    // Qiya ko'rinish — binolar bo'rtib turishi uchun. 0 bo'lsa
+    // ekstruziya bor bo'lsa ham tekis ko'rinadi.
+    pitch: 55,
+    bearing: -17,
+    antialias: true,   // ekstruziya qirralari tekis chiqishi uchun
     // Atributsiya o'chirilgan (loyiha egasining qarori).
     //
     // ESLATMA: Mapbox ToS standart tarifda atributsiyani talab
@@ -92,21 +115,30 @@
     // kerak — yoki Mapbox tarifi mos bo'lishi kerak.
     attributionControl: false,
   });
-  map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+  // `visualizePitch` — kompas qiyalikni ham ko'rsatadi va sichqoncha
+  // o'ng tugmasi bilan aylantirish mumkinligini bildiradi.
+  map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right');
 
   map.on('load', async () => {
+    add3DBuildings();
+
     // ── Bizning mahalla poligonlarimiz ────────────────────────────
     const data = await (await fetch('/v1/mahallas')).json();
     map.addSource('ondex-mahallas', { type: 'geojson', data });
 
+    // Mahalla qatlamlari binolardan PASTGA qo'yiladi — aks holda
+    // to'q sariq to'ldirish binolarni yopib qo'yardi.
+    const under = map.getLayer('ondex-3d-buildings') ? 'ondex-3d-buildings' : undefined;
+
     map.addLayer({
       id: 'mahalla-fill', type: 'fill', source: 'ondex-mahallas',
-      paint: { 'fill-color': '#ea580c', 'fill-opacity': 0.12 }
-    });
+      paint: { 'fill-color': '#ea580c', 'fill-opacity': 0.10 }
+    }, under);
     map.addLayer({
       id: 'mahalla-line', type: 'line', source: 'ondex-mahallas',
-      paint: { 'line-color': '#ea580c', 'line-width': 2 }
-    });
+      paint: { 'line-color': '#ea580c', 'line-width': 2.5 }
+    }, under);
+    // Yorliq eng tepada — binolar orasida ham o'qilsin.
     map.addLayer({
       id: 'mahalla-label', type: 'symbol', source: 'ondex-mahallas',
       layout: {
@@ -114,9 +146,63 @@
         'text-size': 13,
         'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular']
       },
-      paint: { 'text-color': '#7c2d12', 'text-halo-color': '#fff', 'text-halo-width': 1.5 }
+      paint: { 'text-color': '#7c2d12', 'text-halo-color': '#fff', 'text-halo-width': 2 }
     });
   });
+
+  // ── 3D binolar ────────────────────────────────────────────────────
+  //
+  // Mapbox uslubidagi `composite` manbasining `building` qatlamida
+  // bino balandligi (`height`) bor, lekin u standart holatda TEKIS
+  // chiziladi. `fill-extrusion` uni bo'rttiradi.
+  //
+  // Qatlam YORLIQLARDAN PASTGA qo'yiladi: aks holda binolar ko'cha
+  // nomlarini yopib qo'yadi va xarita o'qilmay qoladi.
+  function add3DBuildings() {
+    const layers = map.getStyle().layers || [];
+    const firstLabel = layers.find(
+      (l) => l.type === 'symbol' && l.layout && l.layout['text-field']
+    );
+
+    // Uslub o'zgarsa `composite` manbasi bo'lmasligi mumkin —
+    // o'shanda xarita 2D bo'lib ishlayveradi, yiqilmaydi.
+    if (!map.getSource('composite')) return;
+
+    map.addLayer({
+      id: 'ondex-3d-buildings',
+      source: 'composite',
+      'source-layer': 'building',
+      filter: ['==', 'extrude', 'true'],
+      type: 'fill-extrusion',
+      minzoom: 14,
+      paint: {
+        'fill-extrusion-color': [
+          'interpolate', ['linear'], ['get', 'height'],
+          0, '#e6e8ec',      // past binolar — och
+          20, '#d3d7de',
+          60, '#bcc2cc'      // baland binolar — to'qroq (hajm sezilsin)
+        ],
+        // Zoom 14 dan 15.5 gacha binolar "o'sib chiqadi" — keskin
+        // paydo bo'lish o'rniga silliq o'tish.
+        'fill-extrusion-height': [
+          'interpolate', ['linear'], ['zoom'],
+          14, 0, 15.5, ['get', 'height']
+        ],
+        'fill-extrusion-base': [
+          'interpolate', ['linear'], ['zoom'],
+          14, 0, 15.5, ['get', 'min_height']
+        ],
+        'fill-extrusion-opacity': 0.92,
+      },
+    }, firstLabel ? firstLabel.id : undefined);
+  }
+
+  // ── 2D / 3D almashtirgich ─────────────────────────────────────────
+  $('dim').onclick = () => {
+    const flat = map.getPitch() < 10;
+    map.easeTo({ pitch: flat ? 55 : 0, bearing: flat ? -17 : 0, duration: 700 });
+    $('dim').textContent = flat ? '2D' : '3D';
+  };
 
   // ── Qidiruv ─────────────────────────────────────────────────────
   let timer;

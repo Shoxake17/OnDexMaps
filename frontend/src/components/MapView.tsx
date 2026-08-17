@@ -29,7 +29,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/light-v11',
+      style: 'mapbox://styles/mapbox/streets-v12',
       center: center,
       zoom: zoom,
     });

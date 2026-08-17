@@ -75,8 +75,15 @@
      element va u baribir chiqadi — shu sabab CSS ham kerak. */
   .mapboxgl-ctrl-logo,
   .mapboxgl-ctrl-attrib,
+  .mapboxgl-ctrl-attrib-inner,
   .mapboxgl-ctrl-bottom-left,
+  .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-attrib,
   a.mapboxgl-ctrl-logo{display:none !important}
+
+  #dim{position:absolute;right:12px;bottom:12px;z-index:3;background:var(--panel);
+    color:var(--text);border:1px solid var(--line);border-radius:9px;padding:8px 13px;
+    font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+  #dim:hover{border-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -167,6 +174,7 @@
 </div>
 
 <div id="map"></div>
+<button id="dim">3D</button>
 
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.js"></script>
 <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.js"></script>
@@ -220,18 +228,42 @@ async function boot() {
 
   map = new mapboxgl.Map({
     container: 'map', style: 'mapbox://styles/mapbox/dark-v11',
-    center: CHUST, zoom: 14,
-    // Atributsiya o'chirilgan (loyiha egasining qarori).
-    // Bu vosita faqat 127.0.0.1 da ishlaydi va tashqariga chiqmaydi.
+    center: CHUST, zoom: 16,
+    // Chizish uchun pitch=0 (ustdan ko'rinish) ANIQROQ: qiya
+    // ko'rinishda sichqoncha nuqtasi yer sathiga boshqa joyga
+    // tushadi va chegara siljib ketadi. 3D ni "3D" tugmasi yoqadi —
+    // bino konturlari mo'ljal sifatida kerak bo'lganda.
+    pitch: 0,
+    antialias: true,
     attributionControl: false,
   });
-  map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+  map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right');
 
   draw = new MapboxDraw({ displayControlsDefault: false, controls: {} });
   map.addControl(draw);
 
   map.on('draw.create', (e) => onDrawn(e.features[0]));
-  map.on('load', () => { addLayers(); refresh(); });
+  map.on('load', () => { add3D(); addLayers(); refresh(); });
+}
+
+// 3D binolar — chizishda mo'ljal sifatida. Yorliqlardan pastga
+// qo'yiladi, aks holda ko'cha nomlarini yopib qo'yadi.
+function add3D() {
+  if (!map.getSource('composite')) return;
+  const layers = map.getStyle().layers || [];
+  const firstLabel = layers.find(
+    (l) => l.type === 'symbol' && l.layout && l.layout['text-field']);
+
+  map.addLayer({
+    id: 'b3d', source: 'composite', 'source-layer': 'building',
+    filter: ['==', 'extrude', 'true'], type: 'fill-extrusion', minzoom: 14,
+    paint: {
+      'fill-extrusion-color': '#2a2f3a',
+      'fill-extrusion-height': ['interpolate',['linear'],['zoom'],14,0,15.5,['get','height']],
+      'fill-extrusion-base':   ['interpolate',['linear'],['zoom'],14,0,15.5,['get','min_height']],
+      'fill-extrusion-opacity': 0.9,
+    },
+  }, firstLabel ? firstLabel.id : undefined);
 }
 
 function addLayers() {
@@ -413,6 +445,15 @@ for (const tab of document.querySelectorAll('.tab')) {
     refresh();
   };
 }
+
+// ── 2D / 3D almashtirgich ──────────────────────────────────────────
+// Chizish PITCH=0 da aniqroq, shuning uchun standart holat 2D.
+$('dim').onclick = () => {
+  if (!map) return;
+  const flat = map.getPitch() < 10;
+  map.easeTo({ pitch: flat ? 55 : 0, bearing: flat ? -17 : 0, duration: 600 });
+  $('dim').textContent = flat ? '2D' : '3D';
+};
 
 // Bazadan kelgan matn HTML sifatida talqin qilinmasin.
 function esc(s) {
