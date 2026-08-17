@@ -104,6 +104,32 @@ Google → Yandex → 2GIS      ← BUGUNGI zanjir, o'zgarishsiz
 
 Bu — orqaga qaytish tugmasi. Usiz izolyatsiya xayoliy bo'lib qoladi.
 
+### 4.2b Admin muharriri ChustApp panelida
+
+Ma'lumot kiritish uchun alohida oyna ochish shart emas — OnDexMap
+muharriri ChustApp admin panelining **"OnDexMap"** bo'limida ochiladi.
+
+```
+ChustApp admin paneli (Windows desktop)
+   └─ "OnDexMap" bo'limi → WebView → http://127.0.0.1:8091
+```
+
+**INVARIANT:** ChustApp tomonida bu — faqat OYNA. Uch fayl qo'shildi
+(`pages/ondexmap_page.dart`, `widgets/ondexmap_surface*.dart`) va
+`shell.dart` ga uch qator. ChustApp OnDexMap bazasiga ham, uning
+API'siga ham murojaat qilmaydi; bo'lim yangi so'rov yubormaydi va
+`adminLive` soketiga tegmaydi.
+
+**Nega WebView, nativ ekran emas:** geometriya chizish mantiqi
+(poligon, chiziq, snapping) Flutter'da qaytadan yozilishi kerak
+bo'lardi, va OnDexMap API'si o'zgarganda ikkala loyiha birga
+o'zgartirilardi. WebView bilan OnDexMap mustaqil rivojlanaveradi.
+
+**Admin kaliti Flutter binariga YOZILMAYDI.** Uni foydalanuvchi
+OnDexMap'ning o'z kirish ekranida bir marta kiritadi (sessiya
+davomida saqlanadi). Kalitni binarga joylash — uni har bir
+o'rnatilgan nusxaga tarqatish degani; EXE esa ochib o'qiladi.
+
 ### 4.3 Kalitlar
 
 Ikki xil kalit, ikki xil huquq — **aralashtirilmaydi**:
@@ -174,6 +200,7 @@ qoldiriladi; qaror qilmaslik ham qaror va bu holda to'g'ri qaror.
 | 6 | Ma'lumot kiritish (QGIS + hokimlik ro'yxati) | ⏳ |
 | 7 | Sifatni Google bilan solishtirish (50 ta manzil) | ⏳ |
 | 8 | ChustApp'ga ulash (`internal/geodata/client.go`) | ⏳ |
+| — | Admin muharriri ChustApp panelida (§4.2b) | ✅ |
 | — | Frontend viewer (Mapbox + o'z qatlamimiz) | keyin |
 | — | Crowdsourcing + moderatsiya | keyin |
 | — | Marshrut (OSRM), panorama | keyin |
