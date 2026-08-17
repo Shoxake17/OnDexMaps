@@ -6,31 +6,72 @@
 <title>OnDexMap — dev</title>
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.css" rel="stylesheet">
 <style>
-  :root { color-scheme: light dark; }
+  /* ⚠️ `color-scheme: light` ATAYLAB qat'iy.
+     Ilgari bu yerda `light dark` turgan edi va oqibati og'ir bo'lgan:
+     tizim QORONG'I rejimda bo'lsa brauzer standart matn rangini OQ
+     qiladi, panel foni esa aniq `#fff` — natijada oq ustiga oq va
+     interfeys butunlay ko'rinmay qolgan.
+
+     Shu sabab pastda HAR BIR matnning rangi ANIQ berilgan. Meros
+     qilib olingan rangga tayanmaymiz. */
+  :root {
+    color-scheme: light;
+    --ink:#111418; --ink-2:#5b6472; --ink-3:#8892a0;
+    --card:#ffffff; --line:#e3e6ea; --tint:#f4f5f7;
+    --accent:#ea580c; --accent-ink:#7c2d12; --err:#b91c1c;
+    --shadow:0 6px 24px rgba(15,20,30,.16);
+  }
   * { box-sizing: border-box; }
-  html, body { margin:0; height:100%; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  html, body {
+    margin:0; height:100%; background:var(--tint); color:var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
   #map { position:absolute; inset:0; }
+
   .panel {
-    position:absolute; top:12px; left:12px; z-index:2; width:320px; max-width:calc(100vw - 24px);
-    background:#fff; border-radius:12px; box-shadow:0 6px 24px rgba(0,0,0,.18); overflow:hidden;
+    position:absolute; top:12px; left:12px; z-index:2; width:330px;
+    max-width:calc(100vw - 24px);
+    background:var(--card); color:var(--ink);
+    border:1px solid var(--line); border-radius:14px;
+    box-shadow:var(--shadow); overflow:hidden;
   }
-  .panel h1 { margin:0; padding:12px 14px; font-size:14px; font-weight:600; background:#111; color:#fff; }
-  .panel .body { padding:12px 14px; }
+  .panel h1 {
+    margin:0; padding:12px 15px; font-size:13px; font-weight:600;
+    letter-spacing:.02em; background:var(--ink); color:#fff;
+  }
+  .panel .body { padding:13px 15px; color:var(--ink); }
+
   input[type=search] {
-    width:100%; padding:9px 11px; font-size:14px; border:1px solid #ccc; border-radius:8px; outline:none;
+    width:100%; padding:10px 12px; font-size:14px; font-family:inherit;
+    background:var(--card); color:var(--ink);
+    border:1px solid var(--line); border-radius:9px; outline:none;
   }
-  input[type=search]:focus { border-color:#111; }
-  ul { list-style:none; margin:10px 0 0; padding:0; max-height:40vh; overflow:auto; }
-  li { padding:8px 10px; border-radius:8px; cursor:pointer; font-size:13px; }
-  li:hover { background:#f2f2f2; }
-  .type { font-size:11px; color:#666; }
-  .via { font-size:11px; color:#b45309; }
-  .hint { margin-top:10px; font-size:12px; color:#666; line-height:1.5; }
+  input[type=search]::placeholder { color:var(--ink-3); }
+  input[type=search]:focus { border-color:var(--accent); }
+
+  ul { list-style:none; margin:10px 0 0; padding:0; max-height:42vh; overflow:auto; }
+  li {
+    padding:9px 11px; border-radius:9px; cursor:pointer; font-size:13px;
+    color:var(--ink); border:1px solid transparent;
+  }
+  li:hover { background:var(--tint); border-color:var(--line); }
+  .type { font-size:11px; color:var(--ink-2); margin-top:2px; }
+  .via  { font-size:11px; color:var(--accent-ink); margin-top:2px; }
+  .hint { margin-top:11px; font-size:12px; color:var(--ink-2); line-height:1.55; }
+  .hint b { color:var(--ink); }
+  code {
+    background:var(--tint); color:var(--ink); border:1px solid var(--line);
+    padding:1px 5px; border-radius:5px; font-size:11px;
+  }
+
   #resolve {
-    position:absolute; bottom:12px; left:12px; z-index:2; background:#fff; padding:10px 14px;
-    border-radius:12px; box-shadow:0 6px 24px rgba(0,0,0,.18); font-size:13px; max-width:340px;
+    position:absolute; bottom:12px; left:12px; z-index:2;
+    background:var(--card); color:var(--ink);
+    border:1px solid var(--line); padding:11px 15px;
+    border-radius:14px; box-shadow:var(--shadow);
+    font-size:13px; max-width:340px; line-height:1.5;
   }
-  .err { color:#b91c1c; }
+  .err { color:var(--err); }
 
   /* Mapbox logotipi va atributsiya bloki — yashirilgan.
      `attributionControl: false` yozuvni o'chiradi, lekin LOGOTIP
@@ -49,11 +90,12 @@
   /* 2D / 3D almashtirgich */
   #dim {
     position:absolute; right:12px; bottom:12px; z-index:2;
-    background:#fff; border:none; border-radius:10px; padding:9px 14px;
+    background:var(--card); color:var(--ink);
+    border:1px solid var(--line); border-radius:10px; padding:9px 15px;
     font-size:13px; font-weight:600; cursor:pointer;
-    box-shadow:0 4px 16px rgba(0,0,0,.18); font-family:inherit;
+    box-shadow:var(--shadow); font-family:inherit;
   }
-  #dim:hover { background:#f4f4f5; }
+  #dim:hover { background:var(--tint); border-color:var(--accent); }
 </style>
 </head>
 <body>

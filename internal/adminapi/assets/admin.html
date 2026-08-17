@@ -227,7 +227,10 @@ async function boot() {
   mapboxgl.accessToken = cfg.mapbox_token;
 
   map = new mapboxgl.Map({
-    container: 'map', style: 'mapbox://styles/mapbox/dark-v11',
+    container: 'map',
+    // Ommaviy xarita (`/map`) bilan AYNAN bir xil uslub — muharrir
+    // nima chizsa, foydalanuvchi ko'radigan ko'rinishda ko'radi.
+    style: 'mapbox://styles/mapbox/streets-v12',
     center: CHUST, zoom: 16,
     // Chizish uchun pitch=0 (ustdan ko'rinish) ANIQROQ: qiya
     // ko'rinishda sichqoncha nuqtasi yer sathiga boshqa joyga
@@ -258,26 +261,35 @@ function add3D() {
     id: 'b3d', source: 'composite', 'source-layer': 'building',
     filter: ['==', 'extrude', 'true'], type: 'fill-extrusion', minzoom: 14,
     paint: {
-      'fill-extrusion-color': '#2a2f3a',
+      // Ommaviy xarita bilan bir xil: balandlik bo'yicha ranglash.
+      'fill-extrusion-color': [
+        'interpolate', ['linear'], ['get', 'height'],
+        0, '#e6e8ec', 20, '#d3d7de', 60, '#bcc2cc'
+      ],
       'fill-extrusion-height': ['interpolate',['linear'],['zoom'],14,0,15.5,['get','height']],
       'fill-extrusion-base':   ['interpolate',['linear'],['zoom'],14,0,15.5,['get','min_height']],
-      'fill-extrusion-opacity': 0.9,
+      'fill-extrusion-opacity': 0.92,
     },
   }, firstLabel ? firstLabel.id : undefined);
 }
 
 function addLayers() {
   map.addSource('saved', { type: 'geojson', data: emptyFC() });
+  // Chizilgan obyektlar binolardan PASTGA — aks holda to'q sariq
+  // to'ldirish binolarni yopib qo'yadi.
+  const under = map.getLayer('b3d') ? 'b3d' : undefined;
+
   map.addLayer({ id:'saved-fill', type:'fill', source:'saved',
     filter:['==',['geometry-type'],'Polygon'],
-    paint:{ 'fill-color':'#ea580c', 'fill-opacity':0.14 } });
+    paint:{ 'fill-color':'#ea580c', 'fill-opacity':0.16 } }, under);
   map.addLayer({ id:'saved-line', type:'line', source:'saved',
-    paint:{ 'line-color':'#ea580c',
-      'line-width':['case',['==',['get','id'],['literal','']],3,2.5] } });
+    paint:{ 'line-color':'#ea580c', 'line-width':2.5 } }, under);
+  // Yorliq eng tepada. Halo OQ — xarita endi och rangda
+  // (ilgari to'q edi va yorliq o'qilmay qolardi).
   map.addLayer({ id:'saved-label', type:'symbol', source:'saved',
     layout:{ 'text-field':['get','name'], 'text-size':12,
       'symbol-placement':['case',['==',['geometry-type'],'LineString'],'line','point'] },
-    paint:{ 'text-color':'#fdba74','text-halo-color':'#0f1115','text-halo-width':1.5 } });
+    paint:{ 'text-color':'#7c2d12','text-halo-color':'#ffffff','text-halo-width':2 } });
 
   map.on('click', 'saved-fill', (e) => select(e.features[0].properties.id));
   map.on('click', 'saved-line', (e) => select(e.features[0].properties.id));
