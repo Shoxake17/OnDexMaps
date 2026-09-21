@@ -51,6 +51,11 @@ var allowedSources = []string{"official", "survey", "osm", "community"}
 
 var allowedStreetKinds = []string{"kocha", "tor_kocha", "xiyobon", "shox_kocha", "maydon"}
 
+// Aholi punkti turlari — `mahallas` jadvalidagi CHECK bilan bir xil
+// (migrations/0004_settlement_kind.sql). Ro'yxat o'zgarsa ikkala joy
+// ham yangilanishi kerak.
+var allowedMahallaKinds = []string{"mahalla", "qishloq", "daha"}
+
 type featureCollection struct {
 	Type     string    `json:"type"`
 	Features []feature `json:"features"`
@@ -195,8 +200,18 @@ func validate(f feature, kind string) error {
 		return fmt.Errorf("`source` = %q, ruxsat etilganlar: %s",
 			f.Props.Source, strings.Join(allowedSources, ", "))
 	}
-	if kind == "street" && f.Props.Kind != "" && !slices.Contains(allowedStreetKinds, f.Props.Kind) {
-		return fmt.Errorf("`kind` = %q noto'g'ri", f.Props.Kind)
+	// `kind` bazada CHECK bilan ham himoyalangan, lekin bu yerda
+	// tekshirilsa xato ANIQ qaysi obyektda ekani ko'rinadi — baza
+	// xatosi esa faqat "constraint buzildi" deb aytadi.
+	if f.Props.Kind != "" {
+		allowed := allowedMahallaKinds
+		if kind == "street" {
+			allowed = allowedStreetKinds
+		}
+		if !slices.Contains(allowed, f.Props.Kind) {
+			return fmt.Errorf("`kind` = %q noto'g'ri, ruxsat etilganlar: %s",
+				f.Props.Kind, strings.Join(allowed, ", "))
+		}
 	}
 	if len(f.Geometry) == 0 || string(f.Geometry) == "null" {
 		return errors.New("geometriya yo'q")
@@ -253,20 +268,24 @@ func importAll(ctx context.Context, pool *storage.Pool, features []feature, kind
 
 const serviceBBox = `ST_MakeEnvelope(70.5, 40.5, 72.0, 41.6, 4326)`
 
+// `kind` — aholi punkti turi (mahalla | qishloq | daha).
+// Bo'sh qoldirilsa `mahalla` deb hisoblanadi: eski GeoJSON fayllar
+// (ularda bu maydon yo'q edi) avvalgidek ishlashda davom etadi.
 const mahallaUpsert = `
 WITH g AS (SELECT ST_SetSRID(ST_GeomFromGeoJSON($3), 4326) AS geom)
-INSERT INTO mahallas (ext_key, name, center, geom, source)
+INSERT INTO mahallas (ext_key, name, center, geom, source, kind)
 SELECT $1, $2,
        ST_Centroid(g.geom)::geography,
        CASE WHEN ST_GeometryType(g.geom) IN ('ST_Polygon','ST_MultiPolygon')
             THEN ST_Multi(g.geom)::geography END,
-       $4
+       $4,
+       COALESCE(NULLIF($5, ''), 'mahalla')
 FROM g
 WHERE ST_Within(g.geom, ` + serviceBBox + `)
-  AND ($5 = $5)  -- kind mahallada ishlatilmaydi, parametr soni bir xil bo'lsin
 ON CONFLICT (ext_key) DO UPDATE
 SET name = EXCLUDED.name, center = EXCLUDED.center,
-    geom = EXCLUDED.geom, source = EXCLUDED.source`
+    geom = EXCLUDED.geom, source = EXCLUDED.source,
+    kind = EXCLUDED.kind`
 
 const streetUpsert = `
 WITH g AS (SELECT ST_SetSRID(ST_GeomFromGeoJSON($3), 4326) AS geom)

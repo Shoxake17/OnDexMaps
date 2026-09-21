@@ -13,6 +13,7 @@ func setEnv(t *testing.T, kv map[string]string) {
 		"ONDEXMAP_READ_KEY", "ONDEXMAP_READ_KEY_PREV",
 		"ONDEXMAP_ADMIN_KEY", "ONDEXMAP_ADMIN_KEY_PREV",
 		"ALLOWED_ORIGINS", "TRUSTED_PROXIES", "MAPBOX_TOKEN",
+		"SUBMIT_DATABASE_URL", "SUBMIT_HINT_SECRET",
 	} {
 		t.Setenv(k, "")
 	}
@@ -178,5 +179,89 @@ func TestDevModeAllowsMissingSecrets(t *testing.T) {
 	}
 	if cfg.HTTPAddr != ":8090" {
 		t.Errorf("standart port kutilgan :8090, olingan %q", cfg.HTTPAddr)
+	}
+	// Yuborish ulanishi berilmagan — ob'ekt qabul qilish O'CHIQ (fail-closed).
+	if cfg.SubmitDatabaseURL != "" {
+		t.Error("SUBMIT_DATABASE_URL o'zi to'ldirilib qolgan")
+	}
+}
+
+// ── Foydalanuvchi ob'ektlari: yozish yo'li MUSTAQIL rol bo'lishi shart ─────
+
+func prodEnv(extra map[string]string) map[string]string {
+	m := map[string]string{
+		"APP_ENV":              "production",
+		"DATABASE_URL":         "postgres://app@db:5433/ondexmap?sslmode=require",
+		"DATABASE_URL_MIGRATE": "postgres://owner@db:5433/ondexmap?sslmode=require",
+		"ONDEXMAP_READ_KEY":    okReadKey,
+		"ONDEXMAP_ADMIN_KEY":   okAdminKey,
+		"ALLOWED_ORIGINS":      "https://map-ondex.shoxpro.uz",
+	}
+	for k, v := range extra {
+		m[k] = v
+	}
+	return m
+}
+
+func TestSubmitURLMustNotBeOwnerOrReadRole(t *testing.T) {
+	for name, kv := range map[string]map[string]string{
+		"egasi bilan bir xil": {"SUBMIT_DATABASE_URL": "postgres://owner@db:5433/ondexmap?sslmode=require"},
+		"o'qish roli bilan":   {"SUBMIT_DATABASE_URL": "postgres://app@db:5433/ondexmap?sslmode=require"},
+	} {
+		kv["SUBMIT_HINT_SECRET"] = strings.Repeat("s", 40)
+		setEnv(t, prodEnv(kv))
+		_, err := Load("yo'q-fayl.env")
+		if err == nil {
+			t.Errorf("%s: qabul qilindi — ommaviy yozish yo'li kerakli darajadan ortiq huquq oladi", name)
+		} else if !strings.Contains(err.Error(), "BIR XIL") {
+			t.Errorf("%s: xato sababi tushunarsiz: %v", name, err)
+		}
+	}
+}
+
+// Dev'da ham tekshiriladi: noto'g'ri sozlash hech qaerda jimgina o'tib ketmasin.
+func TestSubmitURLSameAsOwnerRejectedEvenInDev(t *testing.T) {
+	const owner = "postgres://owner@127.0.0.1:5433/ondexmap"
+	setEnv(t, map[string]string{
+		"APP_ENV":              "development",
+		"DATABASE_URL_MIGRATE": owner,
+		"SUBMIT_DATABASE_URL":  owner,
+	})
+	if _, err := Load("yo'q-fayl.env"); err == nil {
+		t.Fatal("dev'da ham SUBMIT_DATABASE_URL == egasi rad etilishi kerak edi")
+	}
+}
+
+func TestProductionSubmitRequiresTLSAndStrongSecret(t *testing.T) {
+	good := "postgres://submit@db:5433/ondexmap?sslmode=require"
+	secret := strings.Repeat("s", 40)
+
+	setEnv(t, prodEnv(map[string]string{"SUBMIT_DATABASE_URL": good, "SUBMIT_HINT_SECRET": secret}))
+	if _, err := Load("yo'q-fayl.env"); err != nil {
+		t.Fatalf("to'g'ri sozlama rad etildi: %v", err)
+	}
+
+	setEnv(t, prodEnv(map[string]string{
+		"SUBMIT_DATABASE_URL": "postgres://submit@db:5433/ondexmap?sslmode=disable", "SUBMIT_HINT_SECRET": secret}))
+	if _, err := Load("yo'q-fayl.env"); err == nil {
+		t.Error("sslmode=disable prod'da qabul qilindi")
+	}
+
+	setEnv(t, prodEnv(map[string]string{"SUBMIT_DATABASE_URL": good}))
+	if _, err := Load("yo'q-fayl.env"); err == nil {
+		t.Error("SUBMIT_HINT_SECRET'siz prod'da qabul qilindi (IP xeshini tiklash oson bo'lardi)")
+	}
+
+	setEnv(t, prodEnv(map[string]string{"SUBMIT_DATABASE_URL": good, "SUBMIT_HINT_SECRET": "qisqa"}))
+	if _, err := Load("yo'q-fayl.env"); err == nil {
+		t.Error("qisqa SUBMIT_HINT_SECRET qabul qilindi")
+	}
+}
+
+// Yuborish ulanishi berilmasa — hech qanday qo'shimcha talab yo'q (qabul qilish o'chiq).
+func TestProductionWithoutSubmitNeedsNoSubmitSettings(t *testing.T) {
+	setEnv(t, prodEnv(nil))
+	if _, err := Load("yo'q-fayl.env"); err != nil {
+		t.Fatalf("yuborishsiz prod sozlamasi rad etildi: %v", err)
 	}
 }

@@ -126,3 +126,35 @@ func TestForwardedHeaderIgnoredWhenNoTrustedProxy(t *testing.T) {
 		t.Errorf("kutilgan RemoteAddr IP'si, olingan %q", s.clientIP(r1))
 	}
 }
+
+// Xarita markazi (`lat`/`lng`) ixtiyoriy, lekin berilsa TO'LIQ va O'ZBEKISTON
+// ichida bo'lishi shart. Yaroqsiz qiymat jimgina tashlanmaydi: mijoz xatosi
+// darrov ko'rinishi uchun 400.
+func TestSearchBiasValidation(t *testing.T) {
+	h := testServer(t, baseCfg())
+
+	bad := []string{
+		"&lat=41.0",           // faqat kenglik
+		"&lng=71.6",           // faqat uzunlik
+		"&lat=abc&lng=71.6",   // son emas
+		"&lat=NaN&lng=71.6",   // NaN
+		"&lat=41.0&lng=Inf",   // cheksiz
+		"&lat=0&lng=0",        // O'zbekiston tashqarisida
+		"&lat=41.0&lng=100.0", // uzunlik chegaradan tashqarida
+		"&lat=60.0&lng=71.6",  // kenglik chegaradan tashqarida
+	}
+	for _, q := range bad {
+		if w := do(h, "GET", "/v1/search?q=toshkent"+q, ""); w.Code != http.StatusBadRequest {
+			t.Errorf("%q uchun kutilgan 400, olingan %d", q, w.Code)
+		}
+	}
+
+	// Yaroqli: validatsiyadan o'tadi (baza yo'q — 503, 400 EMAS).
+	// Toshkent (69.3, 41.2) — qidiruv butun mamlakat bo'yicha, `resolve` dagi
+	// tor xizmat hududi bilan chegaralanmaydi.
+	for _, q := range []string{"", "&lat=41.2995&lng=69.2401", "&lat=41.0&lng=71.6"} {
+		if w := do(h, "GET", "/v1/search?q=toshkent"+q, ""); w.Code == http.StatusBadRequest {
+			t.Errorf("%q yaroqli, lekin 400 olindi", q)
+		}
+	}
+}

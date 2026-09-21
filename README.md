@@ -104,31 +104,66 @@ Google → Yandex → 2GIS      ← BUGUNGI zanjir, o'zgarishsiz
 
 Bu — orqaga qaytish tugmasi. Usiz izolyatsiya xayoliy bo'lib qoladi.
 
-### 4.2b Admin muharriri ChustApp panelida
+### 4.2b Admin muharriri va moderatsiya ChustApp panelida (NATIV Flutter)
 
 Ma'lumot kiritish uchun alohida oyna ochish shart emas — OnDexMap
-muharriri ChustApp admin panelining **"OnDexMap"** bo'limida ochiladi.
+muharriri va foydalanuvchi ob'ektlari moderatsiyasi ChustApp admin
+panelining **"OnDexMap"** bo'limida, ikki tab bilan: **Muharrir | Takliflar (N)**.
 
 ```
-ChustApp admin paneli (Windows desktop)
-   └─ "OnDexMap" bo'limi → WebView → http://127.0.0.1:8091
+ChustApp admin paneli (Windows desktop) — 100% nativ Flutter, WebView YO'Q
+   └─ "OnDexMap" bo'limi ──HTTP (X-API-Key)──▶ cmd/admin (127.0.0.1:8091, faqat JSON)
+        ├─ Muharrir  — flutter_map: mahalla/ko'cha chizish, tahrirlash, o'chirish, muqobil nom
+        └─ Takliflar — foydalanuvchi ob'ektlarini tasdiqlash / rad etish
 ```
 
-**INVARIANT:** ChustApp tomonida bu — faqat OYNA. Uch fayl qo'shildi
-(`pages/ondexmap_page.dart`, `widgets/ondexmap_surface*.dart`) va
-`shell.dart` ga uch qator. ChustApp OnDexMap bazasiga ham, uning
-API'siga ham murojaat qilmaydi; bo'lim yangi so'rov yubormaydi va
-`adminLive` soketiga tegmaydi.
+Ilgari muharrir OnDexMap serveri bergan Mapbox HTML sahifasi edi va panel
+uni WebView2 ichida ochardi. U **o'chirildi**: admin serverda HTML sahifa,
+statik fayl va Mapbox tokeniga bog'liqlik yo'q; `Content-Security-Policy:
+default-src 'none'`. Kod: `apps/admin_panel/lib/ondexmap/`
+(`editor_view.dart`, `editor_geometry.dart`, `moderation_view.dart`,
+`moderation_api.dart`, `ondexmap_session*.dart`).
 
-**Nega WebView, nativ ekran emas:** geometriya chizish mantiqi
-(poligon, chiziq, snapping) Flutter'da qaytadan yozilishi kerak
-bo'lardi, va OnDexMap API'si o'zgarganda ikkala loyiha birga
-o'zgartirilardi. WebView bilan OnDexMap mustaqil rivojlanaveradi.
+**Asos xarita** (muharrirda): *Sputnik* — OnDexMap API'ning o'z tile
+proksisi (`/tiles/satellite/…`; provayder kaliti serverda qoladi,
+`/api/config` faqat proksi manzilini beradi); *Xarita* — OpenStreetMap
+raster tile'lari (kredit ko'rsatiladi; bu — admin uchun yengil yuk, ommaviy
+sayt o'z PMTiles'ini ishlatadi). 3D binolar yo'q: chegara chizish uchun tik
+ko'rinish aniqroq.
 
-**Admin kaliti Flutter binariga YOZILMAYDI.** Uni foydalanuvchi
-OnDexMap'ning o'z kirish ekranida bir marta kiritadi (sessiya
-davomida saqlanadi). Kalitni binarga joylash — uni har bir
-o'rnatilgan nusxaga tarqatish degani; EXE esa ochib o'qiladi.
+**INVARIANT:** ChustApp OnDexMap bazasiga ham, uning ommaviy API'siga ham
+murojaat qilmaydi; bo'lim ChustApp API'siga so'rov yubormaydi va
+`adminLive` soketiga tegmaydi — faqat lokal admin serveri bilan gaplashadi.
+
+**Panelda kirish ekrani YO'Q.** Bo'lim ochilishi bilan ma'lumot ko'rinadi:
+ekotizimda ikkinchi kirish nuqtasi bo'lmasligi kerak — foydalanuvchi
+ChustApp paneliga allaqachon kirgan.
+
+**Admin kaliti Flutter binariga ham, ChustApp env'iga ham
+YOZILMAYDI** (§4.3 o'z kuchida qoladi). Uning o'rniga *lokal sessiya
+qo'l berishi* ishlaydi:
+
+```
+cmd/admin ishga tushdi
+   └─ tasodifiy token (32 bayt) → %LOCALAPPDATA%\OnDexMap\admin_session.json
+                                        │  (faqat shu foydalanuvchi profili)
+ChustApp paneli ────────────────────────┘
+   └─ har so'rovda faylni QAYTA o'qiydi va tokenni `X-API-Key` sarlavhasida
+      yuboradi (URL'da EMAS)
+```
+
+- token jarayon bilan birga **o'ladi** (server to'xtaganda fayl o'chiriladi);
+- o'g'irlansa `ONDEXMAP_ADMIN_KEY` fosh bo'lmaydi, rotatsiya shart emas;
+- kalit tekshiruvining o'zi **saqlanadi**: brauzerdagi zararli sahifa
+  `127.0.0.1:8091` ga so'rov yuborishi mumkin, lekin lokal **faylni
+  o'qiy olmaydi** — qo'l berish shu sababli haqiqiy chegara.
+
+Panel har so'rovda manzilni tekshiradi: faqat `http` va faqat loopback
+(aks holda sessiya faylini yozgan narsa panelni tashqi serverga burib,
+unga tokenni yuborib qo'yardi). O'qish mantig'i BITTA joyda
+(`ondexmap_session_io.dart`) va testlangan.
+
+Kod: `internal/localsession` (OnDexMap), `apps/admin_panel/lib/ondexmap/` (ChustApp).
 
 ### 4.3 Kalitlar
 
@@ -147,6 +182,68 @@ Talablar:
 - `*_PREV` sloti bilan **to'xtovsiz rotatsiya**
 - Hech qachon loglanmaydi — xato matnida ham
 - Prod'da faqat HTTPS
+
+### 4.4 Foydalanuvchi qo'shgan ob'ektlar (moderatsiya bilan)
+
+Xarita saytida o'ng tugma → **«Ob'ekt qo'shish»**: tashkilot, manzil, bino
+kirishi, yo'l, shlagbaum, bekat, avtoturargoh, piyodalar o'tish joyi,
+to'siq, kalitka, boshqa ob'ekt (nom/tavsif/telefon/ish vaqti + 4 tagacha rasm).
+
+```
+brauzer ─POST /v1/places─▶ place_submissions  (KARANTIN, status=pending)
+                                  │  admin ko'radi, tuzatadi, tasdiqlaydi
+                                  ▼  (ChustApp admin paneli → OnDexMap → «Takliflar»)
+                           places ─GET /v1/places─▶ HAMMAGA ko'rinadi (xarita, qidiruv)
+```
+
+**INVARIANT:** yuborilgan hech narsa xaritaga to'g'ridan-to'g'ri tushmaydi.
+Ommaviy API uchun §4 dagi "yozish yo'li yo'q" qoidasi **bitta tor istisno**
+bilan: karantin jadvaliga INSERT. Uni uch narsa cheklaydi:
+
+1. **Alohida rol** `ondexmap_submit` (`0007`, `0008` migratsiyalari): faqat
+   `place_submissions` / `place_submission_photos` ga INSERT (moderatsiya
+   ustunlariga — `status`, `created_at`, `reviewed_*` — **yozolmaydi**); jonli
+   `places`, `mahallas` va h.k. ga tegolmaydi; karantinni o'qiy olmaydi (faqat
+   soatlik chegara uchun 3 ta ustun).
+2. **Alohida ulanish** `SUBMIT_DATABASE_URL` (`ondexmap_app` va egasi bilan
+   bir xil bo'lsa server ishga tushmaydi). Bo'sh bo'lsa qabul qilish O'CHIQ.
+3. **Tor kod interfeysi**: HTTP qatlami `*storage.Submitter` ni ushlaydi —
+   faqat `Submit`, `RecentCount`, `PendingTotal`; o'zboshimchalik SQL yo'q.
+
+Tekshiruv chuqurligi: turi bo'yicha maydon qoidalari (`internal/places`, bitta
+manba — mijoz forma qoidalarini `/v1/places/meta` dan oladi), ko'rinmas/RTL
+belgilar tozalanadi, rasm brauzerda kichraytiriladi **va serverda qaytadan
+dekodlanib** JPEG'ga yoziladi (EXIF/GPS yo'qoladi, "rasm+skript" zararsiz),
+piksel bombasi rad etiladi. Spam: IP bo'yicha rate limit, IP'ning **HMAC**i
+bo'yicha soatiga 8 ta (xom IP saqlanmaydi), navbat 500 dan oshsa qabul yo'q,
+asalari maydoni. Chiqishda hamma matn React matn tugunlari orqali —
+`dangerouslySetInnerHTML` yo'q.
+
+Ishga tushirish:
+
+```powershell
+# .env ga: ONDEXMAP_SUBMIT_DB_PASSWORD, SUBMIT_DATABASE_URL, SUBMIT_HINT_SECRET
+go run ./cmd/migrate          # 0007 + 0008 (rol va jadvallar)
+go run ./cmd/api              # qabul qilish yoqiladi
+go run ./cmd/admin            # lokal admin serveri (127.0.0.1:8091)
+```
+
+**Moderatsiya UI — ChustApp admin panelida** (OnDexMap bo'limi → «Takliflar (N)»):
+ko'rish, tuzatish, rasmni tanlash, tasdiqlash / rad etish, xaritadan olib
+tashlash. UI nativ Flutter ekran (`apps/admin_panel/lib/ondexmap/`); u faqat
+shu lokal admin serveri bilan gaplashadi (`/api/submissions*`, `/api/places*`;
+hammasi admin kalitini talab qiladi). Token lokal sessiya faylidan olinadi
+(§4.2b), manzil har so'rovda tekshiriladi (faqat `http://127.0.0.1`). Brauzer
+sahifasi yo'q. Panel faqat Windows desktopda ishlaydi (web'da mixed content).
+Jonli shartnoma testi: `$env:ONDEXMAP_LIVE='1'; flutter test test/moderation_live_test.dart`.
+
+⚠️ **Prod'da `TRUSTED_PROXIES` SHART**: proksi (Cloudflare) ortida usiz hamma
+foydalanuvchi bitta IP bo'lib sanaladi va soatlik chegara hammani bloklaydi.
+`SUBMIT_DATABASE_URL` prod'da `sslmode=disable` bo'lmasligi va `SUBMIT_HINT_SECRET`
+kamida 32 belgi bo'lishi shart (aks holda server ishga tushmaydi).
+
+Foydalanuvchi jadvali baribir YO'Q (§6): yuboruvchi anonim, tasdiqlash — admin
+(lokal). Ob'ektni tahrirlash/hisobga bog'lash — keyingi bosqich.
 
 ## 5. Ma'lumot manbasi va litsenziya ⚠️
 

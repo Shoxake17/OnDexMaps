@@ -55,9 +55,36 @@ func main() {
 		slog.Warn("DATABASE_URL yo'q — geo endpointlar ishlamaydi")
 	}
 
+	// ── Karantinga yozuvchi (ixtiyoriy) ──────────────────────────────
+	// Ommaviy API'ning YAGONA yozish yo'li: foydalanuvchi ob'ekti
+	// `place_submissions` ga tushadi, xaritaga emas (admin tasdiqlaydi).
+	// `ondexmap_submit` roli faqat shu jadvallarga INSERT qila oladi.
+	// `SUBMIT_DATABASE_URL` bo'sh bo'lsa qabul qilish O'CHIQ (503).
+	api := httpapi.New(cfg, db)
+	if cfg.SubmitDatabaseURL != "" {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		sub, err := storage.OpenSubmitter(ctx, cfg.SubmitDatabaseURL)
+		cancel()
+		if err != nil {
+			slog.Error("yuborish ulanishi ochilmadi", "err", err)
+			os.Exit(1)
+		}
+		defer sub.Close()
+		api.WithSubmitter(sub)
+		slog.Info("ob'ekt qabul qilish yoqilgan (karantinga yozadi)")
+		// ⚠️ Proksi ortida TRUSTED_PROXIES bo'lmasa hamma foydalanuvchi bitta IP
+		// (proksi IP'si) bo'lib ko'rinadi: rate limit va soatlik chegara ularni
+		// BIR odam deb sanaydi va 8 ta taklifdan keyin HAMMA bloklanadi.
+		if !cfg.DevMode && len(cfg.TrustedProxies) == 0 {
+			slog.Warn("TRUSTED_PROXIES bo'sh — proksi ortida barcha foydalanuvchilar bitta IP bo'lib sanaladi va ob'ekt yuborish chegarasi hammani bloklaydi")
+		}
+	} else {
+		slog.Warn("SUBMIT_DATABASE_URL yo'q — ob'ekt qabul qilish o'chiq")
+	}
+
 	srv := &http.Server{
 		Addr:    cfg.HTTPAddr,
-		Handler: httpapi.New(cfg, db).Handler(),
+		Handler: api.Handler(),
 		// ANIQ timeout'lar — nol qiymatli `http.Server` ularsiz keladi,
 		// ya'ni sekin klient ulanishni CHEKSIZ ushlab tura oladi va
 		// ochiq ulanishlar to'planib serverni bo'g'adi (slowloris).

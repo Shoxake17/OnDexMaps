@@ -81,12 +81,28 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		limit = parsed // yuqori chegara storage qatlamida qo'yiladi
 	}
 
+	// Xarita markazi (ixtiyoriy): teng natijalardan yaqini oldinda chiqadi.
+	// Ikkalasi BIRGA berilishi kerak; yaroqsiz qiymat jimgina tashlanmaydi —
+	// mijoz xatosi darrov ko'rinishi uchun 400. Chegara — butun O'ZBEKISTON
+	// (`resolve` dagi tor xizmat hududi emas): qidiruv butun mamlakat bo'yicha.
+	var bias *storage.Point
+	rawLat, rawLng := r.URL.Query().Get("lat"), r.URL.Query().Get("lng")
+	if rawLat != "" || rawLng != "" {
+		lat, okLat := parseCoord(rawLat, uzMinLat, uzMaxLat)
+		lng, okLng := parseCoord(rawLng, uzMinLng, uzMaxLng)
+		if !okLat || !okLng {
+			httpError(w, http.StatusBadRequest, "lat/lng noto'g'ri yoki O'zbekiston tashqarisida")
+			return
+		}
+		bias = &storage.Point{Lat: lat, Lng: lng}
+	}
+
 	if s.db == nil {
 		httpError(w, http.StatusServiceUnavailable, "baza ulanmagan")
 		return
 	}
 
-	matches, err := s.db.Search(r.Context(), q, limit)
+	matches, err := s.db.Search(r.Context(), q, limit, bias)
 	if err != nil {
 		// Haqiqiy sabab FAQAT logga; javobga umumiy xabar ketadi.
 		slog.Error("qidiruv xatosi", "err", err)

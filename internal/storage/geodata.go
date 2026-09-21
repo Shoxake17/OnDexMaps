@@ -8,11 +8,25 @@ import (
 
 // Match — qidiruv natijasidagi bitta yozuv.
 type Match struct {
-	ID    string  `json:"id"`
-	Type  string  `json:"type"` // "street" | "mahalla"
-	Name  string  `json:"name"`
-	Kind  string  `json:"kind,omitempty"`
-	Score float64 `json:"score"`
+	ID string `json:"id"`
+	// Type — obyekt turi. Mahalla/ko'cha jadvalidan: "mahalla" | "qishloq" |
+	// "daha" | "street". `geo_names` dan: region | district | city | town |
+	// village | hamlet | suburb | locality | street | water | poi | building |
+	// address.
+	Type string `json:"type"`
+	Name string `json:"name"`
+	// Kind — faqat mahalla jadvalidan (mahalla/qishloq/daha).
+	Kind string `json:"kind,omitempty"`
+	// Label — o'zbekcha tur («Ko'cha», «Maktab»): ro'yxatda nom yonida.
+	Label string `json:"label,omitempty"`
+	// Near — eng yaqin aholi punkti («Ko'cha · Serob»).
+	Near string `json:"near,omitempty"`
+	// Lat/Lng — natijaga uchish uchun. Koordinatasiz ko'cha yozuvida yo'q.
+	Lat *float64 `json:"lat,omitempty"`
+	Lng *float64 `json:"lng,omitempty"`
+	// BBox — [g'arb, janub, sharq, shimol]: ko'cha, bino, maydon uchun.
+	BBox  *[4]float64 `json:"bbox,omitempty"`
+	Score float64     `json:"score"`
 	// MatchedVia — qaysi nom orqali topildi. Alias orqali topilganda
 	// foydalanuvchiga "Katta ko'cha (rasmiy: Navoiy ko'chasi)" deb
 	// ko'rsatish imkonini beradi.
@@ -48,7 +62,8 @@ const maxSearchLimit = 25
 // zaxira to'siq bo'lib qoladi.
 const queryTimeout = 3 * time.Second
 
-// Search — ko'cha va mahallalarni nom bo'yicha qidiradi.
+// searchLegacy — jamoa kiritgan ko'cha va mahallalarni nom bo'yicha qidiradi.
+// (Barcha nomlar uchun `Search` — search.go; u bu funksiyani ham chaqiradi.)
 //
 // `q` bu yerga XOM ko'rinishda keladi va SQL ichida `ondex_normalize()`
 // orqali normallashtiriladi — ya'ni indeksdagi qiymat bilan AYNAN bir
@@ -58,7 +73,7 @@ const queryTimeout = 3 * time.Second
 //
 // Barcha qiymatlar parametr sifatida uzatiladi ($1, $2) — SQL satriga
 // hech narsa yopishtirilmaydi.
-func (p *Pool) Search(ctx context.Context, q string, limit int) ([]Match, error) {
+func (p *Pool) searchLegacy(ctx context.Context, q string, limit int) ([]Match, error) {
 	if limit <= 0 || limit > maxSearchLimit {
 		limit = maxSearchLimit
 	}
@@ -67,10 +82,11 @@ func (p *Pool) Search(ctx context.Context, q string, limit int) ([]Match, error)
 
 	const sql = `
 WITH needle AS (SELECT ondex_normalize($1) AS n)
-SELECT id, type, name, kind, score, matched_via FROM (
+SELECT id, type, name, kind, score, matched_via, lat, lng FROM (
     SELECT s.id, 'street' AS type, s.name, s.kind,
            similarity(s.name_norm, needle.n) AS score,
-           NULL::text AS matched_via
+           NULL::text AS matched_via,
+           ST_Y(ST_Centroid(s.geom::geometry)) AS lat, ST_X(ST_Centroid(s.geom::geometry)) AS lng
     FROM streets s, needle
     WHERE s.name_norm %> needle.n
 
@@ -79,16 +95,21 @@ SELECT id, type, name, kind, score, matched_via FROM (
     -- Alias orqali topilganlar: xalq nomi, eski nom, kirill yozuvi.
     SELECT s.id, 'street', s.name, s.kind,
            similarity(a.alias_norm, needle.n) * 0.95,  -- rasmiy nomdan bir oz past
-           a.alias
+           a.alias,
+           ST_Y(ST_Centroid(s.geom::geometry)), ST_X(ST_Centroid(s.geom::geometry))
     FROM street_aliases a
     JOIN streets s ON s.id = a.street_id, needle
     WHERE a.alias_norm %> needle.n
 
     UNION ALL
 
-    SELECT m.id, 'mahalla', m.name, NULL,
+    -- type aholi punkti TURIDAN keladi (mahalla | qishloq | daha),
+    -- qotib qolgan 'mahalla' matnidan emas: aks holda qidiruvda
+    -- qishloq ham "mahalla" deb ko'rsatilardi.
+    SELECT m.id, m.kind, m.name, NULL,
            similarity(m.name_norm, needle.n),
-           NULL
+           NULL,
+           ST_Y(m.center::geometry), ST_X(m.center::geometry)
     FROM mahallas m, needle
     WHERE m.name_norm %> needle.n
 ) r
@@ -105,9 +126,13 @@ LIMIT $2;`
 	for rows.Next() {
 		var m Match
 		var kind, via *string
-		if err := rows.Scan(&m.ID, &m.Type, &m.Name, &kind, &m.Score, &via); err != nil {
+		var sim float64
+		if err := rows.Scan(&m.ID, &m.Type, &m.Name, &kind, &sim, &via, &m.Lat, &m.Lng); err != nil {
 			return nil, errQuery
 		}
+		// O'xshashlik (0..1) → umumiy shkala (geo_names bilan solishtirish uchun).
+		m.Score = 70 + 30*sim + legacyBonus
+		m.Label = legacyLabel(m.Type)
 		if kind != nil {
 			m.Kind = *kind
 		}
@@ -218,7 +243,20 @@ FROM (
         -- DIQQAT: source ustuni ATAYLAB chiqarilmaydi. U ichki maydon
         -- (provenans/litsenziya uchun) va ommaviy endpointda
         -- oshkor qilinmaydi.
-        'properties', jsonb_build_object('id', id, 'name', name)
+        --
+        -- center — yorliq (nom) QAYERGA qo'yilishi. Usiz xarita
+        -- kutubxonasi nomni poligonning O'ZIGA qo'yadi va poligon ichki
+        -- tile chegaralari bo'ylab bo'lakka bo'linganda HAR BO'LAKKA
+        -- bitta nom chizadi — yaqinlashtirganda bitta mahalla nomi
+        -- bir necha marta takrorlanib ketardi.
+        'properties', jsonb_build_object(
+            'id', id,
+            'name', name,
+            -- kind: mahalla | qishloq | daha. Xarita ularni turlicha
+            -- chizishi mumkin (qishloq nomi boshqa shriftda va h.k.).
+            'kind', kind,
+            'center', ST_AsGeoJSON(center)::jsonb
+        )
     ) AS feature
     FROM mahallas
     WHERE geom IS NOT NULL

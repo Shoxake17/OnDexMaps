@@ -17,7 +17,7 @@ import (
 	"net/http"
 )
 
-//go:embed assets/ondexmap.js assets/ondexmap.css
+//go:embed assets/ondexmap.js assets/ondexmap.css assets/ondex-pin.png assets/icons.js assets/maplibre-gl.js assets/maplibre-gl.css assets/pmtiles.js
 var assets embed.FS
 
 // allowed — beriladigan fayllar RO'YXATI.
@@ -30,6 +30,25 @@ var assets embed.FS
 var allowed = map[string]string{
 	"ondexmap.js":  "text/javascript; charset=utf-8",
 	"ondexmap.css": "text/css; charset=utf-8",
+	// OnDex joylashuv belgisi (pin). `image/ondex-map.png` dan
+	// 96px kenglikka kichraytirilgan nusxa: asl fayl 682×981 va
+	// 355 KB — xaritada o'nlab belgi chizilganda bu bekorga
+	// yuklanardi. 96px — eng katta ishlatilish (40px belgi) uchun
+	// 2× zichlik, ya'ni retina ekranda ham aniq chiqadi.
+	"ondex-pin.png": "image/png",
+	// Interfeys ikonalari (Lucide + Font Awesome) — o'z serverimizdan.
+	// CDN ATAYLAB ishlatilmaydi; sababi faylning o'z izohida.
+	"icons.js": "text/javascript; charset=utf-8",
+	// MapLibre GL — Mapbox GL'ning tokensiz, ochiq kodli forki.
+	// O'ZIMIZ joylagan PMTiles bilan ishlatiladi (`/v1/tiles/chust`),
+	// Mapbox'ga bog'liqlikni butunlay yo'q qilish uchun. CDN emas —
+	// xuddi icons.js kabi sabab: CSP va uzilmas ishlash.
+	"maplibre-gl.js":  "text/javascript; charset=utf-8",
+	"maplibre-gl.css": "text/css; charset=utf-8",
+	// PMTiles brauzer plagini — `.pmtiles` faylini HTTP Range
+	// so'rovlari bilan to'g'ridan-to'g'ri o'qiydi, alohida tile-server
+	// jarayoni shart emas.
+	"pmtiles.js": "text/javascript; charset=utf-8",
 }
 
 // Register — `GET /assets/{file}` marshrutini qo'shadi.

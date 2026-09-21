@@ -12,8 +12,8 @@ import (
 // Chegaralarsiz bitta skript butun geoma'lumotni bir necha daqiqada
 // yuklab olardi va baza hovuzini band qilardi.
 const (
-	rateBurst  = 30              // qisqa portlashga ruxsat
-	ratePerSec = 5               // barqaror tezlik
+	rateBurst  = 30 // qisqa portlashga ruxsat
+	ratePerSec = 5  // barqaror tezlik
 	rateTTL    = 10 * time.Minute
 	// maxTrackedIPs — xotira chegarasi.
 	//
@@ -21,6 +21,10 @@ const (
 	// yaratib serverning xotirasini tugatardi — ya'ni rate limiter
 	// ning O'ZI hujum vositasiga aylanardi.
 	maxTrackedIPs = 20000
+
+	// /v1/route — OSRM so'rovi qimmat, shuning uchun ANCHA qattiqroq.
+	routeRateBurst  = 10
+	routeRatePerSec = 1
 )
 
 type bucket struct {
@@ -31,10 +35,16 @@ type bucket struct {
 type rateLimiter struct {
 	mu      sync.Mutex
 	buckets map[string]*bucket
+	burst   float64
+	perSec  float64
 }
 
 func newRateLimiter() *rateLimiter {
-	rl := &rateLimiter{buckets: make(map[string]*bucket)}
+	return newRateLimiterWith(rateBurst, ratePerSec)
+}
+
+func newRateLimiterWith(burst, perSec float64) *rateLimiter {
+	rl := &rateLimiter{buckets: make(map[string]*bucket), burst: burst, perSec: perSec}
 	go rl.janitor()
 	return rl
 }
@@ -52,13 +62,13 @@ func (rl *rateLimiter) allow(key string) bool {
 		if len(rl.buckets) >= maxTrackedIPs {
 			return true
 		}
-		rl.buckets[key] = &bucket{tokens: rateBurst - 1, last: now}
+		rl.buckets[key] = &bucket{tokens: rl.burst - 1, last: now}
 		return true
 	}
 
-	b.tokens += now.Sub(b.last).Seconds() * ratePerSec
-	if b.tokens > rateBurst {
-		b.tokens = rateBurst
+	b.tokens += now.Sub(b.last).Seconds() * rl.perSec
+	if b.tokens > rl.burst {
+		b.tokens = rl.burst
 	}
 	b.last = now
 	if b.tokens < 1 {
@@ -87,6 +97,18 @@ func (s *Server) rateLimit(next http.HandlerFunc) http.HandlerFunc {
 		if !s.limiter.allow(s.clientIP(r)) {
 			w.Header().Set("Retry-After", "1")
 			httpError(w, http.StatusTooManyRequests, "so'rovlar juda tez-tez yuborilmoqda")
+			return
+		}
+		next(w, r)
+	}
+}
+
+// routeLimit — /v1/route uchun alohida, qattiqroq chegara bilan.
+func (s *Server) routeLimit(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !s.routeLimiter.allow(s.clientIP(r)) {
+			w.Header().Set("Retry-After", "2")
+			httpError(w, http.StatusTooManyRequests, "marshrut so'rovlari juda tez-tez yuborilmoqda")
 			return
 		}
 		next(w, r)

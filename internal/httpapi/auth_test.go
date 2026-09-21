@@ -180,6 +180,38 @@ func TestCORSAllowlist(t *testing.T) {
 	if !strings.Contains(w2.Header().Get("Vary"), "Origin") {
 		t.Error("Vary: Origin yo'q — kesh javoblarni chalkashtirib yuborishi mumkin")
 	}
+
+	// Origin ro'yxatga TUSHMAGANDA ham `Vary` bo'lishi SHART: aks holda
+	// brauzer bir origin uchun olingan javobni boshqasiga ulashadi.
+	if !strings.Contains(w.Header().Get("Vary"), "Origin") {
+		t.Error("ruxsatsiz origin javobida Vary: Origin yo'q — kesh zaharlanadi")
+	}
+}
+
+// Uzoq keshlanadigan statik boyliklar HAR QANDAY origin'dan o'qilishi
+// kerak.
+//
+// NEGA TEST: bu aynan ro'y bergan nosozlik. 8090 dagi sahifa shriftni
+// Origin'siz so'raydi, javob CORS sarlavhasisiz keshga tushadi, keyin
+// 3100 o'sha keshdagi nusxani oladi va brauzer so'rovni rad etadi —
+// xaritadagi barcha tile va yozuvlar yo'qoladi. `*` bu holatni
+// butunlay yo'q qiladi: keshdagi nusxa hamma origin uchun yaroqli.
+func TestStaticAssetsAllowAnyOrigin(t *testing.T) {
+	h := testServer(t, baseCfg())
+
+	for _, path := range []string{
+		"/fonts/Noto%20Sans%20Bold/0-255.pbf",
+		"/tiles/chust.pmtiles",
+	} {
+		req := httptest.NewRequest("GET", path, nil)
+		req.Header.Set("Origin", "https://boshqa-sayt.uz")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+
+		if got := w.Header().Get("Access-Control-Allow-Origin"); got != "*" {
+			t.Errorf("%s: ACAO %q, `*` kutilgandi", path, got)
+		}
+	}
 }
 
 func TestSecurityHeadersOnErrorResponses(t *testing.T) {

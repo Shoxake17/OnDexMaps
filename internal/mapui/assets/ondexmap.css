@@ -44,7 +44,12 @@ a.mapboxgl-ctrl-logo { display: none !important; }
 }
 .om-basemap button + button { border-left: 1px solid #e3e6ea; }
 .om-basemap button:hover { background: #f4f5f7; }
-.om-basemap button.on { background: #111418; color: #fff; }
+/* Tanlangan tugma rangi SAHIFADAN keladi: admin muharriri ChustApp
+   panelining yashil rangini beradi (`--om-on`), ommaviy /map esa
+   o'zgaruvchini belgilamaydi va eski to'q ko'rinishida qolaveradi.
+   Shu tarzda umumiy fayl ikkala sahifaning dizayniga bo'ysunadi va
+   birining rangi ikkinchisiga majburan o'tmaydi. */
+.om-basemap button.on { background: var(--om-on, #111418); color: #fff; }
 
 /* ── 2D / 3D tugmasi ──────────────────────────────────────────────── */
 .om-dim {
@@ -63,4 +68,4 @@ a.mapboxgl-ctrl-logo { display: none !important; }
   box-shadow: 0 6px 24px rgba(15, 20, 30, .16);
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
-.om-dim:hover { background: #f4f5f7; border-color: #ea580c; }
+.om-dim:hover { background: #f4f5f7; border-color: var(--om-accent, #ea580c); }

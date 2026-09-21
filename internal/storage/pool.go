@@ -45,6 +45,13 @@ func ReadWrite(ctx context.Context, dsn string) (*Pool, error) {
 }
 
 func newPool(ctx context.Context, dsn string, readOnly bool) (*Pool, error) {
+	return newPoolOpts(ctx, dsn, readOnly, 10, "")
+}
+
+// newPoolOpts — `newPool` ning sozlanadigan varianti. `appName` bo'sh bo'lsa
+// standart nom qo'yiladi; `maxConns` — hovuz chegarasi (yuboruvchi hovuzi
+// kichik: u ommaviy yozish yo'li va bazani band qilib qo'ymasligi kerak).
+func newPoolOpts(ctx context.Context, dsn string, readOnly bool, maxConns int32, appName string) (*Pool, error) {
 	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		// DIQQAT: `err` da ulanish satri (parol bilan) bo'lishi mumkin —
@@ -56,7 +63,7 @@ func newPool(ctx context.Context, dsn string, readOnly bool) (*Pool, error) {
 	// Chegarasiz hovuz sekin so'rovlar oqimida bazadagi barcha
 	// ulanishlarni yeb qo'yadi (Postgres standarti — 100 ta) va
 	// ADMIN ham ulana olmay qoladi.
-	cfg.MaxConns = 10
+	cfg.MaxConns = maxConns
 	cfg.MinConns = 1
 	cfg.MaxConnLifetime = 30 * time.Minute
 	cfg.MaxConnIdleTime = 5 * time.Minute
@@ -75,6 +82,9 @@ func newPool(ctx context.Context, dsn string, readOnly bool) (*Pool, error) {
 	if readOnly {
 		params["default_transaction_read_only"] = "on"
 		params["application_name"] = "ondexmap-api-ro"
+	}
+	if appName != "" {
+		params["application_name"] = appName
 	}
 
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)

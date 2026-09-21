@@ -18,11 +18,11 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"net"
 	"net/http"
 
 	"ondexmap/internal/apikey"
 	"ondexmap/internal/config"
-	"ondexmap/internal/mapui"
 	"ondexmap/internal/storage"
 )
 
@@ -38,24 +38,32 @@ type Server struct {
 	keys *apikey.Set
 }
 
-func New(cfg *config.Config, db *storage.Pool) *Server {
+// New — admin serveri.
+//
+// `sessionKeys` — ishlab turgan jarayonning LOKAL sessiya tokeni
+// (`internal/localsession`). U admin kaliti bilan BIR XIL huquqqa ega,
+// lekin jarayon bilan birga o'ladi; ChustApp paneli uni lokal sessiya
+// faylidan o'qiydi — shu sabab panelda kalit so'raydigan oyna umuman yo'q.
+// Bo'sh qiymatlar `apikey.New` da tashlab yuboriladi.
+func New(cfg *config.Config, db *storage.Pool, sessionKeys ...string) *Server {
+	keys := append([]string{cfg.AdminKey, cfg.AdminKeyPrev}, sessionKeys...)
 	return &Server{
 		cfg:  cfg,
 		db:   db,
-		keys: apikey.New(cfg.AdminKey, cfg.AdminKeyPrev),
+		keys: apikey.New(keys...),
 	}
 }
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /", s.serveUI)
-
-	// Umumiy xarita resurslari — ommaviy `/map` sahifasi ham AYNAN
-	// shu paketdan oladi (internal/mapui). Kalit talab qilinmaydi:
-	// bu statik JS/CSS, ma'lumot emas, va vosita baribir faqat
-	// 127.0.0.1 da ishlaydi.
-	mapui.Register(mux)
+	// ┌─ BU SERVERDA HTML SAHIFA YO'Q ─────────────────────────────────────┐
+	// Muharrir ham, moderatsiya ham ChustApp admin panelining OnDexMap
+	// bo'limida NATIV Flutter ekran (`apps/admin_panel/lib/ondexmap/`).
+	// Ilgari muharrir shu serverdan berilgan Mapbox sahifa edi va panel uni
+	// WebView ichida ochardi; WebView ham, Mapbox tokeniga bog'liqlik ham
+	// olib tashlandi. Bu server endi faqat kalit talab qiladigan JSON API.
+	// └────────────────────────────────────────────────────────────────────┘
 
 	// Barcha ma'lumot endpointlari admin kalitini talab qiladi.
 	// Lokal bog'lanish (127.0.0.1) — birinchi qatlam, kalit — ikkinchi.
@@ -66,6 +74,19 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/street", s.requireKey(s.handleUpsertStreet))
 	mux.HandleFunc("POST /api/alias", s.requireKey(s.handleAlias))
 	mux.HandleFunc("POST /api/delete", s.requireKey(s.handleDelete))
+
+	// ── Foydalanuvchi ob'ektlari moderatsiyasi ───────────────────────
+	// UI — ChustApp admin panelining OnDexMap bo'limida (nativ ekran); bu
+	// yerda faqat kalit talab qiladigan JSON endpointlar. Ommaviy API bularni
+	// CHAQIRA OLMAYDI: ular faqat shu lokal binarda va yozuvchi hovuz bilan
+	// ishlaydi.
+	mux.HandleFunc("GET /api/places/meta", s.requireKey(s.handlePlacesMeta))
+	mux.HandleFunc("GET /api/submissions", s.requireKey(s.handleSubmissions))
+	mux.HandleFunc("GET /api/submissions/{id}/photos/{n}", s.requireKey(s.handleSubmissionPhoto))
+	mux.HandleFunc("POST /api/submissions/approve", s.requireKey(s.handleApprove))
+	mux.HandleFunc("POST /api/submissions/reject", s.requireKey(s.handleReject))
+	mux.HandleFunc("GET /api/places", s.requireKey(s.handlePlacesList))
+	mux.HandleFunc("POST /api/places/delete", s.requireKey(s.handlePlaceDelete))
 
 	return securityHeaders(mux)
 }
@@ -92,12 +113,35 @@ func (s *Server) handleVerify(w http.ResponseWriter, r *http.Request) {
 	ok(w, map[string]bool{"ok": true})
 }
 
+// handleConfig — nativ muharrir uchun xarita sozlamasi.
+//
+// ⚠️ Sir BERILMAYDI (Mapbox tokeni endi umuman kerak emas). Sun'iy yo'ldosh
+// tile'lari OMMAVIY API'ning o'z PROKSISI orqali olinadi
+// (`/tiles/satellite/{z}/{x}/{y}`): provayder kaliti server ichida qoladi va
+// mijozga (panelga) hech qachon yetmaydi. Manba sozlanmagan bo'lsa maydon
+// umuman yuborilmaydi — panel sun'iy yo'ldosh tugmasini ko'rsatmaydi.
 func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
-	if s.cfg.MapboxToken == "" {
-		fail(w, http.StatusServiceUnavailable, "MAPBOX_TOKEN sozlanmagan (.env)")
-		return
+	body := map[string]string{}
+	if s.cfg.SatelliteURL != "" {
+		body["satellite_url"] = "http://127.0.0.1:" + apiPort(s.cfg.HTTPAddr) +
+			"/tiles/satellite/{z}/{x}/{y}"
+		if s.cfg.SatelliteAttribution != "" {
+			body["satellite_attribution"] = s.cfg.SatelliteAttribution
+		}
+		if s.cfg.SatelliteMaxZoom != "" {
+			body["satellite_maxzoom"] = s.cfg.SatelliteMaxZoom
+		}
 	}
-	ok(w, map[string]string{"mapbox_token": s.cfg.MapboxToken})
+	ok(w, body)
+}
+
+// apiPort — ommaviy API porti (`HTTP_ADDR`: ":8090" yoki "host:8090").
+// Tushunib bo'lmasa standart 8090.
+func apiPort(addr string) string {
+	if _, port, err := net.SplitHostPort(addr); err == nil && port != "" {
+		return port
+	}
+	return "8090"
 }
 
 func (s *Server) handleFeatures(w http.ResponseWriter, r *http.Request) {
@@ -217,17 +261,11 @@ func securityHeaders(next http.Handler) http.Handler {
 		h.Set("X-Frame-Options", "DENY")
 		h.Set("Referrer-Policy", "no-referrer")
 		h.Set("Cache-Control", "no-store")
-		// Mapbox va chizish kutubxonasi uchun zarur minimum.
-		// Bu vosita FAQAT lokal ishlaydi, internetga chiqmaydi.
-		// Ruxsat etilgan tashqi manba FAQAT Mapbox — ishlatilmaydigan
-		// ruxsat ochiq qolmasin.
-		h.Set("Content-Security-Policy",
-			"default-src 'none'; "+
-				"script-src 'self' 'unsafe-inline' https://api.mapbox.com; "+
-				"style-src 'self' 'unsafe-inline' https://api.mapbox.com; "+
-				"connect-src 'self' https://api.mapbox.com https://events.mapbox.com; "+
-				"img-src 'self' data: blob:; worker-src blob:; child-src blob:; "+
-				"font-src 'self' data:; frame-ancestors 'none'")
+		// Bu server endi HTML bermaydi (faqat JSON va rasm baytlari), shuning uchun
+		// eng qat'iy siyosat: hech qanday resurs, skript yoki ramka ruxsat etilmaydi.
+		// Ilgari bu yerda Mapbox uchun ruxsatlar bor edi; ishlatilmaydigan ruxsat
+		// ochiq qolmasin.
+		h.Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
 		next.ServeHTTP(w, r)
 	})
 }

@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -43,6 +44,20 @@ type Config struct {
 	// hujumchi ham ma'lumotni o'zgartira olmaydi.
 	DatabaseURL string
 
+	// SubmitDatabaseURL — foydalanuvchi ob'ekt yuborishi uchun ALOHIDA ulanish
+	// (`ondexmap_submit` roli): faqat karantin jadvallariga INSERT.
+	//
+	// Bo'sh bo'lsa ob'ekt qabul qilish O'CHIQ (`POST /v1/places` → 503) —
+	// fail-closed: yozish yo'li faqat ongli ravishda yoqiladi. `DATABASE_URL`
+	// (faqat o'qish) bu yerda ATAYLAB ishlatilmaydi: o'qish hovuzi read-only
+	// va yozuvni umuman qabul qilmaydi.
+	SubmitDatabaseURL string
+
+	// SubmitHintSecret — yuboruvchi IP'sini HMAC qilish siri. Xom IP bazaga
+	// yozilmaydi; bu sir bo'lmasa hujumchi IP'larni oldindan hisoblab (rainbow)
+	// xeshdan IP'ni tiklay olardi.
+	SubmitHintSecret string
+
 	// DatabaseURLMigrate — migratsiya va import uchun (baza egasi).
 	// Bu ulanish HTTP serverida UMUMAN ishlatilmaydi — faqat lokal
 	// vositalarda (`cmd/migrate`, `cmd/geoimport`).
@@ -68,6 +83,130 @@ type Config struct {
 	// almashtirish uchun qayta deploy kerak, `.env` dagini esa
 	// darhol — token fosh bo'lsa bu farq muhim.
 	MapboxToken string
+
+	// PlacesURL — joylar (restoran/kafe) ro'yxati manbasi.
+	//
+	// ┌─ BU URL'GA SERVER MUROJAAT QILMAYDI ──────────────────────────┐
+	// Qiymat faqat `/v1/config` orqali BRAUZERGA beriladi va so'rovni
+	// sahifaning o'zi yuboradi. "OnDexMap hech qachon ChustApp'ni
+	// chaqirmaydi" invarianti (README §4.1) shu sababli buzilmaydi:
+	// bog'lanish klient tomonda va faqat o'qish uchun.
+	//
+	// Nega joylar OnDexMap bazasida saqlanmaydi: README §2 —
+	// restoran/kafe obyektlari ChustApp'ning `catalog` modulida
+	// qoladi, OnDexMap ular bilan `place_id` orqali bog'lanadi,
+	// NUSXA saqlamaydi. Nusxa saqlansa ikkita haqiqat manbasi
+	// paydo bo'lardi.
+	//
+	// Bo'sh bo'lsa — sahifadagi joylar bo'limi ko'rsatilmaydi
+	// (soxta ma'lumot chizilmaydi).
+	// └───────────────────────────────────────────────────────────────┘
+	PlacesURL string
+
+	// WeatherURL — ob-havo manbasi (xarita sarlavhasidagi harorat).
+	//
+	// PlacesURL bilan bir xil qoida: so'rovni BRAUZER yuboradi, server
+	// emas. Bo'sh bo'lsa harorat ko'rsatilmaydi — o'ylab chiqarilgan
+	// yoki qotib qolgan raqam chizilmaydi.
+	//
+	// Standart manba Open-Meteo: kalit talab qilmaydi, shuning uchun
+	// `.env` da sir saqlanmaydi.
+	WeatherURL string
+
+	// SatelliteURL — sun'iy yo'ldosh qatlami uchun raster tile manzili
+	// (`{z}/{x}/{y}` shablonli).
+	//
+	// PlacesURL/WeatherURL bilan bir xil qoida: tile'ni BRAUZER
+	// so'raydi. Bo'sh bo'lsa — tugma umuman ko'rsatilmaydi (fail
+	// closed), sabab: ishlamaydigan tugma soxta imkoniyat va'da qiladi.
+	//
+	// ⚠️ LITSENZIYA — bu yerda ehtiyot bo'ling. Standart qiymat
+	// (EOX Sentinel-2 cloudless) CC BY 4.0, ya'ni tijoratda ham bepul,
+	// lekin aniqligi ~10 m: shahar ko'chasi ko'rinadi, alohida bino
+	// ko'rinmaydi. Ko'chа darajasidagi tasvir (Esri, Bing, Maxar)
+	// PULLIK litsenziya talab qiladi — uni sotiladigan mahsulotga
+	// litsenziyasiz ulash huquqiy muammo tug'diradi.
+	SatelliteURL string
+
+	// SatelliteAttribution — sun'iy yo'ldosh manbasining krediti.
+	// Manba almashsa shu ham almashishi SHART (litsenziya talabi).
+	SatelliteAttribution string
+
+	// SatelliteMaxZoom — provayderda HAQIQIY tasvir bor bo'lgan eng
+	// katta zoom.
+	//
+	// ⚠️ BUNI TO'G'RI BERISH MUHIM. Provayder undan yuqori zoomda ham
+	// javob berishi mumkin, lekin bo'sh rasm bilan: EOX s2cloudless
+	// z12 da 22 KB, z16 da atigi 671 bayt (deyarli oq) qaytaradi.
+	// Chegara berilsa, xarita kutubxonasi mavjud tile'ni CHO'ZADI —
+	// xiralashadi, lekin bo'sh qolmaydi.
+	SatelliteMaxZoom string
+
+	// SatelliteCacheDir — olingan tile'lar saqlanadigan papka.
+	//
+	// Bo'sh bo'lsa kesh O'CHIQ va har so'rov provayderga chiqadi. Bu
+	// ishlaydi, lekin bepul chegarani tez yeydi — jonli serverda
+	// TO'LDIRILISHI kerak.
+	//
+	// ⚠️ TIZIM DISKIDA BO'LMASIN. Kesh vaqt o'tib gigabaytlarga
+	// o'sadi; C: to'lib qolsa oqibati xaritadan ancha kengroq bo'ladi
+	// (ChustApp'da C: to'lib WSL diski yo'qolgan tajribasi bor).
+	// Alohida, keng diskda papka bering.
+	SatelliteCacheDir string
+
+	// SatelliteCacheMaxMB — keshning yuqori chegarasi (MB).
+	//
+	// Chegara oshsa eng ESKI fayllar o'chiriladi. Chegarasiz kesh —
+	// diskni jimgina to'ldiradigan mina: hech kim uni kuzatmaydi va
+	// nosozlik butunlay boshqa joyda (masalan baza yozolmay qolishi
+	// bilan) ko'rinadi.
+	SatelliteCacheMaxMB int
+
+	// OSRMURL — o'z-o'zimiz ko'targan marshrutlash dvigateli (OSRM)
+	// manzili, masalan `http://osrm:5000` (docker tarmog'i ichida) yoki
+	// `http://127.0.0.1:5000` (lokal).
+	//
+	// ┌─ BU — TASHQI ODAM UCHUN EMAS ──────────────────────────────────┐
+	// PlacesURL/WeatherURL'dan FARQLI O'LAROQ, bu manzilga SERVERNING
+	// O'ZI murojaat qiladi (brauzer emas) — `/v1/config` orqali hech
+	// qachon oshkor qilinmaydi. OSRM konteyneri hech qanday tashqi
+	// portga chiqarilmasligi kerak: faqat shu server unga yeta olsin.
+	// └───────────────────────────────────────────────────────────────┘
+	//
+	// Bo'sh bo'lsa — `/v1/route` 503 qaytaradi (soxta marshrut
+	// chizilmaydi, xuddi kalitsiz Mapbox/ob-havo kabi).
+	OSRMURL string
+
+	// TilesURL — xarita ma'lumoti (`.pmtiles`) manzili.
+	//
+	// Bo'sh bo'lsa binarga kiritilgan Chust fayli ishlatiladi
+	// (`/tiles/chust.pmtiles`). Kattaroq hudud (viloyat, butun
+	// mamlakat) uchun fayl o'nlab/yuzlab MB bo'ladi va binarga
+	// kiritilmaydi — o'shanda bu yerga R2 (yoki boshqa statik
+	// hosting) manzili yoziladi, masalan:
+	//   TILES_URL=https://tiles.ondex.uz/uzbekistan.pmtiles
+	//
+	// Talab: manba HTTP Range so'rovlarini qo'llab-quvvatlashi SHART
+	// (R2 qo'llab-quvvatlaydi) — aks holda brauzer har tile uchun
+	// butun faylni yuklab olishga urinadi.
+	//
+	// ⚠️ Bu manzilni BRAUZER chaqiradi, shuning uchun u CSP
+	// `connect-src` ro'yxatiga ham qo'shiladi (routes_map.go).
+	TilesURL string
+
+	// BuildingsURL — bino konturlari (Microsoft GlobalMLBuildingFootprints,
+	// ODbL bilan mos) uchun alohida `.pmtiles`.
+	//
+	// NEGA ALOHIDA MANBA: OSM'da O'zbekiston binolari deyarli
+	// chizilmagan (butun Chust bo'yicha ~55 ta). Microsoft'ning
+	// sun'iy yo'ldan ajratilgan ma'lumoti o'sha hududda 34 mingdan
+	// ortiq bino beradi. Uni asosiy tile'ga qo'shib yuborish o'rniga
+	// alohida fayl qilingan: asosiy xarita qayta qurilganda binolarni
+	// qayta ishlash shart emas va aksincha.
+	//
+	// Bo'sh bo'lsa — bino qatlami uslubdan BUTUNLAY olib tashlanadi
+	// (manzilsiz manba qolsa, xarita kutubxonasi xato beradi).
+	BuildingsURL string
 }
 
 // Load — `.env` faylini (bo'lsa) o'qiydi, so'ng muhitdan sozlamani
@@ -84,17 +223,32 @@ func Load(envPath string) (*Config, error) {
 	}
 
 	c := &Config{
-		AppEnv:         strings.TrimSpace(strings.ToLower(os.Getenv("APP_ENV"))),
+		AppEnv:             strings.TrimSpace(strings.ToLower(os.Getenv("APP_ENV"))),
 		HTTPAddr:           envOr("HTTP_ADDR", ":8090"),
 		DatabaseURL:        os.Getenv("DATABASE_URL"),
 		DatabaseURLMigrate: os.Getenv("DATABASE_URL_MIGRATE"),
-		ReadKey:        os.Getenv("ONDEXMAP_READ_KEY"),
-		ReadKeyPrev:    os.Getenv("ONDEXMAP_READ_KEY_PREV"),
-		AdminKey:       os.Getenv("ONDEXMAP_ADMIN_KEY"),
-		AdminKeyPrev:   os.Getenv("ONDEXMAP_ADMIN_KEY_PREV"),
-		AllowedOrigins: splitList(os.Getenv("ALLOWED_ORIGINS")),
-		TrustedProxies: splitList(os.Getenv("TRUSTED_PROXIES")),
-		MapboxToken:    strings.TrimSpace(os.Getenv("MAPBOX_TOKEN")),
+		SubmitDatabaseURL:  os.Getenv("SUBMIT_DATABASE_URL"),
+		SubmitHintSecret:   os.Getenv("SUBMIT_HINT_SECRET"),
+		ReadKey:            os.Getenv("ONDEXMAP_READ_KEY"),
+		ReadKeyPrev:        os.Getenv("ONDEXMAP_READ_KEY_PREV"),
+		AdminKey:           os.Getenv("ONDEXMAP_ADMIN_KEY"),
+		AdminKeyPrev:       os.Getenv("ONDEXMAP_ADMIN_KEY_PREV"),
+		AllowedOrigins:     splitList(os.Getenv("ALLOWED_ORIGINS")),
+		TrustedProxies:     splitList(os.Getenv("TRUSTED_PROXIES")),
+		MapboxToken:        strings.TrimSpace(os.Getenv("MAPBOX_TOKEN")),
+		PlacesURL:          strings.TrimSpace(os.Getenv("PLACES_URL")),
+		WeatherURL:         strings.TrimSpace(os.Getenv("WEATHER_URL")),
+		SatelliteURL:       strings.TrimSpace(os.Getenv("SATELLITE_URL")),
+		SatelliteAttribution: strings.TrimSpace(
+			os.Getenv("SATELLITE_ATTRIBUTION")),
+		SatelliteMaxZoom: strings.TrimSpace(os.Getenv("SATELLITE_MAXZOOM")),
+		SatelliteCacheDir: strings.TrimSpace(
+			os.Getenv("SATELLITE_CACHE_DIR")),
+		SatelliteCacheMaxMB: intOr("SATELLITE_CACHE_MAX_MB",
+			defaultSatelliteCacheMB),
+		OSRMURL:      strings.TrimSpace(os.Getenv("OSRM_URL")),
+		TilesURL:     strings.TrimSpace(os.Getenv("TILES_URL")),
+		BuildingsURL: strings.TrimSpace(os.Getenv("TILES_BUILDINGS_URL")),
 	}
 	c.DevMode = c.AppEnv == devEnvValue
 
@@ -128,6 +282,21 @@ func (c *Config) validate() error {
 			"ONDEXMAP_READ_KEY va ONDEXMAP_ADMIN_KEY BIR XIL — read kaliti yozish huquqini ham berib qo'yadi")
 	}
 
+	// ── Yuborish ulanishi: MUSTAQIL rol bo'lishi shart ───────────────────
+	// Egaviy yoki o'qish ulanishi bilan bir xil bo'lsa, "faqat karantinga
+	// yozadi" kafolati yo'qoladi (0007_places.sql). Bu dev'da ham tekshiriladi:
+	// noto'g'ri sozlash hech qaerda jimgina o'tib ketmasin.
+	if c.SubmitDatabaseURL != "" {
+		if c.SubmitDatabaseURL == c.DatabaseURLMigrate {
+			problems = append(problems,
+				"SUBMIT_DATABASE_URL va DATABASE_URL_MIGRATE BIR XIL — ommaviy yozish yo'li baza egasi huquqiga ega bo'lib qoladi")
+		}
+		if c.SubmitDatabaseURL == c.DatabaseURL {
+			problems = append(problems,
+				"SUBMIT_DATABASE_URL va DATABASE_URL BIR XIL — o'qish roli yozishga ishlatilmaydi")
+		}
+	}
+
 	if c.DevMode {
 		// Dev'da kalitlar ixtiyoriy, lekin berilgan bo'lsa jiddiy bo'lsin.
 		if err := errorsFrom(problems); err != nil {
@@ -151,6 +320,16 @@ func (c *Config) validate() error {
 	if c.DatabaseURL != "" && c.DatabaseURL == c.DatabaseURLMigrate {
 		problems = append(problems,
 			"DATABASE_URL va DATABASE_URL_MIGRATE BIR XIL — API baza egasi sifatida ulanadi va SQL inyeksiya DROP TABLE qila oladi")
+	}
+	if c.SubmitDatabaseURL != "" {
+		if strings.Contains(c.SubmitDatabaseURL, "sslmode=disable") {
+			problems = append(problems,
+				"SUBMIT_DATABASE_URL da sslmode=disable — production'da baza aloqasi shifrlanishi SHART")
+		}
+		if len(c.SubmitHintSecret) < minKeyLen {
+			problems = append(problems, fmt.Sprintf(
+				"SUBMIT_HINT_SECRET yo'q yoki juda qisqa (kamida %d belgi): usiz IP xeshini tiklash oson", minKeyLen))
+		}
 	}
 	if len(c.AllowedOrigins) == 0 {
 		problems = append(problems,
@@ -235,6 +414,27 @@ func envOr(key, def string) string {
 		return v
 	}
 	return def
+}
+
+// defaultSatelliteCacheMB — kesh chegarasi ko'rsatilmaganda.
+//
+// 4 GB ≈ 200 000 tile (o'rtacha 20 KB). Bu bitta shahar uchun ortig'i
+// bilan yetadi va bir nechta shahar faol ishlatilsa ham disk bosimi
+// nazorat ostida qoladi.
+const defaultSatelliteCacheMB = 4096
+
+// intOr — musbat butun son, aks holda standart qiymat.
+//
+// Noto'g'ri yozilgan qiymat (`"ko'p"`, `-1`, `0`) JIMGINA standartga
+// tushadi, xato bermaydi: kesh chegarasi — ishga tushishga to'sqinlik
+// qiladigan darajada muhim sozlama emas, lekin `0` bo'lib qolsa kesh
+// butunlay o'chib qolardi va buni hech kim sezmasdi.
+func intOr(key string, def int) int {
+	v, err := strconv.Atoi(strings.TrimSpace(os.Getenv(key)))
+	if err != nil || v <= 0 {
+		return def
+	}
+	return v
 }
 
 func splitList(s string) []string {

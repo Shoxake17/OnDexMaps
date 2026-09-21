@@ -23,6 +23,7 @@ import (
 
 	"ondexmap/internal/adminapi"
 	"ondexmap/internal/config"
+	"ondexmap/internal/localsession"
 	"ondexmap/internal/storage"
 )
 
@@ -67,9 +68,35 @@ func main() {
 	}
 	defer pool.Close()
 
+	// ┌─ LOKAL SESSIYA — ikkinchi kirish oynasi o'rniga ───────────────┐
+	// Muharrir ChustApp admin panelining ichida ochiladi va u yerda
+	// foydalanuvchi ALLAQACHON kirgan bo'ladi. Shu sabab bu yerda
+	// bir martalik token yaratiladi; panel uni fayldan o'qib sahifaga
+	// beradi va kalit so'raydigan oyna umuman ko'rinmaydi
+	// (`internal/localsession` izohiga qarang).
+	//
+	// Token YARATILMASA ham server ishlaydi — faqat panel uni topa
+	// olmaydi. Bu ataylab fatal EMAS: yozish huquqi kalit bilan
+	// baribir himoyalangan.
+	// └────────────────────────────────────────────────────────────────┘
+	sess, err := localsession.Create("http://" + adminAddr)
+	if err != nil {
+		slog.Warn("lokal sessiya fayli yozilmadi — panelda kalit so'raladi", "err", err)
+		sess = nil
+	} else {
+		slog.Info("lokal sessiya tayyor", "fayl", sess.Path)
+		// Fayl jarayon bilan birga o'ladi: o'lgan serverning tokeniga
+		// panel ishonib qolmasin.
+		defer sess.Remove()
+	}
+	var sessionKeys []string
+	if sess != nil {
+		sessionKeys = append(sessionKeys, sess.Token)
+	}
+
 	srv := &http.Server{
 		Addr:              adminAddr,
-		Handler:           adminapi.New(cfg, pool).Handler(),
+		Handler:           adminapi.New(cfg, pool, sessionKeys...).Handler(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,

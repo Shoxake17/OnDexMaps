@@ -162,18 +162,24 @@ func apply(ctx context.Context, pool *storage.Pool, path string) error {
 	}
 	sql := string(raw)
 
-	// `:app_password` o'rniga qiymat qo'yish — faqat shu bitta
-	// o'zgaruvchi qo'llab-quvvatlanadi (yuqoridagi izohga qarang).
-	if strings.Contains(sql, ":app_password") {
-		pw := os.Getenv("ONDEXMAP_APP_DB_PASSWORD")
+	// `:app_password` / `:submit_password` o'rniga qiymat qo'yish — faqat shu
+	// ikki o'zgaruvchi qo'llab-quvvatlanadi (yuqoridagi izohga qarang).
+	for _, v := range []struct{ placeholder, env, role string }{
+		{":app_password", "ONDEXMAP_APP_DB_PASSWORD", "ilova"},
+		{":submit_password", "ONDEXMAP_SUBMIT_DB_PASSWORD", "yuboruvchi"},
+	} {
+		if !strings.Contains(sql, v.placeholder) {
+			continue
+		}
+		pw := os.Getenv(v.env)
 		if pw == "" {
-			return errors.New("ONDEXMAP_APP_DB_PASSWORD yo'q (.env) — ilova roli parolisiz yaratilmaydi")
+			return errors.New(v.env + " yo'q (.env) — " + v.role + " roli parolisiz yaratilmaydi")
 		}
 		if !appPasswordPattern.MatchString(pw) {
-			return errors.New("ONDEXMAP_APP_DB_PASSWORD ruxsat etilmagan belgi yoki uzunlikda " +
+			return errors.New(v.env + " ruxsat etilmagan belgi yoki uzunlikda " +
 				"(16–128, faqat A-Z a-z 0-9 + / = _ . -)")
 		}
-		sql = strings.ReplaceAll(sql, ":app_password", quoteLiteral(pw))
+		sql = strings.ReplaceAll(sql, v.placeholder, quoteLiteral(pw))
 	}
 
 	// Migratsiya fayllari o'z ichida BEGIN/COMMIT ni saqlaydi —

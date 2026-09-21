@@ -1,0 +1,386 @@
+{
+  "version": 8,
+  "name": "OnDexMap",
+  "glyphs": "__SELF__/fonts/{fontstack}/{range}.pbf?v=2",
+  "light": {
+    "anchor": "viewport",
+    "color": "#ffffff",
+    "intensity": 0.45,
+    "position": [1.6, 210, 32]
+  },
+  "sources": {
+    "ondex": {
+      "type": "vector",
+      "url": "pmtiles://__TILES_URL__"
+    },
+    "ondex-buildings": {
+      "type": "vector",
+      "url": "pmtiles://__BUILDINGS_URL__"
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": { "background-color": "#ffffff" }
+    },
+    {
+      "id": "landcover",
+      "type": "fill",
+      "source": "ondex",
+      "source-layer": "landcover",
+      "metadata": {
+        "ondex:note": "Ranglar ATAYLAB to'yingan. Ilgari ular deyarli oq edi (#dde7d5 ni 0.75 shaffoflik bilan bej fon ustiga qo'yganda yashil umuman sezilmasdi) va xarita bir xil bej bo'lib ko'rinardi. Chust — hovli-bog'li shahar, yashil zona uning asosiy belgisi."
+      },
+      "paint": {
+        "fill-color": [
+          "match", ["get", "class"],
+          "wood", "#c3dea6",
+          "grass", "#d6ecbd",
+          "farmland", "#dcecc0",
+          "sand", "#f0e4c8",
+          "wetland", "#cde3dc",
+          "#d8e8c4"
+        ],
+        "fill-opacity": 1
+      }
+    },
+    {
+      "id": "landuse",
+      "type": "fill",
+      "source": "ondex",
+      "source-layer": "landuse",
+      "metadata": {
+        "ondex:note": "⚠️ `park` BU YERDA ham bor. Sabab: OpenMapTiles sxemasida `park` QATLAMI faqat qo'riqlanadigan hududlar (milliy bog', qo'riqxona) uchun; shahar bog'i (`leisure=park`) esa `landuse` ga class=park bo'lib tushadi. Bu ro'yxatda u yo'q edi va standart oq rangga tushib, xaritada KO'RINMASDI — Chust bog'i aynan shu sababli yo'qolgan edi. Sport maydoni, bolalar maydonchasi, dam olish hududi ham shu yerda. Turar-joy ATAYLAB bej: fon oq bo'lgach, shahar hududi fondan ajralib turishi kerak."
+      },
+      "paint": {
+        "fill-color": [
+          "match", ["get", "class"],
+          "residential", "#f4f1ea",
+          "suburb", "#f4f1ea",
+          "neighbourhood", "#f4f1ea",
+          "quarter", "#f4f1ea",
+          "commercial", "#f6f2ee",
+          "retail", "#f6f2ee",
+          "industrial", "#f2f1ef",
+          "garages", "#f2f1ef",
+          "cemetery", "#dcecc8",
+          "hospital", "#faf0f0",
+          "school", "#f5f2e9",
+          "kindergarten", "#f5f2e9",
+          "college", "#f5f2e9",
+          "university", "#f5f2e9",
+          "park", "#cbe7b2",
+          "garden", "#cbe7b2",
+          "recreation_ground", "#d3ebba",
+          "village_green", "#d6ecbd",
+          "playground", "#d3ebba",
+          "theme_park", "#d3ebba",
+          "dog_park", "#d3ebba",
+          "grass", "#d6ecbd",
+          "pitch", "#c8e5b0",
+          "golf_course", "#c8e5b0",
+          "stadium", "#e6e2da",
+          "#f7f5f2"
+        ],
+        "fill-opacity": 1
+      }
+    },
+    {
+      "id": "park",
+      "type": "fill",
+      "source": "ondex",
+      "source-layer": "park",
+      "paint": { "fill-color": "#cbe7b2", "fill-opacity": 0.95 }
+    },
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "ondex",
+      "source-layer": "water",
+      "filter": ["!=", ["get", "intermittent"], 1],
+      "paint": { "fill-color": "#a6c9e8" }
+    },
+    {
+      "id": "waterway",
+      "type": "line",
+      "source": "ondex",
+      "source-layer": "waterway",
+      "paint": {
+        "line-color": "#a6c9e8",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.6, 16, 3]
+      }
+    },
+    {
+      "id": "ms-building-flat",
+      "type": "fill",
+      "source": "ondex-buildings",
+      "source-layer": "ms_building",
+      "minzoom": 13,
+      "metadata": {
+        "ondex:note": "Uzoqroq zoomda tekis to'ldirish. 3D ekstruziya z15.5 dan paydo bo'lgani sayin bu qatlam SO'NADI — ikkalasi bir vaqtda to'liq chizilsa rang quyuqlashib ketardi. OSM binolari ATAYLAB chizilmaydi: ikki manba bir binoni biroz boshqacha chizib, qo'sh kontur hosil qilardi."
+      },
+      "paint": {
+        "fill-color": "#f0f0f0",
+        "fill-outline-color": "#e0e0e0",
+        "fill-opacity": ["interpolate", ["linear"], ["zoom"], 13, 0, 14.5, 1, 15, 1, 15.8, 0]
+      }
+    },
+    {
+      "id": "ms-building-3d",
+      "type": "fill-extrusion",
+      "source": "ondex-buildings",
+      "source-layer": "ms_building",
+      "minzoom": 15,
+      "metadata": {
+        "ondex:note": "Balandlik `h` — bino maydonidan hisoblangan TAXMIN (Microsoft ma'lumotida O'zbekiston uchun balandlik yo'q). `coalesce` sababi: atribut yetib kelmasa ham binolar 6 m bilan chiziladi, xarita buzilmaydi. ⚠️ Koeffitsient 0.5 va shift 16 m: taxmin maydondan olingani uchun katta bino BALAND deb hisoblanardi va ombor/bozor rastasi ko'p qavatli uydek cho'zilib ketardi. Chust asosan 1-2 qavatli — shu sabab past va bir tekis."
+      },
+      "paint": {
+        "fill-extrusion-color": "#f2f2f2",
+        "fill-extrusion-height": [
+          "min",
+          16,
+          ["*", 0.5, ["coalesce", ["get", "h"], 6]]
+        ],
+        "fill-extrusion-base": 0,
+        "fill-extrusion-vertical-gradient": true,
+        "fill-extrusion-opacity": ["interpolate", ["linear"], ["zoom"], 15, 0, 15.8, 1]
+      }
+    },
+    {
+      "id": "road-casing",
+      "type": "line",
+      "source": "ondex",
+      "source-layer": "transportation",
+      "filter": ["in", ["get", "class"], ["literal", ["motorway", "trunk", "primary", "secondary", "tertiary"]]],
+      "minzoom": 5,
+      "layout": { "line-cap": "round", "line-join": "round" },
+      "metadata": {
+        "ondex:note": "⚠️ Chet FAQAT asosiy yo'llarga. Kichik ko'chalarga ham chizilsa, z13 da ularning har biri ~4.8 px ga aylanib butun shahar kulrang chizmaga o'xshab qolardi. ⚠️ minzoom 11 EMAS, 5: 11 bo'lganda uzoqlashtirilgan xaritada yo'l to'ri umuman yo'qolib, ekran bo'shab qolardi."
+      },
+      "paint": {
+        "line-color": "#a7b4c6",
+        "line-width": [
+          "interpolate", ["linear"], ["zoom"],
+          5, ["match", ["get", "class"], "motorway", 1.8, "trunk", 1.5, 0.9],
+          11, ["match", ["get", "class"], "motorway", 2.6, "trunk", 2.2, "primary", 1.8, 1.2],
+          14, ["match", ["get", "class"], "motorway", 6, "trunk", 5.2, "primary", 4.6, "secondary", 3.6, 2.8],
+          17, ["match", ["get", "class"], "motorway", 20, "trunk", 18, "primary", 16, "secondary", 13, "tertiary", 11, 9]
+        ]
+      }
+    },
+    {
+      "id": "road-minor",
+      "type": "line",
+      "source": "ondex",
+      "source-layer": "transportation",
+      "filter": ["in", ["get", "class"], ["literal", ["minor", "service"]]],
+      "minzoom": 13,
+      "layout": { "line-cap": "round", "line-join": "round" },
+      "metadata": {
+        "ondex:note": "Ichki ko'chalar ATAYLAB ingichka va ochroq (#d3dae2). Ular asosiy yo'l rangi (#bfc9d5) bilan bir xil qalinlikda chizilsa, shahar bir tekis kulrang to'rga aylanadi va qaysi yo'l muhimligi bilinmaydi. z13 dan pastda umuman chizilmaydi."
+      },
+      "paint": {
+        "line-color": "#d3dae2",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 13, 0.5, 15, 1.6, 17, 5]
+      }
+    },
+    {
+      "id": "road-major",
+      "type": "line",
+      "source": "ondex",
+      "source-layer": "transportation",
+      "filter": ["in", ["get", "class"], ["literal", ["secondary", "tertiary"]]],
+      "minzoom": 8,
+      "layout": { "line-cap": "round", "line-join": "round" },
+      "paint": {
+        "line-color": "#c6cfda",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.4, 11, 0.9, 14, 2.4, 17, 8.5]
+      }
+    },
+    {
+      "id": "road-trunk",
+      "type": "line",
+      "source": "ondex",
+      "source-layer": "transportation",
+      "filter": ["in", ["get", "class"], ["literal", ["motorway", "trunk", "primary"]]],
+      "layout": { "line-cap": "round", "line-join": "round" },
+      "minzoom": 5,
+      "paint": {
+        "line-color": "#bfc9d5",
+        "line-width": [
+          "interpolate", ["linear"], ["zoom"],
+          5, ["match", ["get", "class"], "motorway", 1, "trunk", 0.8, 0.5],
+          10, ["match", ["get", "class"], "motorway", 1.6, 1.2],
+          14, ["match", ["get", "class"], "motorway", 4.2, "trunk", 3.6, 3.2],
+          17, ["match", ["get", "class"], "motorway", 15, "trunk", 13.5, 12]
+        ]
+      }
+    },
+    {
+      "id": "road-path",
+      "type": "line",
+      "source": "ondex",
+      "source-layer": "transportation",
+      "filter": ["in", ["get", "class"], ["literal", ["path", "track"]]],
+      "minzoom": 14,
+      "paint": {
+        "line-color": "#dcdcdc",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 14, 0.6, 18, 2],
+        "line-dasharray": [2, 2]
+      }
+    },
+    {
+      "id": "rail",
+      "type": "line",
+      "source": "ondex",
+      "source-layer": "transportation",
+      "filter": ["==", ["get", "class"], "rail"],
+      "paint": { "line-color": "#c2bbb2", "line-width": 1.2 }
+    },
+    {
+      "id": "boundary",
+      "type": "line",
+      "source": "ondex",
+      "source-layer": "boundary",
+      "filter": ["<=", ["get", "admin_level"], 6],
+      "paint": {
+        "line-color": "#b3a9b8",
+        "line-width": 1,
+        "line-dasharray": [3, 2]
+      }
+    },
+    {
+      "id": "road-label",
+      "type": "symbol",
+      "source": "ondex",
+      "source-layer": "transportation_name",
+      "minzoom": 14,
+      "layout": {
+        "symbol-placement": "line",
+        "text-field": ["coalesce", ["get", "name:uz"], ["get", "name:latin"], ["get", "name"]],
+        "text-font": ["Noto Sans Regular"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 14, 10, 18, 13]
+      },
+      "paint": {
+        "text-color": "#5b6472",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1.4
+      }
+    },
+    {
+      "id": "water-label",
+      "type": "symbol",
+      "source": "ondex",
+      "source-layer": "water_name",
+      "layout": {
+        "text-field": ["coalesce", ["get", "name:uz"], ["get", "name:latin"], ["get", "name"]],
+        "text-font": ["Noto Sans Regular"],
+        "text-size": 11
+      },
+      "paint": {
+        "text-color": "#4a7fae",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1.2
+      }
+    },
+    {
+      "id": "poi-dot",
+      "type": "symbol",
+      "source": "ondex",
+      "source-layer": "poi",
+      "minzoom": 14,
+      "metadata": {
+        "ondex:note": "Ilgari bu `circle` edi va HAR BIR joy bir xil sabzi nuqta bo'lib ko'rinardi — kafe ham, dorixona ham, bankomat ham farqsiz. Endi turkum belgisi chiziladi. Belgilar sprite FAYLIDA emas: mijoz `styleimagemissing` hodisasida ularni tuvalda chizib beradi (`poiIcons.ts`). Shuning uchun yangi turkum qo'shish uchun serverni qayta qurish SHART EMAS."
+      },
+      "layout": {
+        "icon-image": [
+          "concat",
+          "ondex-poi-",
+          ["coalesce", ["get", "class"], "other"]
+        ],
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 14, 0.7, 17, 1],
+        "icon-allow-overlap": false,
+        "icon-padding": 2
+      }
+    },
+    {
+      "id": "poi-label",
+      "type": "symbol",
+      "source": "ondex",
+      "source-layer": "poi",
+      "minzoom": 15,
+      "metadata": {
+        "ondex:note": "z16 dan z15 ga tushirildi: OSM nomlari z12 dan tile ichida bor edi, lekin uslub ularni faqat z16 dan chizardi — shu sababli \"OSM'da nom bor, OnDexMap'da yo'q\" bo'lib ko'rinardi."
+      },
+      "layout": {
+        "text-field": ["coalesce", ["get", "name:uz"], ["get", "name:latin"], ["get", "name"]],
+        "text-font": ["Noto Sans Regular"],
+        "text-size": 11,
+        "text-anchor": "top",
+        "text-offset": [0, 1],
+        "text-max-width": 9,
+        "text-padding": 3
+      },
+      "paint": {
+        "text-color": "#7c2d12",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1.4
+      }
+    },
+    {
+      "id": "housenumber",
+      "type": "symbol",
+      "source": "ondex",
+      "source-layer": "housenumber",
+      "minzoom": 16,
+      "metadata": {
+        "ondex:note": "z17 dan z16 ga tushirildi. ⚠️ Lekin asosiy cheklov uslubda emas, MA'LUMOTDA: Chust markazida OSM'da atigi ~12 ta uy raqami bor (o'lchangan). Yandex'dagi yuzlab raqam ularning O'Z ma'lumoti — OnDexMap uni o'zi yig'ishi kerak."
+      },
+      "layout": {
+        "text-field": ["get", "housenumber"],
+        "text-font": ["Noto Sans Regular"],
+        "text-size": 11,
+        "text-allow-overlap": false,
+        "text-padding": 2
+      },
+      "paint": {
+        "text-color": "#7a8492",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1.2
+      }
+    },
+    {
+      "id": "place-label",
+      "type": "symbol",
+      "source": "ondex",
+      "source-layer": "place",
+      "filter": ["in", ["get", "class"], ["literal", ["suburb", "neighbourhood", "quarter", "village", "hamlet", "town", "city"]]],
+      "minzoom": 6,
+      "layout": {
+        "text-field": ["coalesce", ["get", "name:uz"], ["get", "name:latin"], ["get", "name"]],
+        "text-font": ["Noto Sans Bold"],
+        "text-size": [
+          "interpolate", ["linear"], ["zoom"],
+          6, ["match", ["get", "class"], "city", 14, "town", 11, 9],
+          12, ["match", ["get", "class"], "city", 17, "town", 13, 10],
+          17, ["match", ["get", "class"], "city", 20, "town", 18, 14]
+        ],
+        "text-max-width": 8
+      },
+      "metadata": {
+        "ondex:note": "Shahar nomi z13–15 oralig'ida so'nadi — o'sha zoomda mahalla nomlari paydo bo'ladi va ikkalasi bir vaqtda tursa xarita to'lib ketadi. Mahalla/qishloq nomlari esa doim ko'rinadi. ⚠️ TUZOQ: `zoom` FAQAT eng tashqi `interpolate`/`step` ichida bo'lishi mumkin. Avval `case` ichiga solingan edi va MapLibre BUTUN uslubni rad etgan — xarita umuman chizilmagan. Shuning uchun `interpolate` tashqarida, `case` esa uning natijasi ichida."
+      },
+      "paint": {
+        "text-color": "#3f4652",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1.6,
+        "text-opacity": [
+          "interpolate", ["linear"], ["zoom"],
+          13, 1,
+          15, ["case", ["in", ["get", "class"], ["literal", ["city", "town"]]], 0, 1]
+        ]
+      }
+    }
+  ]
+}

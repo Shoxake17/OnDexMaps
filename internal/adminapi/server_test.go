@@ -53,6 +53,90 @@ func TestReadKeyCannotAccessAdmin(t *testing.T) {
 	}
 }
 
+// Lokal sessiya tokeni admin kaliti kabi ishlaydi — panel ichida
+// kirish oynasi bo'lmasligining asosi shu.
+//
+// MUHIM: read kaliti bu yerda ham o'tmasligi kerak. Sessiya qo'shilishi
+// bilan kalitlar to'plami "hammaga ochiq" bo'lib qolmasin.
+func TestLocalSessionTokenWorksButReadKeyStillDoesNot(t *testing.T) {
+	const session = "sessiya-tokeni-0123456789abcdef0123"
+	h := New(cfgWith(adminKey, ""), nil, session).Handler()
+
+	if got := call(h, "GET", "/api/verify", session).Code; got != http.StatusOK {
+		t.Errorf("sessiya tokeni ishlamadi, status %d", got)
+	}
+	if got := call(h, "GET", "/api/verify", adminKey).Code; got != http.StatusOK {
+		t.Errorf("admin kaliti ishlamadi, status %d", got)
+	}
+	for _, key := range []string{"", readKey, "yolg'on"} {
+		if got := call(h, "GET", "/api/verify", key).Code; got != http.StatusUnauthorized {
+			t.Errorf("kalit=%q: kutilgan 401, olingan %d", key, got)
+		}
+	}
+}
+
+// Bu server HTML sahifa BERMAYDI: muharrir ham, moderatsiya ham ChustApp admin
+// panelida NATIV ekran. Eski Mapbox sahifasi (va u orqali kalit so'raydigan
+// oyna) qaytib kelmasligini qo'riqlaydi — ikkinchi kirish nuqtasi yo'q.
+func TestNoHTMLPagesAreServed(t *testing.T) {
+	h := New(cfgWith(adminKey, ""), nil).Handler()
+	for _, path := range []string{"/", "/index.html", "/moderation", "/assets/ondexmap.js", "/assets/ondexmap.css"} {
+		w := call(h, "GET", path, adminKey)
+		if w.Code != http.StatusNotFound {
+			t.Errorf("%s: 404 kutilgan, %d (HTML/statik sahifa qaytib kelgan)", path, w.Code)
+		}
+		if ct := w.Header().Get("Content-Type"); strings.Contains(ct, "html") {
+			t.Errorf("%s: HTML qaytdi (%s)", path, ct)
+		}
+	}
+}
+
+// Muharrir xaritasi sozlamasi: SIR tarqalmaydi.
+//
+// Sun'iy yo'ldosh tile'lari ommaviy API proksisi orqali olinadi; provayderning
+// haqiqiy manzili (unda kalit bor) mijozga HECH QACHON berilmaydi. Mapbox tokeni
+// ham endi umuman berilmaydi.
+func TestConfigDoesNotLeakSecrets(t *testing.T) {
+	cfg := cfgWith(adminKey, "")
+	cfg.HTTPAddr = ":8090"
+	cfg.SatelliteURL = "https://services.example/tile/{z}/{y}/{x}?token=JUDA-SIRLI-KALIT"
+	cfg.SatelliteAttribution = "Powered by Esri"
+	cfg.SatelliteMaxZoom = "18"
+	h := New(cfg, nil).Handler()
+
+	w := call(h, "GET", "/api/config", adminKey)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status %d", w.Code)
+	}
+	body := w.Body.String()
+	for _, secret := range []string{"JUDA-SIRLI-KALIT", "services.example", "pk.test", "mapbox_token", adminKey, readKey} {
+		if strings.Contains(body, secret) {
+			t.Errorf("/api/config sirni oshkor qildi: %q", secret)
+		}
+	}
+	if !strings.Contains(body, "http://127.0.0.1:8090/tiles/satellite/{z}/{x}/{y}") {
+		t.Errorf("proksi manzili yo'q: %s", body)
+	}
+	if !strings.Contains(body, "Powered by Esri") {
+		t.Errorf("kredit (litsenziya talabi) yo'q: %s", body)
+	}
+
+	// Manba sozlanmagan bo'lsa — maydon umuman yo'q (panel tugmani ko'rsatmaydi).
+	cfg.SatelliteURL = ""
+	body = call(New(cfg, nil).Handler(), "GET", "/api/config", adminKey).Body.String()
+	if strings.Contains(body, "satellite_url") {
+		t.Errorf("manba yo'q, lekin satellite_url berildi: %s", body)
+	}
+}
+
+func TestApiPort(t *testing.T) {
+	for in, want := range map[string]string{":8090": "8090", "0.0.0.0:9000": "9000", "127.0.0.1:8123": "8123", "": "8090", "noto'g'ri": "8090"} {
+		if got := apiPort(in); got != want {
+			t.Errorf("apiPort(%q) = %q, %q kutilgan", in, got, want)
+		}
+	}
+}
+
 func TestAdminRequiresKey(t *testing.T) {
 	h := New(cfgWith(adminKey, ""), nil).Handler()
 
@@ -78,6 +162,35 @@ func TestAdminRequiresKey(t *testing.T) {
 	}
 }
 
+// Foydalanuvchi ob'ektlari moderatsiyasi: HAR BIR endpoint admin kalitini talab
+// qiladi (tasdiqlash, rad etish, o'chirish — yozish huquqi). READ kaliti ham,
+// kalitsiz so'rov ham o'tmaydi. Brauzer sahifasi (`/moderation`) endi YO'Q:
+// UI ChustApp admin panelida.
+func TestModerationEndpointsRequireAdminKey(t *testing.T) {
+	h := New(cfgWith(adminKey, ""), nil).Handler()
+
+	endpoints := []struct{ method, path string }{
+		{"GET", "/api/places/meta"},
+		{"GET", "/api/submissions"},
+		{"GET", "/api/submissions/11111111-1111-4111-8111-111111111111/photos/0"},
+		{"POST", "/api/submissions/approve"},
+		{"POST", "/api/submissions/reject"},
+		{"GET", "/api/places"},
+		{"POST", "/api/places/delete"},
+	}
+	for _, e := range endpoints {
+		for name, key := range map[string]string{"kalitsiz": "", "read kaliti": readKey, "noto'g'ri": "yolg'on"} {
+			if got := call(h, e.method, e.path, key).Code; got != http.StatusUnauthorized {
+				t.Errorf("%s %s (%s): 401 kutilgan, %d — moderatsiya himoyasiz", e.method, e.path, name, got)
+			}
+		}
+	}
+
+	if got := call(h, "GET", "/moderation", adminKey).Code; got != http.StatusNotFound {
+		t.Errorf("/moderation sahifasi hamon bor (%d): ortiqcha kirish yuzasi", got)
+	}
+}
+
 // Kalit sozlanmagan bo'lsa vosita OCHILMAYDI (fail-closed).
 //
 // Bo'sh kalitni qabul qilish yozish huquqini himoyasiz qoldirardi.
@@ -100,16 +213,13 @@ func TestAdminKeyRotation(t *testing.T) {
 	}
 }
 
-// UI sahifasi kalitsiz ochiladi (u shunchaki HTML), lekin undagi
-// har bir ma'lumot chaqiruvi kalit talab qiladi.
-func TestUIServedWithoutKeyButAPIIsNot(t *testing.T) {
+// Ma'lumot endpointlari kalitsiz ochilmaydi.
+func TestDataEndpointsRequireKey(t *testing.T) {
 	h := New(cfgWith(adminKey, ""), nil).Handler()
-
-	if got := call(h, "GET", "/", "").Code; got != http.StatusOK {
-		t.Errorf("UI sahifasi ochilmadi, status %d", got)
-	}
-	if got := call(h, "GET", "/api/features?kind=mahalla", "").Code; got != http.StatusUnauthorized {
-		t.Errorf("ma'lumot endpointi kalitsiz ochildi, status %d", got)
+	for _, path := range []string{"/api/features?kind=mahalla", "/api/config"} {
+		if got := call(h, "GET", path, "").Code; got != http.StatusUnauthorized {
+			t.Errorf("%s kalitsiz ochildi, status %d", path, got)
+		}
 	}
 }
 
@@ -124,11 +234,12 @@ func TestUnknownPathIsNotFound(t *testing.T) {
 
 func TestSecurityHeadersPresent(t *testing.T) {
 	h := New(cfgWith(adminKey, ""), nil).Handler()
-	w := call(h, "GET", "/", "")
+	w := call(h, "GET", "/api/verify", adminKey)
 	for k, want := range map[string]string{
-		"X-Content-Type-Options": "nosniff",
-		"X-Frame-Options":        "DENY",
-		"Cache-Control":          "no-store",
+		"X-Content-Type-Options":  "nosniff",
+		"X-Frame-Options":         "DENY",
+		"Cache-Control":           "no-store",
+		"Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
 	} {
 		if got := w.Header().Get(k); got != want {
 			t.Errorf("%s: kutilgan %q, olingan %q", k, want, got)
