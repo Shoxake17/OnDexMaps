@@ -1,0 +1,31 @@
+# OWASP ZAP baseline — qoidalar jadvali (OnDexMap).
+#
+# Format (TAB bilan ajratilgan):  <qoida-ID>	<amal>	<izoh>
+# Amallar:  IGNORE (ko'rsatilmasin) | WARN (ogohlantirish) | FAIL (to'xtatadi)
+#
+# ChustApp'dagi (`.zap/rules.tsv`) bilan bir xil mantiq. Nishon
+# `/healthz` — juda kichik JSON javob, shuning uchun bu yerda faqat
+# CI kontekstiga tegishli (HTTP, domensiz) qoidalar yumshatilgan.
+
+# ┌─ HTTPS bilan bog'liqlar — CI da MA'NOSIZ ─────────────────────────┐
+# CI da server oddiy HTTP orqali sinaladi (localhost:8090). HSTS
+# production'da TESKARI PROKSI (Caddy) darajasida qo'yiladi
+# (`deploy/Caddyfile.snippet`, `maps.ondex.uz`). Bu yerda uni talab
+# qilish har doim yolg'on xato berardi.
+#
+# DIQQAT: production domenga qarshi skanerlashda buni FAIL ga
+# o'zgartiring — o'sha yerda u HAQIQATAN majburiy.
+# └───────────────────────────────────────────────────────────────────┘
+10035	IGNORE	HSTS — Caddy darajasida, CI da HTTP ishlatiladi
+10063	IGNORE	Permissions-Policy — /healthz uchun ahamiyatsiz
+
+# ┌─ Kichik JSON javob uchun shovqin ──────────────────────────────────┐
+10015	WARN	Cache-control — /healthz uchun kritik emas
+10096	WARN	Timestamp oshkor bo'lishi — odatda yolg'on xato
+10109	IGNORE	Modern Web Application — ma'lumot xarakteridagi belgi, zaiflik emas
+10027	WARN	Info disclosure suspicious comments — Go binardan kelmaydi, yolg'on musbat bo'lishi mumkin
+
+# ┌─ Yangi qoida qo'shish ────────────────────────────────────────────┐
+# Hisobotdagi (zap-report.html) har bir ogohlantirish yonida qoida ID
+# turadi. Yolg'on xato bo'lsa shu yerga IGNORE qatorini SABABI BILAN
+# qo'shing — izohsiz IGNORE keyinchalik haqiqiy zaiflikni yashiradi.

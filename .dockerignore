@@ -1,0 +1,13 @@
+# Go API image yig'ilishida KERAK BO'LMAGAN narsalar — build tezroq,
+# image kichikroq, sirlar tasodifan image ichiga tushmaydi.
+.git
+.github
+web/
+frontend/
+image/
+*.md
+.env
+.env.*
+!.env.example
+secrets/
+*.pmtiles

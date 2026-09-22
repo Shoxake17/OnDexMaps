@@ -1,0 +1,697 @@
+# OnDexMap — CI/CD va xavfsizlik quvuri.
+#
+# ChustApp'dagi (`F:\ChustApp\.github\workflows\deploy.yml`) bilan bir
+# xil bosqichlar va mantiq — bitta repo (Go API + Next.js web), shuning
+# uchun Flutter-filtri va ikkita alohida "build" ishi shart emas, lekin
+# API va web IKKI ALOHIDA image bo'lib qoladi (ikkalasi ham mustaqil
+# masshtablanadi/qayta ishga tushiriladi).
+#
+# Bosqichlar (har biri oldingisidan o'tishini kutadi):
+#   0. Gitleaks     — tarixda sir bormi
+#   1. Go sifati    — build, vet, test (integratsiya bilan), govulncheck
+#   1b. Go lint     — golangci-lint
+#   1c. Bog'liqlik  — OSV-Scanner (go.mod, package-lock.json)
+#   2. Semgrep      — SAST (statik tahlil)
+#   3. Build+Trivy  — ikkala image (api, web) yig'ish va zaiflik skanerlash
+#   4. OWASP ZAP    — DAST (ishlab turgan serverga hujum simulyatsiyasi)
+#   5. Deploy       — VPS (sozlanmagan bo'lsa JIMGINA o'tkazib yuboriladi)
+
+name: CI/CD Pipeline - OnDexMap
+
+on:
+  push:
+    branches: [ main, master ]
+    paths-ignore:
+      - '**.md'
+      - 'image/**'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+  # Har kuni: yangi e'lon qilingan CVE'lar kod o'zgarmasa ham topilsin.
+  schedule:
+    - cron: '0 0 * * *'
+
+# ┌─ ENG KAM HUQUQ ────────────────────────────────────────────────────┐
+# Standart holatda GITHUB_TOKEN ko'p narsaga yozish huquqiga ega.
+# Bu yerda hamma narsa `read` ga tushiriladi va kerakli job o'ziga
+# kerakligini ALOHIDA so'raydi.
+# └────────────────────────────────────────────────────────────────────┘
+permissions:
+  contents: read
+
+# Bir branchga ketma-ket push bo'lsa, eskisi bekor qilinadi.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE_NAME: ondexmap-api
+
+jobs:
+
+  # ══════════════════════════════════════════════════════════════════
+  # 0. Sirlar — Gitleaks
+  # ══════════════════════════════════════════════════════════════════
+  gitleaks_scan:
+    name: Secrets - Gitleaks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # fetch-depth: 0 — BUTUN tarix. Sir bir marta commit qilinib
+          # keyin o'chirilgan bo'lsa, u faqat tarixda qoladi.
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ══════════════════════════════════════════════════════════════════
+  # 1. Go sifati — build, vet, test (integratsiya bilan), rasmiy zaiflik bazasi
+  # ══════════════════════════════════════════════════════════════════
+  go_quality:
+    name: Go - Test & Vulnerabilities
+    runs-on: ubuntu-latest
+    needs: gitleaks_scan
+
+    # PostGIS kerak: `internal/storage`dagi integratsiya testlari va
+    # `CREATE EXTENSION postgis` haqiqiy bazani talab qiladi. Oddiy
+    # `postgres` image'da PostGIS kengaytmasi yo'q.
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: ondexmap
+          POSTGRES_PASSWORD: ondexmap
+          POSTGRES_DB: ondexmap_test
+        ports: [ '5432:5432' ]
+        options: >-
+          --health-cmd "pg_isready -U ondexmap"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.26.x'
+          check-latest: true
+          cache: true
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      # ┌─ MIGRATSIYA — TESTLARDAN OLDIN ────────────────────────────────┐
+      # Integratsiya testlari haqiqiy jadval/funksiyalarni kutadi
+      # (`ondex_normalize`, `place_submissions`...). `cmd/migrate` shu
+      # bazaga 0001...0010ni qo'llaydi — `0002`/`0007` dagi
+      # `:app_password`/`:submit_password` shu yerdagi soxta CI
+      # qiymatlaridan to'ldiriladi (haqiqiy production siridan EMAS).
+      # └───────────────────────────────────────────────────────────────┘
+      - name: Run migrations (CI database)
+        env:
+          DATABASE_URL_MIGRATE: postgres://ondexmap:ondexmap@localhost:5432/ondexmap_test?sslmode=disable
+          ONDEXMAP_APP_DB_PASSWORD: ci-app-password-not-real
+          ONDEXMAP_SUBMIT_DB_PASSWORD: ci-submit-password-not-real
+        run: go run ./cmd/migrate
+
+      - name: Test (integratsiya bilan)
+        # ┌─ O'ZGARUVCHILAR SHU YERDA ─────────────────────────────────┐
+        # Ular berilmasa integratsiya testlari `t.Skip` qiladi va
+        # quvur yashil bo'lib qolaveradi. Nomlar testlar kutgani bilan
+        # AYNAN bir xil bo'lishi shart:
+        #   ONDEXMAP_INTEGRATION → internal/storage/*_integration_test.go
+        # └───────────────────────────────────────────────────────────┘
+        env:
+          ONDEXMAP_INTEGRATION: "1"
+          DATABASE_URL_MIGRATE: postgres://ondexmap:ondexmap@localhost:5432/ondexmap_test?sslmode=disable
+          DATABASE_URL: postgres://ondexmap:ondexmap@localhost:5432/ondexmap_test?sslmode=disable
+          SUBMIT_DATABASE_URL: postgres://ondexmap:ondexmap@localhost:5432/ondexmap_test?sslmode=disable
+        run: go test -count=1 ./...
+
+      # Poyga detektori (`-race`) gcc talab qiladi — Linux runner'da bor.
+      # Alohida yugurish: yuqoridagi test integratsiya bilan, bu esa
+      # butun to'plamni yana poyga tekshiruvi bilan sinaydi.
+      - name: Test (race detector)
+        env:
+          ONDEXMAP_INTEGRATION: "1"
+          DATABASE_URL_MIGRATE: postgres://ondexmap:ondexmap@localhost:5432/ondexmap_test?sslmode=disable
+          DATABASE_URL: postgres://ondexmap:ondexmap@localhost:5432/ondexmap_test?sslmode=disable
+          SUBMIT_DATABASE_URL: postgres://ondexmap:ondexmap@localhost:5432/ondexmap_test?sslmode=disable
+        run: go test -race -count=1 ./...
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Run govulncheck
+        run: govulncheck ./...
+
+  # ══════════════════════════════════════════════════════════════════
+  # 1b. Go lint — golangci-lint
+  # ══════════════════════════════════════════════════════════════════
+  go_lint:
+    name: Go - Lint (golangci-lint)
+    runs-on: ubuntu-latest
+    needs: gitleaks_scan
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.26.x'
+          check-latest: true
+          cache: false
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.13.2
+          install-mode: goinstall
+          args: --timeout=10m
+
+  # ══════════════════════════════════════════════════════════════════
+  # 1c. Bog'liqliklar — OSV-Scanner (Go, npm)
+  # ══════════════════════════════════════════════════════════════════
+  dependency_scan:
+    name: Dependencies - OSV-Scanner
+    runs-on: ubuntu-latest
+    needs: gitleaks_scan
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Run OSV-Scanner
+        run: |
+          docker run --rm -v "$PWD:/src:ro" -w /src \
+            ghcr.io/google/osv-scanner:v2.6.0@sha256:afd838850ac1a0fcc15ff4a041dc9ba11123c3f0d2666217a5f0fcf9222b55fa \
+            scan source -r /src
+
+  # ══════════════════════════════════════════════════════════════════
+  # 2. SAST — Semgrep
+  # ══════════════════════════════════════════════════════════════════
+  semgrep_sast:
+    name: SAST - Semgrep
+    runs-on: ubuntu-latest
+    needs: gitleaks_scan
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Semgrep
+        run: pip install --no-cache-dir semgrep
+
+      - name: Run Semgrep Full Scan
+        run: |
+          semgrep scan \
+            --config=p/owasp-top-ten \
+            --config=p/security-audit \
+            --config=p/secrets \
+            --config=p/golang \
+            --config=p/typescript \
+            --config=p/dockerfile \
+            --config=p/github-actions \
+            --sarif \
+            --output=semgrep.sarif \
+            --metrics=off \
+            . || true
+
+      - name: Check for Critical Issues
+        run: |
+          CRITICAL=$(jq '[.runs[].results[] | select(.level == "error")] | length' semgrep.sarif)
+          echo "Kritik xavfsizlik muammolari: $CRITICAL"
+          if [ "$CRITICAL" -gt 0 ]; then
+            echo "::error::Kritik zaiflik topildi — quvur to'xtatildi"
+            jq -r '.runs[].results[] | select(.level == "error")
+                   | "  \(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine)  \(.message.text)"' \
+                   semgrep.sarif
+            exit 1
+          fi
+
+      - name: Upload Report to GitHub Security
+        uses: github/codeql-action/upload-sarif@c4dd10e44af883a891fe31ced449bcb4a6728b9b # v3
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
+        continue-on-error: true
+
+  # ══════════════════════════════════════════════════════════════════
+  # 3. API image — yig'ish, skanerlash
+  # ══════════════════════════════════════════════════════════════════
+  build-and-push:
+    name: Build and Push API Image
+    runs-on: ubuntu-latest
+    needs: [ go_quality, go_lint, dependency_scan, semgrep_sast ]
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      # GHCR FAQAT kichik harfli nomlarni qabul qiladi.
+      - name: Compute image name
+        id: meta
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "image=ghcr.io/$OWNER/${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker Image locally
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          load: true
+          tags: ${{ steps.meta.outputs.image }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Trivy - Dockerfile misconfiguration
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+      - name: Trivy - Image vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.meta.outputs.image }}:${{ github.sha }}
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+          vuln-type: 'os,library'
+
+      - name: Save image for DAST
+        run: docker save "${{ steps.meta.outputs.image }}:${{ github.sha }}" -o /tmp/image.tar
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: docker-image
+          path: /tmp/image.tar
+          retention-days: 1
+
+  # ══════════════════════════════════════════════════════════════════
+  # 3b. Web image — yig'ish, skanerlash
+  # ══════════════════════════════════════════════════════════════════
+  #
+  # ┌─ DOMEN GITHUB VARIABLES'DAN ──────────────────────────────────────┐
+  #   Settings -> Secrets and variables -> Actions -> Variables
+  #     MAP_DOMAIN = maps.ondex.uz
+  # Sozlanmasa pastdagi zaxira qiymat ishlatiladi. Bitta domen —
+  # web VA API bir xil hostda (Caddy `/v1/*`, `/tiles/*`, `/fonts/*`,
+  # `/healthz` ni API konteyneriga, qolganini web'ga yo'naltiradi),
+  # shuning uchun ChustApp'dagidek IKKITA domen (API_DOMAIN/WEB_DOMAIN)
+  # shart emas — CORS ham kerak bo'lmaydi (bir xil kelib chiqish).
+  # └────────────────────────────────────────────────────────────────────┘
+  build-web:
+    name: Build and Push Web Image
+    runs-on: ubuntu-latest
+    needs: [ go_quality, go_lint, dependency_scan, semgrep_sast ]
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Compute image name
+        id: meta
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "image=ghcr.io/$OWNER/ondexmap-web" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Web Image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: ./web
+          load: true
+          tags: ${{ steps.meta.outputs.image }}:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://${{ vars.MAP_DOMAIN || 'maps.ondex.uz' }}
+            SITE_URL=https://${{ vars.MAP_DOMAIN || 'maps.ondex.uz' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Trivy - Web image vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.meta.outputs.image }}:${{ github.sha }}
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+          vuln-type: 'os,library'
+
+      - name: Push
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        run: |
+          IMAGE="${{ steps.meta.outputs.image }}"
+          docker tag "$IMAGE:${{ github.sha }}" "$IMAGE:latest"
+          docker push "$IMAGE:${{ github.sha }}"
+          docker push "$IMAGE:latest"
+
+  # ══════════════════════════════════════════════════════════════════
+  # 4. DAST — OWASP ZAP
+  # ══════════════════════════════════════════════════════════════════
+  dast_zap:
+    name: DAST - OWASP ZAP
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: ondexmap
+          POSTGRES_PASSWORD: ondexmap
+          POSTGRES_DB: ondexmap
+        ports: [ '5432:5432' ]
+        options: >-
+          --health-cmd "pg_isready -U ondexmap"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Go (migratsiya uchun)
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.26.x'
+          check-latest: true
+
+      - name: Run migrations (ZAP uchun bo'sh baza)
+        env:
+          DATABASE_URL_MIGRATE: postgres://ondexmap:ondexmap@localhost:5432/ondexmap?sslmode=disable
+          ONDEXMAP_APP_DB_PASSWORD: ci-app-password-not-real
+          ONDEXMAP_SUBMIT_DB_PASSWORD: ci-submit-password-not-real
+        run: go run ./cmd/migrate
+
+      - name: Download image artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: docker-image
+          path: /tmp
+
+      - name: Load image
+        run: docker load -i /tmp/image.tar
+
+      - name: Compute image name
+        id: meta
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "image=ghcr.io/$OWNER/${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
+
+      # ┌─ BU PRODUCTION EMAS ──────────────────────────────────────────┐
+      # `APP_ENV=production` shunchaki skanerni ishlab chiqarish
+      # rejimidagi qattiqroq sozlamalarga qarshi yurgizish uchun.
+      # HAQIQIY SERVER SOZLAMALARI bu faylda UMUMAN yo'q — ular VPS'dagi
+      # `~/ondexmap/.env` faylida turadi. Kalitlar/parollar bu yerda
+      # TASODIFIY va CI ishlashi tugagach yo'qoladi.
+      # └───────────────────────────────────────────────────────────────┘
+      - name: Start API (ZAP skaneri uchun vaqtinchalik konteyner)
+        run: |
+          docker run -d --name ondexmap-api --network host \
+            -e APP_ENV=production \
+            -e ALLOWED_ORIGINS="https://maps.ondex.uz" \
+            -e TRUSTED_PROXIES="" \
+            -e DATABASE_URL="postgres://ondexmap:ondexmap@localhost:5432/ondexmap?sslmode=disable" \
+            -e ONDEXMAP_READ_KEY="$(openssl rand -hex 32)" \
+            -e ONDEXMAP_ADMIN_KEY="$(openssl rand -hex 32)" \
+            -e HTTP_ADDR=":8090" \
+            "${{ steps.meta.outputs.image }}:${{ github.sha }}"
+
+      - name: Wait for API
+        run: |
+          for i in $(seq 1 45); do
+            if curl -fsS http://localhost:8090/healthz >/dev/null 2>&1; then
+              echo "API tayyor ($i soniya)"; exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::API 45 soniyada ko'tarilmadi"
+          docker logs ondexmap-api
+          exit 1
+
+      - name: Prepare ZAP workspace
+        run: |
+          if [ ! -f .zap/rules.tsv ]; then
+            echo "::error::.zap/rules.tsv topilmadi — fayl repoga commit qilinganini tekshiring"
+            exit 1
+          fi
+          mkdir -p zap-report && chmod 777 zap-report
+          cp .zap/rules.tsv zap-report/rules.tsv
+
+      - name: Run OWASP ZAP Baseline Scan
+        run: |
+          set +e
+
+          docker run --rm --network host --entrypoint curl \
+            ghcr.io/zaproxy/zaproxy:stable \
+            -fsS --max-time 15 -o /dev/null -w 'ZAP konteyneridan nishon: HTTP %{http_code}\n' \
+            http://localhost:8090/healthz
+          if [ $? -ne 0 ]; then
+            echo "::error::ZAP konteyneri API'ga ULANOLMADI — skanerlashning ma'nosi yo'q"
+            docker logs ondexmap-api 2>&1 | tail -30
+            exit 1
+          fi
+
+          docker run --rm --network host \
+            -v "$(pwd)/zap-report:/zap/wrk:rw" \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+              -t http://localhost:8090/healthz \
+              -c /zap/wrk/rules.tsv \
+              -r zap-report.html \
+              -J zap-report.json \
+              -I
+          RC=$?
+          echo "ZAP chiqish kodi: $RC"
+
+          case "$RC" in
+            0) echo "DAST toza — FAIL darajasidagi topilma yo'q" ;;
+            1) echo "::error::ZAP zaiflik topdi (rules.tsv dagi FAIL qoidalari)"; exit 1 ;;
+            3) echo "::warning::ZAP ISHGA TUSHMADI (kod 3) — bu xavfsizlik topilmasi EMAS, vosita xatosi. Hisobot artefaktini ko'ring." ;;
+            *) echo "::error::ZAP kutilmagan kod qaytardi: $RC"; exit 1 ;;
+          esac
+
+      - name: API logs (har doim)
+        if: always()
+        run: docker logs ondexmap-api || true
+
+      - name: Upload ZAP report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: zap-report
+          path: zap-report/
+          retention-days: 30
+
+  # ══════════════════════════════════════════════════════════════════
+  # 4b. Image'ni GHCR ga yuborish — FAQAT hamma tekshiruvdan keyin
+  # ══════════════════════════════════════════════════════════════════
+  push_image:
+    name: Push Image to GHCR
+    runs-on: ubuntu-latest
+    needs: dast_zap
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Download image artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: docker-image
+          path: /tmp
+
+      - name: Load image
+        run: docker load -i /tmp/image.tar
+
+      - name: Login to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag and Push
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE="ghcr.io/$OWNER/${IMAGE_NAME}"
+          docker tag "$IMAGE:${{ github.sha }}" "$IMAGE:latest"
+          docker push "$IMAGE:${{ github.sha }}"
+          docker push "$IMAGE:latest"
+
+  # ══════════════════════════════════════════════════════════════════
+  # 5. Deploy — VPS
+  # ══════════════════════════════════════════════════════════════════
+  preflight:
+    name: Deploy Preflight
+    runs-on: ubuntu-latest
+    needs: [ push_image, build-web ]
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - id: check
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          if [ -n "$SSH_HOST" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::SSH_HOST sozlanmagan — deploy o'tkazib yuborildi"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    needs: preflight
+    if: needs.preflight.outputs.ready == 'true'
+    environment: production
+    steps:
+      - name: SSH preflight diagnostics
+        env:
+          H: ${{ secrets.SSH_HOST }}
+          P: ${{ secrets.SSH_PORT }}
+        run: |
+          PORT="${P:-22}"
+          echo "SSH_HOST uzunligi : ${#H} belgi"
+          echo "SSH_PORT          : $PORT"
+          case "$H" in
+            *" "*|*$'\t'*|*$'\n'*) echo "::warning::SSH_HOST ichida PROBEL yoki YANGI QATOR bor" ;;
+          esac
+          if getent hosts "$H" >/dev/null 2>&1; then
+            echo "DNS               : yechildi"
+          else
+            echo "DNS               : yechilmadi (IP bo'lsa bu normal)"
+          fi
+          if timeout 10 bash -c "cat < /dev/null > /dev/tcp/$H/$PORT" 2>/dev/null; then
+            echo "TCP $PORT         : OCHIQ"
+          else
+            echo "::error::TCP $PORT yopiq — server javob bermayapti."
+            exit 1
+          fi
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17 # v1.2.0
+        env:
+          API_TAG: ${{ github.sha }}
+          WEB_TAG: ${{ github.sha }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          timeout: 30s
+          command_timeout: 10m
+          envs: API_TAG,WEB_TAG
+          script: |
+            set -euo pipefail
+            cd ~/ondexmap
+
+            touch .env
+            [ -s .env ] && [ "$(tail -c1 .env | wc -l)" -eq 0 ] && echo >> .env
+
+            sed -i '/^API_TAG=/d;/^WEB_TAG=/d' .env
+            echo "API_TAG=${API_TAG}" >> .env
+            echo "WEB_TAG=${WEB_TAG}" >> .env
+
+            for v in API_TAG WEB_TAG; do
+              grep -q "^${v}=${API_TAG}$" .env || {
+                echo "::error::${v} .env ga yozilmadi"
+                exit 1
+              }
+            done
+
+            # ┌─ NEGA `docker login` YO'Q ─────────────────────────────┐
+            # GHCR'da PAT yaratish faqat GitHub veb-interfeysida mumkin
+            # (API orqali yo'q) — shuning uchun bu ikki image ATAYLAB
+            # OCHIQ (public) qilib qo'yilgan (birinchi push'dan keyin:
+            # Settings → Packages → ondexmap-api/ondexmap-web →
+            # Package settings → Change visibility → Public). Ochiq
+            # image xavfsiz: sirlar image ICHIDA emas, `.env`da
+            # (ishlash vaqtida, shu faylda) — `NEXT_PUBLIC_API_URL`
+            # bundan mustasno, u ochiq domen nomi, sir emas.
+            # └───────────────────────────────────────────────────────┘
+            docker compose pull api web migrate
+
+            # Migratsiya — API/web qayta ishga tushishidan OLDIN. Bir
+            # martalik konteyner (`restart` yo'q), muvaffaqiyatsiz
+            # bo'lsa DEPLOY TO'XTAYDI (eski kod yangi sxemaga qarshi
+            # ishga tushmasin).
+            docker compose run --rm migrate
+
+            docker compose up -d --no-deps --force-recreate api web
+
+            docker image prune -f
+
+      - name: Smoke test
+        env:
+          URL: ${{ secrets.HEALTHCHECK_URL }}
+        run: |
+          if [ -z "$URL" ]; then
+            echo "::warning::HEALTHCHECK_URL sozlanmagan — tekshiruv o'tkazib yuborildi"
+            exit 0
+          fi
+          for i in $(seq 1 20); do
+            if curl -fsS "$URL" >/dev/null; then echo "Server javob berdi"; exit 0; fi
+            sleep 3
+          done
+          echo "::error::Deploy'dan keyin server javob bermayapti"
+          exit 1
