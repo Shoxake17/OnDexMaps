@@ -6,20 +6,18 @@
  * pastida ingichka chiziq. Chetlari kesilib ko'rinadi — "yana bor" degan
  * ishora, barmoq bilan suriladi.
  *
- * Ma'lumot `CategoryGrid` bilan BIR XIL (`CATEGORIES`): ikki nusxa
- * bir-biridan farq qilib qolmasin.
- *
- * ⚠️ HALOLLIK QOIDASI (CategoryGrid'dagi bilan bir xil): manbasi yo'q
- * turkum bosilganda SOXTA natija chizilmaydi — sababi ochiq aytiladi.
+ * Ma'lumot va holat `panels/categories.tsx` bilan BIR XIL: ikki nusxa
+ * bir-biridan farq qilib qolmasin. Mobilda «Barcha joylar» tugmasi yo'q —
+ * hamma turkum shu yerda (aylantiriladi). Tanlangan turkum xaritada faqat
+ * o'sha turkumdagi joylarni qoldiradi.
  */
 
-import { useState } from "react";
+import Image from "next/image";
 
-import { CATEGORIES } from "@/components/panels/CategoryGrid";
+import { ALL_CATEGORIES, useCategories } from "@/components/panels/categories";
 
 export default function CategoryChips() {
-  const [active, setActive] = useState<string | null>(null);
-  const chosen = CATEGORIES.find((c) => c.key === active) ?? null;
+  const { active, setActive } = useCategories();
 
   return (
     <div className="border-b border-zinc-200 pb-3 dark:border-white/10">
@@ -31,7 +29,7 @@ export default function CategoryChips() {
         aria-label="Turkumlar"
         className="-mx-3 flex gap-5 overflow-x-auto px-3 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {CATEGORIES.map((c) => {
+        {ALL_CATEGORIES.map((c) => {
           const on = c.key === active;
           return (
             <button
@@ -41,13 +39,21 @@ export default function CategoryChips() {
               onClick={() => setActive(on ? null : c.key)}
               className="flex shrink-0 items-center gap-2.5 rounded-xl py-1 text-left active:opacity-70"
             >
-              <span
-                className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px] text-white [&_svg]:h-[18px] [&_svg]:w-[18px]"
-                // Kulrang (rasmdagi kabi); tanlanganda turkumning o'z rangi.
-                style={{ backgroundColor: on ? c.color : "#9a9ca4" }}
-              >
-                {c.icon}
-              </span>
+              {c.pngIcon ? (
+                // PNG pin — xaritadagi belgi bilan AYNAN BIR XIL (fon YO'Q:
+                // rasmning o'zida o'z rangi bor).
+                <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center">
+                  <Image src={c.pngIcon} alt="" width={26} height={26} className="h-[26px] w-[26px] object-contain" />
+                </span>
+              ) : (
+                <span
+                  className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px] text-white [&_svg]:h-[18px] [&_svg]:w-[18px]"
+                  // Kulrang (rasmdagi kabi); tanlanganda turkumning o'z rangi.
+                  style={{ backgroundColor: on ? c.color : "#9a9ca4" }}
+                >
+                  {c.icon}
+                </span>
+              )}
               <span
                 className={`whitespace-nowrap text-[16px] leading-none ${
                   on
@@ -61,15 +67,6 @@ export default function CategoryChips() {
           );
         })}
       </div>
-
-      {chosen && (
-        <p className="mt-2 rounded-lg bg-zinc-50 px-3 py-2 text-xs leading-relaxed text-zinc-600 dark:bg-white/5 dark:text-zinc-300">
-          <b>{chosen.name}</b>{" "}
-          {chosen.hasSource
-            ? "ChustApp katalogidan keladi — bu bog'lanish keyingi bosqichda ulanadi."
-            : "uchun ma'lumot manbasi hali yo'q. OnDexMap joylar katalogi emas — u mahalla va ko'cha nomlarini saqlaydi. Bu turkum jamoa takliflari bilan to'ladi."}
-        </p>
-      )}
     </div>
   );
 }

@@ -74,34 +74,93 @@ FROM (
 
 // PlaceDetail — bitta ob'ektning to'liq ma'lumoti (rasm baytlarisiz).
 type PlaceDetail struct {
-	ID          string    `json:"id"`
-	Kind        string    `json:"kind"`
-	KindLabel   string    `json:"kind_label"`
-	Name        string    `json:"name,omitempty"`
-	Category    string    `json:"category,omitempty"`
-	Description string    `json:"description,omitempty"`
-	Phone       string    `json:"phone,omitempty"`
-	Hours       string    `json:"hours,omitempty"`
-	Street      string    `json:"street,omitempty"`
-	House       string    `json:"house,omitempty"`
-	Lat         float64   `json:"lat"`
-	Lng         float64   `json:"lng"`
-	Photos      int       `json:"photos"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID          string `json:"id"`
+	Kind        string `json:"kind"`
+	KindLabel   string `json:"kind_label"`
+	Name        string `json:"name,omitempty"`
+	Category    string `json:"category,omitempty"`
+	Description string `json:"description,omitempty"`
+	Phone       string `json:"phone,omitempty"`
+	Hours       string `json:"hours,omitempty"`
+	Street      string `json:"street,omitempty"`
+	House       string `json:"house,omitempty"`
+	// Site, Social — veb-sayt va ijtimoiy tarmoq manzili (faqat http/https;
+	// `places.Validate` va bazadagi CHECK kafolatlaydi).
+	Site   string `json:"site,omitempty"`
+	Social string `json:"social,omitempty"`
+	// Lat, Lng — nuqta uchun o'zi; chiziq (yo'l) uchun chiziqning O'ZIDA
+	// yotgan bitta nuqta (`ST_PointOnSurface`): xaritani shu joyga olib borish,
+	// qidiruv natijasi va manzil uchun.
+	Lat    float64 `json:"lat"`
+	Lng    float64 `json:"lng"`
+	Photos int     `json:"photos"`
+	// Geometry — GeoJSON (Point yoki LineString). Chiziqni xaritada chizish
+	// va moderatorga ko'rsatish uchun.
+	Geometry json.RawMessage `json:"geometry,omitempty"`
+	// LengthM — chiziq uzunligi (metr); nuqta uchun 0 (JSON'da yo'q).
+	LengthM   float64   `json:"length_m,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
-const placeCols = `id, kind, COALESCE(name,''), COALESCE(category,''), COALESCE(description,''),
+// placeGeomCols — geometriya ustunlari (Lat, Lng, Geometry, LengthM) — `places`
+// va `place_submissions` bir xil shaklda o'qiydi. Tartib scanPlace bilan BIR XIL.
+const placeGeomCols = `ST_Y(ST_PointOnSurface(geom::geometry)), ST_X(ST_PointOnSurface(geom::geometry)),
+       photo_count, ST_AsGeoJSON(geom::geometry, 6),
+       CASE WHEN GeometryType(geom::geometry) = 'LINESTRING' THEN ST_Length(geom) ELSE 0 END`
+
+// placeTextCols — matnli ustunlar; `places` va `place_submissions` bir xil
+// shaklda o'qiydi. Tartib `scanTargets` bilan BIR XIL.
+const placeTextCols = `id, kind, COALESCE(name,''), COALESCE(category,''), COALESCE(description,''),
        COALESCE(phone,''), COALESCE(hours,''), COALESCE(street,''), COALESCE(house,''),
-       ST_Y(geom::geometry), ST_X(geom::geometry), photo_count, created_at`
+       COALESCE(site,''), COALESCE(social,'')`
+
+const placeCols = placeTextCols + `,
+       ` + placeGeomCols + `, created_at`
+
+// placeScanTargets — placeCols/ListSubmissions tartibidagi maydonlar.
+func (d *PlaceDetail) scanTargets(geom *string) []any {
+	return []any{&d.ID, &d.Kind, &d.Name, &d.Category, &d.Description, &d.Phone,
+		&d.Hours, &d.Street, &d.House, &d.Site, &d.Social,
+		&d.Lat, &d.Lng, &d.Photos, geom, &d.LengthM}
+}
 
 func scanPlace(row pgx.Row) (*PlaceDetail, error) {
 	var d PlaceDetail
-	if err := row.Scan(&d.ID, &d.Kind, &d.Name, &d.Category, &d.Description, &d.Phone,
-		&d.Hours, &d.Street, &d.House, &d.Lat, &d.Lng, &d.Photos, &d.CreatedAt); err != nil {
+	var geom string
+	dest := append(d.scanTargets(&geom), &d.CreatedAt)
+	if err := row.Scan(dest...); err != nil {
 		return nil, err
 	}
+	d.Geometry = json.RawMessage(geom)
 	d.KindLabel = places.KindLabel(d.Kind)
 	return &d, nil
+}
+
+// geomSQL — geography ifodasi: xs/ys — `float64[]` parametrlarining raqami.
+// Bitta element bo'lsa NUQTA, ko'p bo'lsa CHIZIQ (`ST_MakeLine`, nuqtalar
+// berilgan tartibda). Qiymatlar parametr sifatida keladi — SQL matniga
+// hech qachon qo'shilmaydi.
+func geomSQL(xs, ys int) string {
+	x, y := "$"+strconv.Itoa(xs)+"::float8[]", "$"+strconv.Itoa(ys)+"::float8[]"
+	return `ST_SetSRID(CASE WHEN cardinality(` + x + `) = 1
+	         THEN ST_MakePoint((` + x + `)[1], (` + y + `)[1])
+	         ELSE ST_MakeLine(ARRAY(
+	             SELECT ST_MakePoint(px, py)
+	             FROM unnest(` + x + `, ` + y + `) WITH ORDINALITY AS t(px, py, ord)
+	             ORDER BY ord))
+	       END, 4326)::geography`
+}
+
+// geomArgs — `geomSQL` uchun ikki massiv (lng lar va lat lar).
+func geomArgs(c places.Clean) (xs, ys []float64) {
+	if c.IsLine() {
+		xs, ys = make([]float64, len(c.Line)), make([]float64, len(c.Line))
+		for i, p := range c.Line {
+			xs[i], ys[i] = p[0], p[1]
+		}
+		return xs, ys
+	}
+	return []float64{c.Lng}, []float64{c.Lat}
 }
 
 // PlaceByID — tasdiqlangan ob'ekt; topilmasa `ErrNotFound`.
@@ -158,7 +217,7 @@ func (p *Pool) searchPlaces(ctx context.Context, norm string, toks []string, lim
 	args := []any{norm, limit}
 	sb.WriteString(`
 SELECT id, kind, COALESCE(name,''), COALESCE(category,''), COALESCE(street,''), COALESCE(house,''),
-       ST_Y(geom::geometry), ST_X(geom::geometry),
+       ST_Y(ST_PointOnSurface(geom::geometry)), ST_X(ST_PointOnSurface(geom::geometry)),
        (CASE
           WHEN name_norm = $1 THEN 95.0
           WHEN name_norm LIKE $1 || '%' THEN 80.0
@@ -236,9 +295,8 @@ func (p *Pool) ListSubmissions(ctx context.Context, status string, limit int) ([
 	defer cancel()
 
 	rows, err := p.Query(ctx, `
-SELECT id, kind, COALESCE(name,''), COALESCE(category,''), COALESCE(description,''),
-       COALESCE(phone,''), COALESCE(hours,''), COALESCE(street,''), COALESCE(house,''),
-       ST_Y(geom::geometry), ST_X(geom::geometry), photo_count, created_at,
+SELECT `+placeTextCols+`,
+       `+placeGeomCols+`, created_at,
        status, submitter_hint, COALESCE(reviewed_by,''), reviewed_at,
        COALESCE(review_note,''), COALESCE(place_id,'')
 FROM place_submissions
@@ -253,11 +311,13 @@ LIMIT $2`, status, limit)
 	out := []SubmissionRow{}
 	for rows.Next() {
 		var r SubmissionRow
-		if err := rows.Scan(&r.ID, &r.Kind, &r.Name, &r.Category, &r.Description, &r.Phone,
-			&r.Hours, &r.Street, &r.House, &r.Lat, &r.Lng, &r.Photos, &r.CreatedAt,
-			&r.Status, &r.Hint, &r.ReviewedBy, &r.ReviewedAt, &r.ReviewNote, &r.PlaceID); err != nil {
+		var geom string
+		dest := append(r.scanTargets(&geom), &r.CreatedAt,
+			&r.Status, &r.Hint, &r.ReviewedBy, &r.ReviewedAt, &r.ReviewNote, &r.PlaceID)
+		if err := rows.Scan(dest...); err != nil {
 			return nil, errQuery
 		}
+		r.Geometry = json.RawMessage(geom)
 		r.KindLabel = places.KindLabel(r.Kind)
 		r.SubmittedAt = r.CreatedAt
 		out = append(out, r)
@@ -350,16 +410,19 @@ func (p *Pool) ApproveSubmission(ctx context.Context, in ApprovePlace) (string, 
 		return "", errors.New("bu taklif allaqachon ko'rib chiqilgan")
 	}
 
+	// Nuqta yoki chiziq — `geomSQL` (qiymatlar parametr, SQL matniga qo'shilmaydi).
+	xs, ys := geomArgs(c)
 	var placeID string
 	if err := tx.QueryRow(ctx, `
 INSERT INTO places (kind, name, category, description, phone, hours, street, house,
-                    geom, source, submission_id, approved_by)
+                    site, social, geom, source, submission_id, approved_by)
 VALUES ($1, NULLIF($2,''), NULLIF($3,''), NULLIF($4,''), NULLIF($5,''), NULLIF($6,''),
-        NULLIF($7,''), NULLIF($8,''),
-        ST_SetSRID(ST_MakePoint($9, $10), 4326)::geography, $11, $12, $13)
+        NULLIF($7,''), NULLIF($8,''), NULLIF($9,''), NULLIF($10,''),
+        `+geomSQL(11, 12)+`, $13, $14, $15)
 RETURNING id`,
 		c.Kind, c.Name, c.Category, c.Description, c.Phone, c.Hours, c.Street, c.House,
-		c.Lng, c.Lat, source, in.ID, in.Reviewer).Scan(&placeID); err != nil {
+		c.Site, c.Social,
+		xs, ys, source, in.ID, in.Reviewer).Scan(&placeID); err != nil {
 		return "", errQuery
 	}
 
@@ -391,12 +454,20 @@ WHERE submission_id = $2 AND pos = ANY($3::smallint[])`, placeID, in.ID, positio
 		return "", errQuery
 	}
 
-	after, _ := json.Marshal(map[string]any{
+	afterDoc := map[string]any{
 		"kind": c.Kind, "name": c.Name, "category": c.Category, "description": c.Description,
 		"phone": c.Phone, "hours": c.Hours, "street": c.Street, "house": c.House,
-		"lat": c.Lat, "lng": c.Lng, "source": source, "submission_id": in.ID,
+		"site": c.Site, "social": c.Social,
+		"source": source, "submission_id": in.ID,
 		"photos": tag.RowsAffected(),
-	})
+	}
+	if c.IsLine() {
+		afterDoc["line"] = c.Line
+		afterDoc["length_m"] = int(places.LineLengthMeters(c.Line))
+	} else {
+		afterDoc["lat"], afterDoc["lng"] = c.Lat, c.Lng
+	}
+	after, _ := json.Marshal(afterDoc)
 	if _, err := tx.Exec(ctx, `
 INSERT INTO geo_revisions (target_kind, target_id, op, before, after, applied_by)
 VALUES ('place', $1, 'create', NULL, $2::jsonb, $3)`, placeID, string(after), in.Reviewer); err != nil {
@@ -495,7 +566,8 @@ func (p *Pool) DeletePlace(ctx context.Context, id, reviewer string) error {
 	err = tx.QueryRow(ctx, `
 SELECT jsonb_build_object('kind', kind, 'name', name, 'category', category,
        'description', description, 'phone', phone, 'hours', hours, 'street', street,
-       'house', house, 'lat', ST_Y(geom::geometry), 'lng', ST_X(geom::geometry),
+       'house', house, 'site', site, 'social', social, 'geometry', ST_AsGeoJSON(geom::geometry, 6)::jsonb,
+       'lat', ST_Y(ST_PointOnSurface(geom::geometry)), 'lng', ST_X(ST_PointOnSurface(geom::geometry)),
        'source', source, 'submission_id', submission_id)::text
 FROM places WHERE id = $1 FOR UPDATE`, id).Scan(&before)
 	if errors.Is(err, pgx.ErrNoRows) {

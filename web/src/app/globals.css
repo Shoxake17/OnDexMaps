@@ -31,28 +31,78 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* ─ Atribut paneli ────────────────────────────────────────────────────
-   Kredit OLIB TASHLANMAYDI (ODbL talabi), lekin u xaritaning asosiy
-   elementi emas: yig'ilgan holatda faqat «ⓘ» ko'rinadi, ochilganda
-   esa matn kichik va bosiq bo'ladi. Ya'ni talab bajariladi, ko'rinish
-   esa «© OnDex map» brendiga qoladi. */
-.maplibregl-ctrl-attrib.maplibregl-compact {
-  background: rgba(255, 255, 255, 0.55);
-  min-height: 20px;
+/* ─ «OnDex» yozuvi va kredit (eng pastki o'ng burchak) ──────────────────
+   `OnDexMark` — brend yozuvi (katta), `MapCredits` — faqat «© OnDex map»:
+   burchakning o'zida, yozuvning PASTIDA (yozuv 30 px yuqoriga ko'tarilgan).
+   Ikkalasi `fixed`: desktopda xaritaning, mobilda ekranning pastki o'ng
+   burchagida, pastki panel USTIDA. Boshqa manba kreditlari shaffof va
+   o'lchamsiz (`.ondex-credits-hidden`) — DOM'da bor, ko'rinmaydi. */
+.ondex-mark {
+  position: fixed;
+  right: 12px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 32px);
+  z-index: 40;
+  pointer-events: none;
+  user-select: none;
+  font: 800 28px/32px Arial, Helvetica, sans-serif;
+  letter-spacing: -0.5px;
+  /* Oq halo: yozuv har qanday fonda (xarita, sun'iy yo'ldosh) o'qiladi. */
+  text-shadow:
+    0 0 4px #fff,
+    0 0 4px #fff,
+    0 0 2px #fff;
 }
-.maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-inner {
-  font-size: 10px;
-  line-height: 14px;
-  color: #a1a1aa;
-  max-width: 260px;
+.ondex-mark-on {
+  color: #f97316;
 }
-.maplibregl-ctrl-attrib-button {
-  opacity: 0.45;
+.ondex-mark-dex {
+  color: #27272a;
 }
-.maplibregl-ctrl-attrib-button:hover {
-  opacity: 0.9;
+.dark .ondex-mark {
+  text-shadow:
+    0 0 4px #000,
+    0 0 4px #000,
+    0 0 2px #000;
+}
+.dark .ondex-mark-dex {
+  color: #f4f4f5;
 }
 
+.ondex-credits {
+  position: fixed;
+  right: 12px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 4px);
+  z-index: 40;
+  pointer-events: none;
+  font: 11px/18px Arial, Helvetica, sans-serif;
+  color: #71717a;
+}
+.ondex-credits-brand {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.7);
+  user-select: none;
+}
+/* Shaffof, o'lchamsiz, bosilmaydi — lekin sahifa matnida mavjud. */
+.ondex-credits-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  opacity: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.dark .ondex-credits {
+  color: #9ca3b0;
+}
+.dark .ondex-credits-brand {
+  background: rgba(35, 39, 52, 0.7);
+}
 /* ─ Masshtab chizg'i («100 m», «1 km») ────────────────────────────────
    Eski ko'rinish: qora to'rtburchak chegara (pastki va yon chiziqlar).
    Endi: chegarasiz oq KAPSULA. Uzunligi masofani ANIQ ko'rsatadi —
@@ -82,48 +132,14 @@ body {
 }
 
 /* ─ MOBIL KO'RINISH (Yandex `mobilemap.png`) ──────────────────────────────
-   KREDIT («© OnDex map | Powered by Esri») — ekranning ENG PASTKI O'NG
-   burchagida, o'ta xira va fonsiz. Pastki panel xaritaning pastini yopadi,
-   shuning uchun kredit panel USTIGA chiqariladi (`z-index`): aks holda u panel
-   ostida qolib, umuman ko'rinmasdi.
-
-   ⚠️ Yashirilmaydi va butunlay shaffof qilinmaydi: OpenStreetMap (ODbL) va
-   Esri litsenziyalari kreditning MAVJUD bo'lishini talab qiladi. Xiralik
-   (opacity) — ko'rinishni pasaytiradi, huquqiy talabni bekor qilmaydi; «ⓘ»
-   tugmasi bosilsa to'liq ro'yxat ochiladi. Bosilishi uchun `pointer-events`
-   yoqiq qoldirilgan. Masshtab chizig'i mobilda o'zimizning vertikal
-   ko'rinishda (`MobileScale`), shuning uchun standarti yashiriladi. */
-.ondex-mobile .maplibregl-ctrl-bottom-right {
-  bottom: env(safe-area-inset-bottom, 0px);
-  right: 0;
-  z-index: 40;
-}
-.ondex-mobile .maplibregl-ctrl-attrib.maplibregl-compact,
-.ondex-mobile .maplibregl-ctrl-attrib {
-  margin: 0;
-  min-height: 0;
-  background: transparent;
-  box-shadow: none;
-  opacity: 0.3;
-}
-.ondex-mobile .maplibregl-ctrl-attrib .maplibregl-ctrl-attrib-inner,
-.ondex-mobile .maplibregl-ctrl-attrib a {
-  font-size: 9px;
-  line-height: 14px;
-  color: #71717a;
-}
-.ondex-mobile .maplibregl-ctrl-attrib-button {
-  width: 18px;
-  height: 18px;
-}
+   Masshtab chizig'i mobilda o'zimizning vertikal ko'rinishda (`MobileScale`),
+   shuning uchun MapLibre'ning standarti yashiriladi. Kredit (`MapCredits`) va
+   «OnDex» yozuvi — `fixed`, pastki panel USTIDA (`z-index: 40`). */
 .ondex-mobile .maplibregl-ctrl-scale {
   display: none;
-}.dark .maplibregl-ctrl-attrib.maplibregl-compact {
-  background: rgba(35, 39, 52, 0.7);
 }
-.dark .maplibregl-ctrl-attrib-button {
-  filter: invert(1);
-}
-.dark .maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-inner {
-  color: #9ca3b0;
+/* Mobilda kredit xiraroq va fonsiz — panelning pastki chetida bosiq turadi. */
+.ondex-mobile .ondex-credits-brand {
+  background: transparent;
+  opacity: 0.6;
 }

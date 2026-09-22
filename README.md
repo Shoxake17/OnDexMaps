@@ -187,7 +187,137 @@ Talablar:
 
 Xarita saytida o'ng tugma → **«Ob'ekt qo'shish»**: tashkilot, manzil, bino
 kirishi, yo'l, shlagbaum, bekat, avtoturargoh, piyodalar o'tish joyi,
-to'siq, kalitka, boshqa ob'ekt (nom/tavsif/telefon/ish vaqti + 4 tagacha rasm).
+to'siq, darvoza (ilgari «kalitka»; kaliti `gate` o'zgarmagan), boshqa ob'ekt
+(nom/tavsif/kontaktlar/ish vaqti + 4 tagacha rasm).
+
+**Tashkilot: kontaktlar va ish vaqti.**
+- «Kontaktlar» bo'limi: telefon, veb-sayt (`site`) va ijtimoiy tarmoq akkaunti
+  (`social`). Bular hammaga HAVOLA bo'ladi, shuning uchun qat'iy tekshiriladi
+  (`internal/places/contacts.go`, bazada ham CHECK — `0010`): faqat `http/https`
+  (`javascript:` va h.k. rad), `user:parol@` yo'q, IP/`localhost`/ichki domen
+  yo'q; ijtimoiy tarmoq — faqat ma'lum tarmoqlar (Instagram, Telegram, Facebook,
+  YouTube, TikTok, X, LinkedIn, VK, OK, Threads, WhatsApp) va akkaunt yo'li bilan.
+  Sayt tafsilotda `rel="noopener noreferrer nofollow ugc"` bilan ochiladi.
+  JSON'da kalitlar `site`/`social` (`website` — asalari, sayt EMAS).
+- «Ish vaqti» Yandex uslubida uch tanlagich (`WorkHoursField.tsx`): kunlar ·
+  soatlar (kun bo'yi / aniq vaqt) · tanaffus. Natija bir xil matn
+  («Du–Ju, 09:00–18:00, tanaffus 13:00–14:00») — `lib/workHours.ts`; ixtiyoriy
+  («Ko'rsatilmagan» tanlansa hech narsa yuborilmaydi).
+
+**Brend.** Brauzer belgisi (favicon, `icon.png`, `apple-icon.png`) va interfeysdagi
+kichik logotip (`public/ondexmap-pin.png`) OnDexMap logotipidan `web/scripts/make-icons.mjs`
+bilan yasaladi (`node scripts/make-icons.mjs` — logotip o'zgarsa qayta ishga tushiring).
+«Ob'ekt qo'shish» paytida xaritadagi sudraladigan belgi shu logotip (`useAddMarker.ts`);
+«Mening joylashuvim» tugmasi va joylashuv nuqtasi esa odatiy (Lucide `Navigation`, ko'k nuqta).
+Pastki o'ng burchakda katta «OnDex» yozuvi (`OnDexMark`, 30 px ko'tarilgan) va uning
+ostida, burchakning o'zida FAQAT «© OnDex map» (`MapCredits`). Boshqa manba kreditlari
+(OpenStreetMap, OpenMapTiles, Microsoft, «Powered by Esri» — oxirgisi faqat sun'iy
+yo'ldosh yoqilganda) shaffof va o'lchamsiz (`.ondex-credits-hidden`): DOM'da bor,
+ko'zga ko'rinmaydi. ⚠️ Bu mahsulot qarori; ODbL/Esri ko'rinadigan kreditni talab
+qilishi mumkin — ommaviy ochishdan oldin huquqiy tekshiring. MapLibre'ning o'z
+`AttributionControl`i ataylab ulanmagan.
+
+**Belgilar — LUCIDE.** Hamma belgi `lucide-react` dan; qo'lda chizilgan SVG yo'l YO'Q.
+Interfeys — Lucide komponentlari; xarita belgilari (ob'ekt turlari `kindUi.tsx`,
+POI `poiIcons.ts`) tuvalda chiziladi, ma'lumot xuddi shu Lucide modulidan
+(`lucide-react/dist/esm/icons/<nom>.mjs` → `__iconData`, `lib/lucideCanvas.ts`) —
+yon paneldagi va xaritadagi belgi hech qachon farq qilmaydi. Yangi belgi: Lucide'dan
+nom toping va import qiling (tur `types/lucide-icons.d.ts`). O'lcham: barcha ob'ekt
+belgilari POI (OSM) belgilariga TENG — 20 px doira, 12 px belgi (`components/map/markerBadge.ts`,
+yagona chizuvchi); avtoturargoh — «P» harfi; faqat bino kirishi ataylab o'ta kichik (13 px).
+YAGONA ISTISNO — shlagbaum: `image/shlagboun.png` ga birga bir o'xshash bo'lishi kerak,
+Lucide'da bunday belgi yo'q, shuning uchun `kindUi.tsx` → `BARRIER` o'lchamlaridan
+chiziladi (panel SVG va xarita tuvali bir xil). Qidiruv natijasi va «ob'ekt qo'shish»
+sudraladigan belgisi — OnDexMap logotipi (`components/map/logoPin.ts`). Yon panelda hech
+qanday «yo'l-yo'riq» matni yo'q (hech narsa tanlanmaganda «Tanlangan hudud» / «Manzil»
+bloki chiqmaydi).
+
+**OSM POI turkumlari — rasmiy OpenMapTiles ro'yxati bo'yicha, 53 ta + «boshqa».**
+`poiIcons.ts`: manba —
+[`openmaptiles/layers/poi/poi.yaml`](https://github.com/openmaptiles/openmaptiles/blob/master/layers/poi/poi.yaml)
+(2026-09-22 tekshirilgan). ⚠️ Ilgari kodda `pub`, `supermarket`, `convenience`,
+`marketplace` deb TAXMIN qilingan kalitlar bor edi — булар HAQIQIY klass nomlari
+EMAS (OpenMapTiles ularni mos ravishda `beer`, `grocery`, `shop`, `grocery` ga
+yig'adi) va HECH QACHON mos kelmasdi: shu turdagi haqiqiy joylar kulrang «boshqa»
+belgisi bo'lib chiqib turardi. Tuzatilgach haqiqiy Chust plitkasida
+(`map.querySourceFeatures`, 304 ta xususiyat) tasdiqlandi: eski xato nomlar
+HAQIQATAN kelmaydi; shu tekshiruvda yana 3 ta ma'lumotda bor, kodda yo'q klass
+(`sports_centre`, `swimming_pool`, `toilets`) ham topilib qo'shildi.
+
+**OSM joylari (POI) = OnDexMap belgilari — BITTA ARXITEKTURA.** Ikkalasi bir chizuvchidan
+(`components/map/markerBadge.ts`): 20 px doira, 12 px belgi, nom belgining O'NG yonida va belgi
+rangining to'qroq tusida (`image/image.png` «Кафе» kabi). OSM avtobus bekati — «Transport bekati»
+belgisi, OSM parking — «P». **Belgi va nom BITTA qatlamda** (`style-chust.json` → `poi-dot`;
+ilgari `poi-dot` + `poi-label` ikkita edi va «belgi bor, nomi yo'q / nomi bor, belgisi yo'q»
+chiqardi): belgi doim birinchi, nom sig'masa `text-optional` bilan FAQAT nom yashiriladi; nom
+belgisiz chiqmaydi. Transport bekati nomi ko'rsatilmaydi (OnDexMap `stop` va OSM `bus`). Uslub
+API ichiga `go:embed` — o'zgarganda API qayta quriladi/yoqiladi.
+
+**To'qnashuv qoidasi ham BIR XIL** (`usePlacesLayer.ts`): `icon-allow-overlap: false` va
+`icon-padding`/`text-padding` OSM bilan aynan bir xil qiymatlarda — ikkalasi BITTA umumiy
+to'qnashuv hisobida qatnashadi. Joy torlashsa OnDexMap ob'ekti ham OSM joyi kabi yashirinadi
+(imtiyozi yo'q): manbasi ko'rinishda umuman bilinmaydi. (Bino kirishi va to'siq o'rtasidagi
+belgi — istisno, `icon-allow-overlap: true`: ular «joy» emas, doim ko'rinishi kerak.)
+
+**Muhimlik darajalari — Google/Yandex kabi DINAMIK ko'rinish** (`components/map/importance.ts`,
+yagona haqiqat manbai; OSM tomoni `style-chust.json` da qo'lda AYNAN shu sonlar bilan
+takrorlangan — o'zgartirilsa ikkalasi ham yangilanadi). 4 daraja: 1 — shahar miqyosidagi kam
+sonli/muhim (shifoxona, yoqilg'i, masjid, kasalxona...), 4 — kichik/ko'p sonli (do'kon, boshqa).
+Har daraja ALOHIDA MapLibre qatlami (`poi-tier1..4` va `ondex-places-tier1..4`) — MapLibre'da
+`minzoom` ma'lumotdan hisoblanmaydi, shuning uchun daraja boshqacha ilojda ajratib bo'lmaydi
+(OpenMapTiles'ning o'z namunaviy uslublari ham shu yo'l bilan ishlaydi). Daraja 1 z12 dan,
+daraja 4 z16.5 dan ko'rinadi; har biriga `symbol-sort-key` (`TIER_SORT_BASE`) biriktirilgan —
+joy torlashsa past raqamli (muhimroq) daraja g'olib chiqadi, MANBASIDAN QAT'I NAZAR (tier-1
+OnDexMap kasalxonasi tier-3 OSM kafesini yutadi). Natija: yaqinlashtirilganda ekranda bo'sh joy
+ko'payib, avval yashirin turgan kam muhim belgilar ham paydo bo'ladi — STATIK emas, haqiqiy
+xaritalardagi kabi DINAMIK. OnDexMap «Tashkilot» darajasi `category` bo'yicha (`ORG_CATEGORY_TIER`),
+qolgan turlar `kind` bo'yicha (`KIND_TIER`) belgilanadi.
+
+**Qidiruv natijasi va «ob'ekt qo'shish» belgisi** — ikkalasi ham OnDexMap logotipi
+(`components/map/logoPin.ts`, `/ondexmap-pin.png`); ilgari qidiruv natijasi qizil tomchi edi.
+
+**Turkumlar (sidebar).** Turkum tanlansa xaritada FAQAT shu turkumdagi joylar belgisi qoladi
+(OSM `class` + OnDexMap «Tashkilot» turkumi/turi; `panels/categories.tsx`, filtr `usePlacesLayer`);
+yana bosilsa yoki «Hammasini ko'rsatish» — filtr olib tashlanadi. «Barcha joylar» asosiy 10 ta
+turkumga 12 ta qo'shimcha turkumni ochadi. Holat (`CategoryContext`) sidebar, sarlavha va mobil
+chiplar orasida umumiy. Yangi turkum: `categories.tsx` ga qo'shing (OSM `class` lari va server
+`places.Categories` dagi aynan shu nomlar).
+
+**«Ob'ekt qo'shish» paneli ixcham:** turlar ro'yxati va tashkilot formasi (ish vaqti to'liq
+to'ldirilganda ham) 1400×850 ekranda aylantirishsiz sig'adi.
+
+**Izoh (tavsif) hech qaysi turda majburiy emas** — ixtiyoriy. Majburiylari faqat
+turning o'z maydonlari: tashkilotda nom + turkum, manzilda uy raqami, bekatda
+nom. Qoida `internal/places/kinds.go` da, `TestDescriptionIsNeverRequired` qulflaydi.
+
+**Bino kirishi — o'ta kichik belgi** (`image/kirish.png` kabi kulrang eshik + oq
+strelka, 16×14 px, yozuvsiz) va faqat yaqin masshtabda (`ENTRANCE_MIN_ZOOM = 17.5`,
+masshtab chizg'ichi ≈30 m) ko'rinadi; uzoqroqda yashirin. Alohida qatlam:
+`usePlacesLayer.ts` → `ondex-places-entrance`, rasm — `kindUi.tsx` → `makeEntranceIcon`.
+
+**Chiziq turlari: yo'l, piyodalar o'tish joyi, to'siq** (qolganlari — NUQTA). Har
+turning o'z chegarasi bor (`KindSpec.Line`, `/v1/places/meta` → `kinds[].line`):
+yo'l 5 m…30 km · **piyodalar o'tish joyi 2…10 m, ≤4 nuqta** · to'siq 1 m…2 km.
+Forma uzun chizishga yo'l qo'ymaydi: chiziq chegarada o'zi TO'XTAYDI
+(`lib/geo.ts` → `extendLine`). Xaritada o'tish joyi ZEBRA (`line-dasharray`,
+kengligi ≈3.5 m, masshtab bilan o'sadi), to'siq — ingichka chiziq + o'rtasida belgi.
+Bazada `0010`: ikki tur ham LineString (eski NUQTA qatorlar `NOT VALID` bilan qoladi).
+
+**Yo'l — CHIZIQ.** «Yo'l» tanlansa belgi o'rniga chizish
+rejimi yoqiladi: xaritani bosib nuqta qo'shiladi, nuqtani surish, ikki marta
+bosib o'chirish, «Ortga» / «Tozalash» mumkin; uzunlik jonli ko'rinadi. Shakl
+tur bilan belgilanadi (`internal/places/kinds.go` → `Geometry`) va **uch joyda**
+majburlanadi: forma (`meta.kinds[].geometry`), server (`places.Validate`) va
+baza (`0009_place_lines.sql` — `road` = LineString 2..500 nuqta, 1..40 000 m;
+qolganlari = Point). Kod chegaralari: 2..500 nuqta, 5 m..30 km, O'zbekiston
+ichida; ketma-ket takror nuqtalar olib tashlanadi; o'zini kesib o'tuvchi/yopiq
+yo'l MUMKIN. Yo'l `POST /v1/places` da `"line": [[lng, lat], ...]` bilan
+yuboriladi (lat/lng BERILMAYDI, har nuqta AYNAN 2 son). Moderator ChustApp
+panelida yo'lni xaritada ko'radi; tasdiqlangach saytda yo'lning CHIZIG'I
+ko'rinmaydi (talab) — faqat NOMI yo'l bo'ylab yozuv bo'lib chiqadi; nomga (yo'l
+ustiga) bosilsa tafsilot (uzunligi) ochiladi. Chizish paytidagi qoralama chiziq
+ko'k va ko'rinadi. Yangi chiziq turi qo'shish:
+`Geometry: GeomLine` + migratsiyadagi `kind = '...'` + `TestMigrationLineKindsMatchCode`.
 
 ```
 brauzer ─POST /v1/places─▶ place_submissions  (KARANTIN, status=pending)

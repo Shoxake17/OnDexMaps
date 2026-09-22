@@ -71,17 +71,19 @@ func TestIntegrationPlacesLifecycleAndPrivileges(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer owner.Close()
+	// t.Cleanup (defer emas): tozalash (pastda) hovuz YOPILGUNCHA ishlashi shart —
+	// LIFO tartibda oxirroq ro'yxatga olingani birinchi ishlaydi.
+	t.Cleanup(owner.Close)
 	app, err := ReadOnly(ctx, appDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer app.Close()
+	t.Cleanup(app.Close)
 	sub, err := OpenSubmitter(ctx, submitDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer sub.Close()
+	t.Cleanup(sub.Close)
 
 	tag := "ITEST-" + time.Now().Format("150405.000")
 	hint := "itest-" + strings.ReplaceAll(tag, ".", "")

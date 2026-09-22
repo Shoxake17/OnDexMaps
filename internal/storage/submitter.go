@@ -75,15 +75,17 @@ func (s *Submitter) Submit(ctx context.Context, in Submission) error {
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck // Commit'dan keyin no-op
 
-	const ins = `
+	// Nuqta yoki chiziq (yo'l): `geomSQL` — qiymatlar parametr sifatida keladi.
+	xs, ys := geomArgs(in.Clean)
+	ins := `
 INSERT INTO place_submissions
     (id, kind, name, category, description, phone, hours, street, house,
-     geom, photo_count, submitter_hint)
+     site, social, geom, photo_count, submitter_hint)
 VALUES ($1, $2, NULLIF($3,''), NULLIF($4,''), NULLIF($5,''), NULLIF($6,''),
-        NULLIF($7,''), NULLIF($8,''), NULLIF($9,''),
-        ST_SetSRID(ST_MakePoint($10, $11), 4326)::geography, $12, $13)`
+        NULLIF($7,''), NULLIF($8,''), NULLIF($9,''), NULLIF($10,''), NULLIF($11,''),
+        ` + geomSQL(12, 13) + `, $14, $15)`
 	if _, err := tx.Exec(ctx, ins, id, in.Kind, in.Name, in.Category, in.Description,
-		in.Phone, in.Hours, in.Street, in.House, in.Lng, in.Lat,
+		in.Phone, in.Hours, in.Street, in.House, in.Site, in.Social, xs, ys,
 		len(in.Photos), in.Hint); err != nil {
 		return errQuery
 	}

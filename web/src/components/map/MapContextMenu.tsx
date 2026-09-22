@@ -26,6 +26,14 @@
  * └──────────────────────────────────────────────────────────────────
  */
 
+import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  CircleQuestionMark,
+  Copy,
+  MapPinPlus,
+  Ruler,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Map as MLMap, MapMouseEvent } from "maplibre-gl";
 
@@ -83,17 +91,8 @@ function place(x: number, y: number, w: number, h: number, menuH: number) {
   };
 }
 
-const ICON = {
-  width: 24,
-  height: 24,
-  viewBox: "0 0 24 24",
-  fill: "none",
-  stroke: "currentColor",
-  strokeWidth: 2,
-  strokeLinecap: "round",
-  strokeLinejoin: "round",
-  "aria-hidden": true,
-} as const;
+/** Menyu bandlarining Lucide belgi sozlamalari. */
+const ICON = { size: 24, strokeWidth: 2, className: "shrink-0" } as const;
 
 const ITEM =
   "flex w-full items-center gap-4 px-5 text-left text-[16px] text-zinc-900 outline-none transition hover:bg-zinc-100 focus-visible:bg-zinc-100 active:bg-zinc-200";
@@ -275,16 +274,7 @@ export default function MapContextMenu({
         className={`${ITEM} h-12`}
         onClick={run(() => onWhatsHere(menu.p, menu.screen))}
       >
-        <svg {...ICON} strokeWidth={0} fill="currentColor" className="shrink-0">
-          <circle cx="12" cy="12" r="10" />
-          <path
-            d="M9.6 9.4a2.5 2.5 0 1 1 3.6 2.2c-.8.4-1.2.9-1.2 1.7"
-            stroke="#fff"
-            strokeWidth={2}
-            fill="none"
-          />
-          <circle cx="12" cy="16.6" r="1.1" fill="#fff" />
-        </svg>
+        <CircleQuestionMark {...ICON} />
         Bu yerda nima bor?
       </button>
 
@@ -294,9 +284,7 @@ export default function MapContextMenu({
         className={`${ITEM} h-12`}
         onClick={run(() => onRouteTo(menu.p, menu.screen))}
       >
-        <svg {...ICON} className="shrink-0">
-          <path d="M12 3v13M7 11l5 5 5-5M7 21h10" />
-        </svg>
+        <ArrowDownToLine {...ICON} />
         Bu yerga marshrut
       </button>
 
@@ -306,9 +294,7 @@ export default function MapContextMenu({
         className={`${ITEM} h-12`}
         onClick={run(() => onRouteFrom(menu.p, menu.screen))}
       >
-        <svg {...ICON} className="shrink-0">
-          <path d="M12 21V8M7 13l5-5 5 5M7 3h10" />
-        </svg>
+        <ArrowUpFromLine {...ICON} />
         Bu yerdan marshrut
       </button>
 
@@ -319,10 +305,7 @@ export default function MapContextMenu({
           className={`${ITEM} h-12`}
           onClick={run(() => onAddObject(menu.p))}
         >
-          <svg {...ICON} className="shrink-0">
-            <path d="M12 21s-6-5.2-6-10a6 6 0 0 1 12 0c0 4.8-6 10-6 10z" />
-            <path d="M12 8v5M9.5 10.5h5" />
-          </svg>
+          <MapPinPlus {...ICON} />
           Ob&apos;ekt qo&apos;shish
         </button>
       )}
@@ -333,10 +316,7 @@ export default function MapContextMenu({
         className={`${ITEM} h-12`}
         onClick={run(() => onMeasure(menu.p))}
       >
-        <svg {...ICON} className="shrink-0">
-          <path d="M3.5 16.5 16.5 3.5l4 4-13 13z" />
-          <path d="M7 13l2 2M10 10l1.5 1.5M13 7l2 2" />
-        </svg>
+        <Ruler {...ICON} />
         Lineyka
       </button>
 
@@ -346,10 +326,7 @@ export default function MapContextMenu({
         className={`${ITEM} h-14`}
         onClick={() => void copy()}
       >
-        <svg {...ICON} className="shrink-0">
-          <rect x="9" y="9" width="11" height="11" rx="2" />
-          <path d="M5 15V6a2 2 0 0 1 2-2h9" />
-        </svg>
+        <Copy {...ICON} />
         <span className="flex min-w-0 flex-col">
           <span className="truncate">{note ?? "Koordinatani nusxalash"}</span>
           <span className="truncate text-xs text-zinc-500">

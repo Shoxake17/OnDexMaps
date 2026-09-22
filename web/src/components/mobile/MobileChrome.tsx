@@ -23,6 +23,8 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
+import { Layers, Menu, Minus, Navigation, Plus, Route, Ruler, X } from "lucide-react";
+
 import { useMap } from "@/components/map/MapProvider";
 import { useGeolocate } from "@/components/map/useGeolocate";
 import type { ToolMode } from "@/components/map/useMapTools";
@@ -139,9 +141,7 @@ export default function MobileChrome({
         onClick={() => onSheet(expanded ? "peek" : "full")}
         className={`${FAB} absolute left-3 top-3 z-20 h-12 w-12`}
       >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-          <path d="M4 7h16M4 12h16M4 17h16" />
-        </svg>
+        <Menu size={22} strokeWidth={2.2} />
       </button>
 
       {/* ── Yuqori-o'ng: qatlam · 3D/2D · ob-havo ──────────────────── */}
@@ -154,10 +154,7 @@ export default function MobileChrome({
             onClick={toggleSatellite}
             className={`${FAB} h-12 w-12 ${satellite ? FAB_ON : ""}`}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
-              <rect x="8" y="3" width="13" height="13" rx="2.5" />
-              <path d="M16 16v2.5a2.5 2.5 0 0 1-2.5 2.5h-8A2.5 2.5 0 0 1 3 18.5v-8A2.5 2.5 0 0 1 5.5 8H8" />
-            </svg>
+            <Layers size={22} strokeWidth={2} />
           </button>
         )}
         {/* Yozuv HOLATNI ko'rsatadi («3D» yoki «2D»), maqsadni emas. */}
@@ -185,14 +182,10 @@ export default function MobileChrome({
       {sheet === "peek" && (
         <div className="absolute right-3 top-[46%] z-20 flex -translate-y-1/2 flex-col gap-2.5">
           <button type="button" aria-label="Yaqinlashtirish" onClick={() => map?.zoomIn({ duration: 250 })} className={`${FAB} h-12 w-12`}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
+            <Plus size={22} strokeWidth={2.2} />
           </button>
           <button type="button" aria-label="Uzoqlashtirish" onClick={() => map?.zoomOut({ duration: 250 })} className={`${FAB} h-12 w-12`}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-              <path d="M5 12h14" />
-            </svg>
+            <Minus size={22} strokeWidth={2.2} />
           </button>
         </div>
       )}
@@ -205,9 +198,7 @@ export default function MobileChrome({
           <span>{measure.points < 2 ? "Nuqtalarni bosing" : measure.text}</span>
           {measure.points > 0 && (
             <button type="button" aria-label="Chizmani tozalash" onClick={measure.onClear} className="-mr-1 flex h-8 w-8 items-center justify-center rounded-full text-zinc-500 dark:text-zinc-300">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
-                <path d="M6 6l12 12M18 6L6 18" />
-              </svg>
+              <X size={16} strokeWidth={2.4} />
             </button>
           )}
         </div>
@@ -236,11 +227,7 @@ export default function MobileChrome({
             onClick={onRoute}
             className={`${FAB} pointer-events-auto h-12 w-12 ${routing ? FAB_ON : ""} ${expanded ? "invisible" : ""}`}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
-              <circle cx="6" cy="19" r="2.5" />
-              <circle cx="18" cy="5" r="2.5" />
-              <path d="M8.5 19h6a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7h6" />
-            </svg>
+            <Route size={24} strokeWidth={1.9} />
           </button>
           <button
             type="button"
@@ -249,9 +236,7 @@ export default function MobileChrome({
             onClick={locate}
             className={`${FAB} pointer-events-auto h-[54px] w-[54px] !rounded-full ${tracking ? FAB_ON : ""} ${expanded ? "invisible" : ""}`}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M3.5 11.2 20.5 3.5l-7.7 17-1.9-7.4z" />
-            </svg>
+            <Navigation size={24} strokeWidth={1.8} fill="currentColor" />
           </button>
         </div>
 
@@ -291,9 +276,7 @@ export default function MobileChrome({
             <div className="mb-2 flex items-center justify-between px-2 pt-1">
               <h2 className="text-[19px] font-bold text-zinc-900 dark:text-white">Marshrut</h2>
               <button type="button" aria-label="Marshrutni yopish" onClick={onRoute} className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 dark:bg-[#2b2c35] dark:text-zinc-300">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
-                  <path d="M6 6l12 12M18 6L6 18" />
-                </svg>
+                <X size={16} strokeWidth={2.4} />
               </button>
             </div>
           ) : (
@@ -307,12 +290,7 @@ export default function MobileChrome({
                 onClick={() => onMode(measuring ? "idle" : "measure")}
                 className={`flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-800 dark:bg-[#2b2c35] dark:text-white ${measuring ? FAB_ON : ""}`}
               >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <g transform="rotate(-45 12 12)">
-                    <rect x="1.5" y="8" width="21" height="8" rx="1.8" />
-                    <path d="M6 8v3.2M10 8v2M14 8v3.2M18 8v2" />
-                  </g>
-                </svg>
+                <Ruler size={24} strokeWidth={1.9} />
               </button>
             </div>
           )}

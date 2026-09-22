@@ -60,7 +60,12 @@ const DARK: Record<string, Paint> = {
   boundary: { "line-color": "#5a5470" },
   "road-label": { "text-color": "#b4bccd", "text-halo-color": BG },
   "water-label": { "text-color": "#6fa2d6", "text-halo-color": "#1b3a5c" },
-  "poi-label": { "text-color": "#e8b48a", "text-halo-color": BG },
+  // Belgi va nom bitta qatlamda, 4 muhimlik darajasiga bo'lingan (`poi-tier1..4`,
+  // `importance.ts`): qorong'i mavzuda nom rangi hammasida bir xil ochiq tusda.
+  "poi-tier1": { "text-color": "#e8b48a", "text-halo-color": BG },
+  "poi-tier2": { "text-color": "#e8b48a", "text-halo-color": BG },
+  "poi-tier3": { "text-color": "#e8b48a", "text-halo-color": BG },
+  "poi-tier4": { "text-color": "#e8b48a", "text-halo-color": BG },
   housenumber: { "text-color": "#8c96aa", "text-halo-color": BG },
   "place-label": { "text-color": "#f2f4f8", "text-halo-color": BG },
   // Keyin qo'shiladigan qatlam (MapProvider): mahalla nomi.

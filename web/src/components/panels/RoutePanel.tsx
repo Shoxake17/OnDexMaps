@@ -18,6 +18,8 @@
  * nuqta hosil qilib bo'lmaydi.
  */
 
+import { ArrowUpDown, Bike, BusFront, CarFront, CarTaxiFront, Footprints, Scooter } from "lucide-react";
+
 import type { RouteInfo, RouteSlot, RouteState } from "@/components/map/useMapTools";
 import { formatDistance, formatDuration, type LngLat } from "@/lib/geo";
 import { BLUE } from "./controlStyles";
@@ -254,85 +256,24 @@ function Result({ route }: { route: RouteInfo }) {
 
 /* ── Belgilar ─────────────────────────────────────────────────────── */
 
-function Ico({ children }: { children: React.ReactNode }) {
-  return (
-    <svg
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {children}
-    </svg>
-  );
-}
-
 function CarIcon() {
-  return (
-    <Ico>
-      <path d="M5 16.5V13l1.6-4.2A2 2 0 0 1 8.5 7.5h7a2 2 0 0 1 1.9 1.3L19 13v3.5" />
-      <path d="M3.5 13h17v3.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z" />
-      <path d="M6.5 17.5V19M17.5 17.5V19" />
-      <circle cx="7.5" cy="14.8" r=".6" fill="currentColor" />
-      <circle cx="16.5" cy="14.8" r=".6" fill="currentColor" />
-    </Ico>
-  );
+  return <CarFront size={24} strokeWidth={1.8} />;
 }
 function BusIcon() {
-  return (
-    <Ico>
-      <rect x="5" y="4" width="14" height="14" rx="2.5" />
-      <path d="M5 11h14M9 20v-2M15 20v-2" />
-      <circle cx="8.5" cy="14.5" r=".7" fill="currentColor" />
-      <circle cx="15.5" cy="14.5" r=".7" fill="currentColor" />
-    </Ico>
-  );
+  return <BusFront size={24} strokeWidth={1.8} />;
 }
 function WalkIcon() {
-  return (
-    <Ico>
-      <circle cx="13" cy="4.5" r="1.8" />
-      <path d="M10 21l2-6-2.5-2.5 1-4.5L14 8l2.5 3M9.5 8.5L7 11M12 15l3 2 .5 4" />
-    </Ico>
-  );
+  return <Footprints size={24} strokeWidth={1.8} />;
 }
 function BikeIcon() {
-  return (
-    <Ico>
-      <circle cx="6" cy="16" r="3.5" />
-      <circle cx="18" cy="16" r="3.5" />
-      <path d="M6 16l3.5-7H14l4 7M9.5 9L12 16M14 9l-1-2h-2" />
-    </Ico>
-  );
+  return <Bike size={24} strokeWidth={1.8} />;
 }
 function ScooterIcon() {
-  return (
-    <Ico>
-      <circle cx="6" cy="18" r="2.5" />
-      <circle cx="18" cy="18" r="2.5" />
-      <path d="M8.5 18H16l-2.5-12H11M12 6h4" />
-    </Ico>
-  );
+  return <Scooter size={24} strokeWidth={1.8} />;
 }
 function TaxiIcon() {
-  return (
-    <Ico>
-      <path d="M10 4h4M12 4v2" />
-      <path d="M5 17v-4l1.6-4.2A2 2 0 0 1 8.5 7.5h7a2 2 0 0 1 1.9 1.3L19 13v4" />
-      <path d="M3.5 13h17v4.5h-17zM6.5 17.5V19M17.5 17.5V19" />
-    </Ico>
-  );
+  return <CarTaxiFront size={24} strokeWidth={1.8} />;
 }
 function SwapIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M8 20V5M8 5L4.5 8.5M8 5l3.5 3.5" />
-      <path d="M16 4v15M16 19l-3.5-3.5M16 19l3.5-3.5" />
-    </svg>
-  );
+  return <ArrowUpDown size={22} strokeWidth={1.9} />;
 }

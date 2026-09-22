@@ -10,8 +10,13 @@
  * Telefon `tel:` havolasiga FAQAT raqam va «+» qoldirilib qo'yiladi.
  */
 
+import { X } from "lucide-react";
 import { useEffect, useState } from "react";
+import maplibregl from "maplibre-gl";
 
+import { useMap } from "@/components/map/MapProvider";
+import { prettyUrl, safeHref, socialName } from "@/lib/contactCheck";
+import { formatDistance } from "@/lib/geo";
 import { placePhotoUrl, placesApi, type PlaceDetail } from "@/lib/places";
 import { KindIcon, kindUi } from "./kindUi";
 
@@ -32,6 +37,7 @@ export default function PlaceDetails({
   id: string;
   onClose: () => void;
 }) {
+  const { map } = useMap();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [zoom, setZoom] = useState<number | null>(null);
 
@@ -45,6 +51,19 @@ export default function PlaceDetails({
       });
     return () => ctl.abort();
   }, [id]);
+
+  // Yo'l tanlanganda xarita uni TO'LIQ ko'rsatadi (uzun yo'lning bir qismi ko'rinib
+  // qolmasin). Nuqta ob'ektlar uchun xarita joyida turadi.
+  const geometry = loaded?.id === id ? loaded.data?.geometry : undefined;
+  const lengthM = loaded?.id === id ? loaded.data?.length_m : undefined;
+  useEffect(() => {
+    if (!map || !geometry || geometry.type !== "LineString" || geometry.coordinates.length < 2) return;
+    const b = new maplibregl.LngLatBounds();
+    for (const c of geometry.coordinates) b.extend([c[0], c[1]]);
+    // Qisqa chiziq (piyodalar o'tish joyi ~10 m) uchun yaqinroq: aks holda u xaritada nuqtadek qoladi.
+    const maxZoom = lengthM !== undefined && lengthM < 60 ? 19 : 17;
+    map.fitBounds(b, { padding: 90, maxZoom, duration: 600 });
+  }, [map, geometry, lengthM]);
 
   // Rasm kattalashtirilganda Escape yopadi.
   useEffect(() => {
@@ -66,6 +85,10 @@ export default function PlaceDetails({
   const title = d ? (d.name || [d.street, d.house].filter(Boolean).join(" ") || d.kind_label) : "";
   const address = d ? [d.street, d.house].filter(Boolean).join(" ") : "";
   const tel = d?.phone ? telHref(d.phone) : null;
+  // Havola FAQAT http/https bo'lsa chiqadi: server allaqachon tekshirgan, lekin
+  // mijoz ham `javascript:` ni HECH QACHON href ga qo'ymaydi (ikki qatlam).
+  const siteHref = safeHref(d?.site);
+  const socialHref = safeHref(d?.social);
 
   return (
     <div className="flex flex-col gap-4 px-5 pb-6 pt-2">
@@ -79,9 +102,7 @@ export default function PlaceDetails({
           aria-label="Yopish"
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-300 text-white transition hover:bg-zinc-400"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
+          <X size={16} strokeWidth={3} />
         </button>
       </div>
 
@@ -142,7 +163,20 @@ export default function PlaceDetails({
                 )}
               </Row>
             )}
+            {siteHref && d.site && (
+              <Row label="Veb-sayt">
+                <ExternalLink href={siteHref}>{prettyUrl(d.site)}</ExternalLink>
+              </Row>
+            )}
+            {socialHref && d.social && (
+              <Row label={socialName(d.social)}>
+                <ExternalLink href={socialHref}>{prettyUrl(d.social)}</ExternalLink>
+              </Row>
+            )}
             {d.hours && <Row label="Ish vaqti">{d.hours}</Row>}
+            {d.length_m !== undefined && d.length_m > 0 && (
+              <Row label="Uzunligi">{formatDistance(d.length_m)}</Row>
+            )}
             {d.description && (
               <Row label="Tavsif">
                 <span className="whitespace-pre-line">{d.description}</span>
@@ -176,13 +210,29 @@ export default function PlaceDetails({
             onClick={() => setZoom(null)}
             className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
+            <X size={18} strokeWidth={3} />
           </button>
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Tashqi havola. `noopener noreferrer` — ochilgan sayt bizning oynaga tegolmaydi
+ * va manzilimizni bilmaydi; `nofollow ugc` — foydalanuvchi yozgan havola bo'yicha
+ * qidiruv tizimlariga ishonch berilmaydi.
+ */
+function ExternalLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer nofollow ugc"
+      className="break-all text-[#2f6bff] hover:underline"
+    >
+      {children}
+    </a>
   );
 }
 

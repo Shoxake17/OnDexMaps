@@ -40,23 +40,34 @@ func bad(msg string) error { return &ValidationError{Msg: msg} }
 // `Website` — asalari (honeypot): odam ko'rmaydi va to'ldirmaydi, bot esa
 // hamma maydonni to'ldiradi. Bo'sh bo'lmasa so'rov sun'iy deb hisoblanadi.
 type Input struct {
-	Kind        string   `json:"kind"`
-	Lat         *float64 `json:"lat"`
-	Lng         *float64 `json:"lng"`
-	Name        string   `json:"name"`
-	Category    string   `json:"category"`
-	Description string   `json:"description"`
-	Phone       string   `json:"phone"`
-	Hours       string   `json:"hours"`
-	Street      string   `json:"street"`
-	House       string   `json:"house"`
-	Website     string   `json:"website"`
+	Kind string   `json:"kind"`
+	Lat  *float64 `json:"lat"`
+	Lng  *float64 `json:"lng"`
+	// Line — yo'l chizig'i, har nuqta [lng, lat] (GeoJSON tartibi). Faqat
+	// chiziq shaklidagi turlar uchun (`GeomLine`); ular uchun lat/lng
+	// BERILMAYDI, nuqta turlari uchun esa Line berilmaydi.
+	Line        [][2]float64 `json:"line"`
+	Name        string       `json:"name"`
+	Category    string       `json:"category"`
+	Description string       `json:"description"`
+	Phone       string       `json:"phone"`
+	Hours       string       `json:"hours"`
+	Street      string       `json:"street"`
+	House       string       `json:"house"`
+	// Site, Social — tashkilotning veb-sayti va ijtimoiy tarmoq akkaunti (URL).
+	// Diqqat: `Website` (JSON «website») — asalari, tashkilot sayti EMAS.
+	Site    string `json:"site"`
+	Social  string `json:"social"`
+	Website string `json:"website"`
 }
 
 // Clean — tekshirilgan va tozalangan ob'ekt. Bazaga FAQAT shu yoziladi.
 type Clean struct {
-	Kind        string
-	Lat, Lng    float64
+	Kind string
+	// Lat, Lng — nuqta turlari uchun. Chiziq turlarida NOL (ishlatilmaydi).
+	Lat, Lng float64
+	// Line — chiziq turlari uchun tozalangan yo'l, har nuqta [lng, lat].
+	Line        [][2]float64
 	Name        string
 	Category    string
 	Description string
@@ -64,7 +75,13 @@ type Clean struct {
 	Hours       string
 	Street      string
 	House       string
+	// Site, Social — tozalangan http(s) manzillar (`contacts.go`).
+	Site   string
+	Social string
 }
+
+// IsLine — ob'ekt chiziq (yo'l) shaklidami.
+func (c *Clean) IsLine() bool { return len(c.Line) > 0 }
 
 // Value — maydon qiymati (Field bo'yicha).
 func (c *Clean) Value(f Field) string {
@@ -83,6 +100,10 @@ func (c *Clean) Value(f Field) string {
 		return c.Street
 	case FHouse:
 		return c.House
+	case FSite:
+		return c.Site
+	case FSocial:
+		return c.Social
 	}
 	return ""
 }
@@ -103,6 +124,10 @@ func (in *Input) value(f Field) string {
 		return in.Street
 	case FHouse:
 		return in.House
+	case FSite:
+		return in.Site
+	case FSocial:
+		return in.Social
 	}
 	return ""
 }
@@ -110,6 +135,12 @@ func (in *Input) value(f Field) string {
 var fieldLabel = map[Field]string{
 	FName: "nom", FCategory: "turkum", FDescription: "tavsif", FPhone: "telefon",
 	FHours: "ish vaqti", FStreet: "ko'cha", FHouse: "uy raqami",
+	FSite: "veb-sayt", FSocial: "ijtimoiy tarmoq",
+}
+
+// allFields — Validate tekshiradigan hamma matnli maydon.
+var allFields = []Field{
+	FName, FCategory, FDescription, FPhone, FSite, FSocial, FHours, FStreet, FHouse,
 }
 
 // IsBot — asalari to'ldirilgan (so'rov sun'iy).
@@ -126,31 +157,51 @@ func Validate(in Input) (Clean, error) {
 		return Clean{}, bad("ob'ekt turi noto'g'ri")
 	}
 
-	if in.Lat == nil || in.Lng == nil {
-		return Clean{}, bad("joylashuv ko'rsatilmagan")
-	}
-	lat, lng := *in.Lat, *in.Lng
-	// NaN va ±Inf uchun oddiy `<` `>` solishtirish `false` beradi va ularni
-	// o'tkazib yuborardi — shuning uchun avval aniq tekshiriladi.
-	if math.IsNaN(lat) || math.IsInf(lat, 0) || math.IsNaN(lng) || math.IsInf(lng, 0) {
-		return Clean{}, bad("joylashuv noto'g'ri")
-	}
-	if lat < MinLat || lat > MaxLat || lng < MinLng || lng > MaxLng {
-		return Clean{}, bad("joylashuv O'zbekiston hududidan tashqarida")
+	// Joylashuv: shakl turga qarab. Noto'g'ri shakl JIMGINA tuzatilmaydi —
+	// rad etiladi (noto'g'ri mijoz yoki qo'lda yasalgan so'rov darrov ko'rinsin).
+	var (
+		lat, lng float64
+		path     [][2]float64
+	)
+	if spec.Shape() == GeomLine {
+		if in.Lat != nil || in.Lng != nil {
+			return Clean{}, bad("«" + spec.Label + "» chiziq bilan yuboriladi, nuqta bilan emas")
+		}
+		var err error
+		if path, err = cleanPath(in.Line, spec.Label, spec.Line); err != nil {
+			return Clean{}, err
+		}
+	} else {
+		if len(in.Line) > 0 {
+			return Clean{}, bad("«" + spec.Label + "» uchun chiziq yuborib bo'lmaydi")
+		}
+		if in.Lat == nil || in.Lng == nil {
+			return Clean{}, bad("joylashuv ko'rsatilmagan")
+		}
+		lat, lng = *in.Lat, *in.Lng
+		// NaN va ±Inf uchun oddiy `<` `>` solishtirish `false` beradi va ularni
+		// o'tkazib yuborardi — shuning uchun avval aniq tekshiriladi.
+		if math.IsNaN(lat) || math.IsInf(lat, 0) || math.IsNaN(lng) || math.IsInf(lng, 0) {
+			return Clean{}, bad("joylashuv noto'g'ri")
+		}
+		if lat < MinLat || lat > MaxLat || lng < MinLng || lng > MaxLng {
+			return Clean{}, bad("joylashuv O'zbekiston hududidan tashqarida")
+		}
+		lat, lng = round6(lat), round6(lng)
 	}
 
 	allowed := make(map[Field]bool, len(spec.Allowed))
 	for _, f := range spec.Allowed {
 		allowed[f] = true
 	}
-	for _, f := range []Field{FName, FCategory, FDescription, FPhone, FHours, FStreet, FHouse} {
+	for _, f := range allFields {
 		if !allowed[f] && strings.TrimSpace(in.value(f)) != "" {
 			return Clean{}, bad("«" + spec.Label + "» uchun «" + fieldLabel[f] + "» maydoni yo'q")
 		}
 	}
 
 	var err error
-	c := Clean{Kind: spec.Key, Lat: round6(lat), Lng: round6(lng)}
+	c := Clean{Kind: spec.Key, Lat: lat, Lng: lng, Line: path}
 	if c.Name, err = cleanLine(in.Name, MaxName, "nom"); err != nil {
 		return Clean{}, err
 	}
@@ -167,6 +218,12 @@ func Validate(in Input) (Clean, error) {
 		return Clean{}, err
 	}
 	if c.Phone, err = cleanPhone(in.Phone); err != nil {
+		return Clean{}, err
+	}
+	if c.Site, err = cleanWebURL(in.Site, MaxSite, "veb-sayt"); err != nil {
+		return Clean{}, err
+	}
+	if c.Social, err = cleanSocial(in.Social); err != nil {
 		return Clean{}, err
 	}
 	if cat := strings.TrimSpace(in.Category); cat != "" {

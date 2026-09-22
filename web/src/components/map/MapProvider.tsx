@@ -34,7 +34,8 @@ import {
   save3D,
   saveSatellite,
 } from "@/lib/prefs";
-import { makePoiIcon, POI_PIXEL_RATIO, POI_PREFIX } from "./poiIcons";
+import { TIERS } from "./importance";
+import { loadPoiPngIcon, makePoiIcon, POI_PIXEL_RATIO, POI_PREFIX, poiLabelColor } from "./poiIcons";
 import { cityById } from "@/lib/cities";
 import { useUrlSync, type Place } from "./useUrlSync";
 import { applyMapTheme } from "./theme";
@@ -74,6 +75,8 @@ interface MapContextValue {
   /** Sun'iy yo'ldosh manbasi sozlanganmi (tugma shunga qarab chiqadi). */
   satelliteAvailable: boolean;
   satellite: boolean;
+  /** Sun'iy yo'ldosh manbasi krediti (masalan «Powered by Esri»); sozlanmagan bo'lsa bo'sh. */
+  satelliteCredit: string;
   toggleSatellite: () => void;
   /** Xarita hozir 3D (egilgan) holatdami. Tugma yozuvi shunga qaraydi. */
   is3D: boolean;
@@ -241,6 +244,7 @@ export function MapProvider({
     maxzoom?: number;
   } | null>(null);
   const [satelliteAvailable, setSatelliteAvailable] = useState(false);
+  const [satelliteCredit, setSatelliteCredit] = useState("");
   const [serviceBounds, setServiceBounds] = useState<
     [number, number, number, number] | null
   >(null);
@@ -271,7 +275,10 @@ export function MapProvider({
           // buzadi va sun'iy yo'ldosh umuman chizilmay qolardi.
           maxzoom: Number.isFinite(mz) && mz > 0 ? mz : undefined,
         };
-        if (!controller.signal.aborted) setSatelliteAvailable(true);
+        if (!controller.signal.aborted) {
+          setSatelliteCredit(cfg.satellite_attribution ?? "");
+          setSatelliteAvailable(true);
+        }
       })
       .catch(() => {
         // Sozlama olinmadi — tugma chiqmaydi, xarita ishlayveradi.
@@ -313,10 +320,26 @@ export function MapProvider({
     // ⚠️ Uslub yuklanishidan OLDIN ulanadi: `poi-dot` qatlami
     // belgilarni nom bo'yicha so'raydi va agar bu ishlovchi kech
     // ulansa, birinchi tile'lar belgisiz chizilib qolardi.
+    // `restaurant`/`cafe`/`grocery` — PNG pin (`loadPoiPngIcon`, ASINXRON):
+    // OnDexMap'ning o'z turkumlari bilan BIR XIL rasm (foydalanuvchi
+    // talabi — ikki manba endi bu 3 klassda ham farqsiz ko'rinadi).
+    // Rasm topilmasa (yoki hali yuklanmagan oraliqda) — generik Lucide
+    // belgi (`makePoiIcon`), avvalgidek.
     map.on("styleimagemissing", (e) => {
       if (!e.id.startsWith(POI_PREFIX) || map.hasImage(e.id)) return;
-      const img = makePoiIcon(e.id.slice(POI_PREFIX.length));
-      if (img) map.addImage(e.id, img, { pixelRatio: POI_PIXEL_RATIO });
+      const cls = e.id.slice(POI_PREFIX.length);
+      const addFallback = () => {
+        if (map.hasImage(e.id)) return;
+        const img = makePoiIcon(cls);
+        if (img) map.addImage(e.id, img, { pixelRatio: POI_PIXEL_RATIO });
+      };
+      const pending = loadPoiPngIcon(cls);
+      if (!pending) return addFallback();
+      pending.then((img) => {
+        if (map.hasImage(e.id)) return;
+        if (img) map.addImage(e.id, img, { pixelRatio: POI_PIXEL_RATIO });
+        else addFallback();
+      });
     });
 
     // ⚠️ Zoom (+/−), kompas va geolokatsiya tugmalari MapLibre'ning
@@ -324,20 +347,12 @@ export function MapProvider({
     // dizaynimizda chiziladi (Yandex `LeftSide.png` kabi). Tayyor
     // boshqaruvlarning ko'rinishini to'liq o'zgartirib bo'lmaydi.
     //
-    // ⚠️ ODbL talabi — kredit MAJBURIY va OLIB TASHLANMAYDI.
-    //
-    // Ko'rinishda faqat «© OnDex map» turadi: `compact` rejimda panel
-    // yig'ilgan bo'ladi va «ⓘ» bosilganda manba kreditlari
-    // (OpenStreetMap, OpenMapTiles, Microsoft) ochiladi. Bu — Yandex
-    // va Google ham ishlatadigan naqsh: brend ko'rinadi, huquqiy
-    // kredit bir bosish narida va yo'qolmaydi.
-    map.addControl(
-      new maplibregl.AttributionControl({
-        compact: true,
-        customAttribution: "© OnDex map",
-      }),
-      "bottom-right",
-    );
+    // ⚠️ ODbL / provayder talabi — kredit MAJBURIY va OLIB TASHLANMAYDI, lekin
+    // ko'rinishda faqat «© OnDex map» va «ⓘ» turadi: hamma manba kreditlari
+    // (OpenStreetMap, OpenMapTiles, Esri, ...) «ⓘ» bosilganda ochiladi
+    // (`MapCredits`). MapLibre'ning o'z boshqaruvi ATAYLAB ulanmagan: u sun'iy
+    // yo'ldosh krediti («Powered by Esri») ni doim ko'rsatib qo'ygan edi, uni
+    // qolganlari kabi yashirib bo'lmasdi.
     map.addControl(
       // `maxWidth` 140: kapsula uzunligi masofani ANIQ ko'rsatadi, matn
       // esa sig'ishi uchun kamida ~56 px kerak (eng qisqa chiziq
@@ -358,6 +373,16 @@ export function MapProvider({
     const controller = new AbortController();
 
     map.on("style.load", () => {
+      // OSM joylari nomi — turkum rangida (to'qroq), 4 muhimlik darajasining
+      // HAMMASIGA. ⚠️ `setStyleLoaded(true)` DAN OLDIN: mavzu (`applyMapTheme`)
+      // uslubdagi ASL qiymatni shu payt saqlab oladi va yorug' mavzuga qaytganda
+      // shuni tiklaydi.
+      for (const t of TIERS) {
+        const id = `poi-tier${t}`;
+        if (map.getLayer(id)) {
+          map.setPaintProperty(id, "text-color", poiLabelColor() as maplibregl.ExpressionSpecification);
+        }
+      }
       // Boshlang'ich 2D/3D ga mos bino qatlami — mahalla ma'lumoti
       // kelishini KUTMASDAN (u tarmoq so'rovi, bino esa tayyor).
       syncBuildings(map);
@@ -448,9 +473,9 @@ export function MapProvider({
             // oqarib qolardi. Chegara bilan esa mavjud tile cho'ziladi:
             // xira, lekin haqiqiy tasvir.
             ...(cfg.maxzoom ? { maxzoom: cfg.maxzoom } : {}),
-            // ⚠️ Manba krediti — litsenziya talabi. Manzil almashsa,
-            // kredit ham almashishi SHART.
-            attribution: cfg.credit,
+            // ⚠️ Manba krediti — litsenziya talabi. U xaritaga «attribution»
+            // sifatida emas, `MapCredits` orqali («ⓘ» ichida) ko'rsatiladi:
+            // `satelliteCredit` holati sun'iy yo'ldosh yoqilganda shu yerdan keladi.
           });
         }
         // Fon ustiga, qolgan HAMMA narsaning ostiga.
@@ -556,6 +581,7 @@ export function MapProvider({
         styleError,
         satelliteAvailable,
         satellite,
+        satelliteCredit,
         toggleSatellite,
         is3D,
         toggle3D,

@@ -27,8 +27,10 @@ const (
 	// kichraytirib yuboradi, shuning uchun odatdagi so'rov < 1.5 MB; bu chegara
 	// brauzersiz mijozlar uchun yuqori to'siq.
 	maxSubmitBody = 16 << 20
-	// maxDataField — JSON maydoni: matn maydonlari yig'indisi ~2 KB.
-	maxDataField = 16 << 10
+	// maxDataField — JSON maydoni: matn maydonlari ~2 KB + yo'l chizig'i (eng ko'pi
+	// 500 nuqta × ~24 bayt ≈ 12 KB; mijoz 6 xonaga yaxlitlaydi, lekin brauzersiz
+	// mijoz uzunroq yozishi mumkin — shuning uchun zaxira bilan 32 KB).
+	maxDataField = 32 << 10
 	// maxParts — so'rovdagi bo'laklar soni (1 JSON + rasmlar + zaxira).
 	maxParts = places.MaxPhotos + 4
 
@@ -91,9 +93,21 @@ func (s *Server) submitLimit(next http.HandlerFunc) http.HandlerFunc {
 // `enabled` — qabul qilish yoqilganmi: o'chiq bo'lsa sahifa «Ob'ekt qo'shish»
 // ni umuman ko'rsatmaydi (ishlamaydigan tugma soxta imkoniyat va'da qiladi).
 func (s *Server) handlePlacesMeta(w http.ResponseWriter, r *http.Request) {
+	// lineView — chiziq turining chegaralari (faqat `geometry == "line"`).
+	type lineView struct {
+		MinM      float64 `json:"min_m"`
+		MaxM      float64 `json:"max_m"`
+		MaxPoints int     `json:"max_points"`
+	}
 	type kindView struct {
-		Key      string         `json:"key"`
-		Label    string         `json:"label"`
+		Key   string `json:"key"`
+		Label string `json:"label"`
+		// Geometry — "point" (bitta belgi) yoki "line" (xaritada chiziladi:
+		// yo'l, piyodalar o'tish joyi, to'siq).
+		Geometry string `json:"geometry"`
+		// Line — chiziq chegaralari. Har tur o'ziniki (o'tish joyi ≤10 m), shuning
+		// uchun forma ularni SHU YERDAN oladi, o'zida qattiq yozmaydi.
+		Line     *lineView      `json:"line,omitempty"`
 		Allowed  []places.Field `json:"allowed"`
 		Required []places.Field `json:"required"`
 		AnyOf    []places.Field `json:"any_of"`
@@ -101,11 +115,14 @@ func (s *Server) handlePlacesMeta(w http.ResponseWriter, r *http.Request) {
 	kinds := make([]kindView, len(places.Kinds))
 	for i, k := range places.Kinds {
 		kinds[i] = kindView{
-			Key: k.Key, Label: k.Label,
+			Key: k.Key, Label: k.Label, Geometry: string(k.Shape()),
 			// `nil` o'rniga bo'sh massiv: mijoz `.includes` chaqirganda yiqilmasin.
 			Allowed:  nonNil(k.Allowed),
 			Required: nonNil(k.Required),
 			AnyOf:    nonNil(k.AnyOf),
+		}
+		if k.Shape() == places.GeomLine {
+			kinds[i].Line = &lineView{MinM: k.Line.MinMeters, MaxM: k.Line.MaxMeters, MaxPoints: k.Line.MaxPoints}
 		}
 	}
 	w.Header().Set("Cache-Control", "public, max-age=60")
@@ -113,10 +130,18 @@ func (s *Server) handlePlacesMeta(w http.ResponseWriter, r *http.Request) {
 		"enabled":    s.submit != nil,
 		"kinds":      kinds,
 		"categories": places.Categories,
-		"max_photos": places.MaxPhotos,
+		// Ijtimoiy tarmoq akkaunti faqat shu domenlardan (forma maslahati uchun).
+		"social_hosts": places.SocialHosts(),
+		"max_photos":   places.MaxPhotos,
 		"limits": map[string]int{
 			"name": places.MaxName, "description": places.MaxDescription,
 			"hours": places.MaxHours, "street": places.MaxStreet, "house": places.MaxHouse,
+			"site": places.MaxSite, "social": places.MaxSocial,
+			// Yo'l chegaralari (eski mijozlar uchun). Har turning o'z chegarasi —
+			// `kinds[].line`.
+			"line_points": places.MaxLinePoints,
+			"line_min_m":  int(places.MinLineMeters),
+			"line_max_m":  int(places.MaxLineMeters),
 		},
 	})
 }
@@ -398,6 +423,12 @@ func readSubmission(mr *multipart.Reader) (places.Input, [][]byte, error) {
 			if err := dec.Decode(&in); err != nil || dec.More() {
 				return in, nil, &submitParseError{http.StatusBadRequest, "ma'lumot maydoni yaroqsiz"}
 			}
+			// Yo'l nuqtasi AYNAN ikki sondan iborat bo'lishi shart. Go `[2]float64`
+			// ga o'qiganda ortiqcha elementlarni JIMGINA tashlab yuboradi
+			// ([lng, lat, balandlik] ham o'tib ketardi) — bu yerda rad etiladi.
+			if !lineShapeOK(b) {
+				return in, nil, &submitParseError{http.StatusBadRequest, "yo'l nuqtasi [uzunlik, kenglik] shaklida bo'lishi kerak"}
+			}
 			gotData = true
 
 		case "photos":
@@ -422,6 +453,24 @@ func readSubmission(mr *multipart.Reader) (places.Input, [][]byte, error) {
 		return in, nil, &submitParseError{http.StatusBadRequest, "«data» maydoni yo'q"}
 	}
 	return in, raw, nil
+}
+
+// lineShapeOK — `line` maydonidagi har nuqta aynan 2 elementlimi (yoki `line` yo'q).
+func lineShapeOK(data []byte) bool {
+	var probe struct {
+		Line [][]json.RawMessage `json:"line"`
+	}
+	// Asosiy dekodlash allaqachon o'tgan: bu yerda xato bo'lmaydi, lekin
+	// bo'lsa ham rad etamiz (fail closed).
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return false
+	}
+	for _, p := range probe.Line {
+		if len(p) != 2 {
+			return false
+		}
+	}
+	return true
 }
 
 // bodyError — tana o'qishdagi xatoni javobga aylantiradi. `MaxBytesReader`

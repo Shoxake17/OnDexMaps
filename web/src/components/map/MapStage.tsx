@@ -22,11 +22,17 @@ import { MapProvider, useMap } from "./MapProvider";
 import MapControls from "./MapControls";
 import MapContextMenu from "./MapContextMenu";
 import { useMapTools, type ToolMode } from "./useMapTools";
-import type { LngLat } from "@/lib/geo";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
+import OnDexMark from "@/components/brand/OnDexMark";
+import MapCredits from "./MapCredits";
+import { extendLine, type LngLat } from "@/lib/geo";
 import AddObjectPanel from "@/components/places/AddObjectPanel";
 import PlaceDetails from "@/components/places/PlaceDetails";
+import { useAddLine } from "@/components/places/useAddLine";
 import { useAddMarker } from "@/components/places/useAddMarker";
-import { usePlacesLayer } from "@/components/places/usePlacesLayer";
+import { usePlacesLayer, type CategoryFilter } from "@/components/places/usePlacesLayer";
+import { CategoryContext, findCategory, type CategoryState } from "@/components/panels/categories";
 import { usePlacesMeta } from "@/components/places/usePlacesMeta";
 import ToolBar from "@/components/panels/ToolBar";
 import SearchBar from "@/components/panels/SearchBar";
@@ -38,6 +44,7 @@ import CategoryChips from "@/components/mobile/CategoryChips";
 import { MOBILE_DARK_THEME } from "@/lib/config";
 import { DARK_QUERY, MOBILE_QUERY, useMedia } from "@/lib/useMedia";
 import type { MapInit } from "@/lib/mapUrl";
+import type { LineRule, PlaceGeometry } from "@/lib/places";
 
 interface Props {
   init: MapInit;
@@ -90,15 +97,60 @@ function StageInner({
   const placesMeta = usePlacesMeta();
   // Belgining hozirgi joyi — «Ob'ekt qo'shish» oqimi ochiq ekanini ham bildiradi.
   const [add, setAdd] = useState<LngLat | null>(null);
+  // Yo'l (chiziq) turi tanlanganda: chizilayotgan yo'l nuqtalari va hozirgi shakl.
+  // Shakl AddObjectPanel dan keladi (qaysi tur tanlangan): line bo'lsa belgi
+  // o'rniga chizish rejimi yoqiladi va xaritadagi HAR BIR bosish yo'lga nuqta qo'shadi.
+  const [addLine, setAddLine] = useState<LngLat[]>([]);
+  const [addShape, setAddShape] = useState<PlaceGeometry>("point");
+  // Chiziq turining chegarasi (server metadan): eng uzun va eng ko'p nuqta.
+  // Shu chegarada xarita yangi nuqtani qabul qilmaydi yoki qisqartiradi
+  // (piyodalar o'tish joyi 10 m dan oshmasin).
+  const [addRule, setAddRule] = useState<LineRule | null>(null);
+  const onAddShape = useCallback((shape: PlaceGeometry, rule: LineRule | null) => {
+    setAddShape(shape);
+    setAddRule(rule);
+  }, []);
   // Xaritada tanlangan (tasdiqlangan) ob'ekt.
   const [placeId, setPlaceId] = useState<string | null>(null);
   // Qo'shish oqimi FAQAT desktop'da (telefonda o'ng tugma menyusi yo'q):
   // oyna toraysa belgi va bosishni ushlash to'xtaydi.
   const addPoint = mobile ? null : add;
   const adding = addPoint !== null;
+  const drawingLine = adding && addShape === "line";
+  // ── Turkumlar (sidebar): tanlangan turkum va «Barcha joylar» ─────────────
+  // Holat shu yerda: xaritaga filtr qo'llanadi (`usePlacesLayer`), sidebar, sarlavha
+  // va mobil chiplar esa kontekst orqali BIR holatni bo'lishadi.
+  const [categoryKey, setCategoryKey] = useState<string | null>(null);
+  const [categoriesExpanded, setCategoriesExpanded] = useState(false);
+  const categoryState = useMemo<CategoryState>(
+    () => ({
+      active: categoryKey,
+      setActive: setCategoryKey,
+      expanded: categoriesExpanded,
+      setExpanded: setCategoriesExpanded,
+    }),
+    [categoryKey, categoriesExpanded],
+  );
+  const categoryFilter = useMemo<CategoryFilter | null>(() => {
+    const c = findCategory(categoryKey);
+    return c
+      ? { key: c.key, classes: c.classes, orgCategories: c.orgCategories, kinds: c.kinds }
+      : null;
+  }, [categoryKey]);
+
   const pickPoint = useMemo(
-    () => (adding ? (p: LngLat) => setAdd(p) : null),
-    [adding],
+    () =>
+      adding
+        ? drawingLine
+          ? (p: LngLat) =>
+              // Turning chegarasi ichida qo'shiladi: nuqta soni to'lsa qo'shilmaydi,
+              // uzunlik oshsa chiziq chegarada to'xtaydi (server ham shuni talab qiladi).
+              setAddLine((prev) =>
+                addRule ? extendLine(prev, p, addRule) : [...prev, p],
+              )
+          : (p: LngLat) => setAdd(p)
+        : null,
+    [adding, drawingLine, addRule],
   );
 
   // Har qanday manzil aniqlash ob'ekt panelini yopadi: foydalanuvchi bo'sh
@@ -144,8 +196,10 @@ function StageInner({
     [selectArea, onAddress],
   );
   // Belgilar faqat oddiy rejimda bosiladi (marshrut/o'lchash/qo'shishda emas).
-  usePlacesLayer(map, ready, mode === "idle" && !adding, selectPlace);
-  useAddMarker(map, addPoint, setAdd);
+  usePlacesLayer(map, ready, mode === "idle" && !adding, selectPlace, 0, categoryFilter);
+  // Belgi FAQAT nuqta turlarida; yo'lda uning o'rniga chiziq va nuqta belgilari.
+  useAddMarker(map, drawingLine ? null : addPoint, setAdd);
+  useAddLine(map, drawingLine ? addLine : null, setAddLine);
 
   /**
    * Rejim almashganda eski chizma tozalanadi.
@@ -192,30 +246,32 @@ function StageInner({
     if (mode !== "idle") changeMode("idle");
     setPlaceId(null);
     setOpen(true);
+    setAddLine([]);
     setAdd(p);
   };
 
   // Tanlangan hudud, o'lchash natijasi va manzil — desktop paneli va mobil
   // panelida BIR XIL blok.
-  const info = (
+  //
+  // ⚠️ Hech narsa tanlanmagan/aniqlanmagan bo'lsa blok UMUMAN chiqmaydi: ilgari
+  // shunda «Tanlangan hudud — Chegarasini ko'rish uchun…» va «Manzil — Bilish uchun…»
+  // yo'l-yo'riq matnlari turardi (talab bo'yicha olib tashlandi).
+  const showInfo = !!selected || mode === "measure" || addressBusy || !!address;
+  const info = !showInfo ? null : (
     <div className="flex flex-col gap-3 border-t border-zinc-200 p-4 dark:border-white/10">
-      <section>
-        <h3 className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-          Tanlangan hudud
-        </h3>
-        {selected ? (
+      {selected && (
+        <section>
+          <h3 className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            Tanlangan hudud
+          </h3>
           <p className="mt-1 text-base text-zinc-900 dark:text-white">
             {selected.name}{" "}
             <span className="text-zinc-500 dark:text-zinc-400">
               ({KIND_LABEL[selected.kind] ?? selected.kind})
             </span>
           </p>
-        ) : (
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Chegarasini ko&apos;rish uchun xaritadagi nomni bosing
-          </p>
-        )}
-      </section>
+        </section>
+      )}
 
       {mode === "measure" && (
         <section className="rounded-2xl bg-orange-50 p-4 dark:bg-orange-500/15">
@@ -233,16 +289,16 @@ function StageInner({
         </section>
       )}
 
-      <section>
-        <h3 className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-          Manzil
-        </h3>
-        <p className="mt-1 text-sm text-zinc-900 dark:text-white">
-          {addressBusy
-            ? "so'ralmoqda…"
-            : (address ?? "Bilish uchun xaritaning istalgan joyini bosing")}
-        </p>
-      </section>
+      {(addressBusy || address) && (
+        <section>
+          <h3 className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            Manzil
+          </h3>
+          <p className="mt-1 text-sm text-zinc-900 dark:text-white">
+            {addressBusy ? "so'ralmoqda…" : address}
+          </p>
+        </section>
+      )}
     </div>
   );
 
@@ -257,6 +313,7 @@ function StageInner({
   );
 
   return (
+    <CategoryContext.Provider value={categoryState}>
     <div
       className={`relative flex h-full w-full overflow-hidden ${
         mobile ? "ondex-mobile" : ""
@@ -280,7 +337,13 @@ function StageInner({
               <AddObjectPanel
                 meta={placesMeta}
                 point={addPoint}
-                onClose={() => setAdd(null)}
+                line={addLine}
+                onLineChange={setAddLine}
+                onShape={onAddShape}
+                onClose={() => {
+                  setAdd(null);
+                  setAddLine([]);
+                }}
               />
             ) : placeId ? (
               <PlaceDetails id={placeId} onClose={() => setPlaceId(null)} />
@@ -321,13 +384,14 @@ function StageInner({
               onMeasure={menuMeasure}
               onAddObject={placesMeta ? menuAddObject : undefined}
             />
-            {/* Brend krediti. To'liq manba ro'yxati yonidagi «ⓘ» da —
-                u MapLibre'ning o'z boshqaruvi va ODbL talabini bajaradi. */}
-            <span className="pointer-events-none absolute bottom-[3px] right-[30px] z-10 rounded bg-white/75 px-1.5 text-[11px] leading-[18px] text-zinc-600">
-              © OnDex map
-            </span>
           </>
         )}
+        {/* Brend yozuvi: eng pastki o'ng burchak (desktop va mobil). «© OnDex map»
+            krediti va to'liq manba ro'yxati (ODbL talabi) MapLibre'ning o'z
+            boshqaruvida — u yozuvning chap tomonida turadi (globals.css). Ilgari
+            shu yerda uning ikkinchi nusxasi ham bor edi: bir xil matn ikki marta chiqardi. */}
+        <MapCredits />
+        <OnDexMark />
       </main>
 
       {mobile ? (
@@ -388,13 +452,12 @@ function StageInner({
               open ? "left-[400px]" : "left-0"
             }`}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              {open ? <path d="M15 5l-7 7 7 7" /> : <path d="M9 5l7 7-7 7" />}
-            </svg>
+            {open ? <ChevronLeft size={16} strokeWidth={2} /> : <ChevronRight size={16} strokeWidth={2} />}
           </button>
         </>
       )}
     </div>
+    </CategoryContext.Provider>
   );
 }
 

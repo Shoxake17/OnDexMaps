@@ -27,7 +27,7 @@ func TestRouteRejectsOutsideServiceArea(t *testing.T) {
 	cases := []string{
 		"/v1/route?from_lat=41.2995&from_lng=69.2401&to_lat=41.01&to_lng=71.23", // Toshkent
 		"/v1/route?from_lat=abc&from_lng=71.22&to_lat=41.01&to_lng=71.23",
-		"/v1/route?from_lat=41.00&from_lng=71.22&to_lat=41.01",                  // to_lng yo'q
+		"/v1/route?from_lat=41.00&from_lng=71.22&to_lat=41.01", // to_lng yo'q
 	}
 	for _, path := range cases {
 		if w := do(h, "GET", path, ""); w.Code != http.StatusBadRequest {

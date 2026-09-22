@@ -5,42 +5,17 @@
  *
  * Foydalanuvchi belgini ob'ekt ustiga suradi (yoki xaritani bosadi) va
  * koordinata shundan olinadi (Yandex: «Belgini ob'ektga to'g'ri qo'ying»).
+ * Belgi — OnDexMap logotipi (`components/map/logoPin.ts`), qidiruv
+ * natijasi belgisi bilan BIR XIL rasm.
  */
 
 import { useEffect, useRef } from "react";
 import maplibregl, { type Map as MLMap, type Marker } from "maplibre-gl";
 
+import { logoPinElement } from "@/components/map/logoPin";
 import type { LngLat } from "@/lib/geo";
 
-const SVG_NS = "http://www.w3.org/2000/svg";
-
-/** Ko'k tomchi-belgi. Faqat DOM API (matn/HTML qatori yo'q). */
-function pinElement(): HTMLElement {
-  const el = document.createElement("div");
-  el.style.cssText = "width:34px;height:44px;cursor:grab;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))";
-  el.setAttribute("aria-hidden", "true");
-
-  const svg = document.createElementNS(SVG_NS, "svg");
-  svg.setAttribute("viewBox", "0 0 34 44");
-  svg.setAttribute("width", "34");
-  svg.setAttribute("height", "44");
-
-  const body = document.createElementNS(SVG_NS, "path");
-  body.setAttribute("d", "M17 1C8.2 1 1 8 1 16.6 1 28 17 43 17 43s16-15 16-26.4C33 8 25.800 1 17 1z");
-  body.setAttribute("fill", "#2f6bff");
-  body.setAttribute("stroke", "#ffffff");
-  body.setAttribute("stroke-width", "2");
-
-  const dot = document.createElementNS(SVG_NS, "circle");
-  dot.setAttribute("cx", "17");
-  dot.setAttribute("cy", "16.5");
-  dot.setAttribute("r", "5.5");
-  dot.setAttribute("fill", "#ffffff");
-
-  svg.append(body, dot);
-  el.append(svg);
-  return el;
-}
+const PIN_SIZE = 46;
 
 /**
  * `point` bo'lsa belgi shu joyda turadi; sudralib qo'yib yuborilganda
@@ -63,8 +38,10 @@ export function useAddMarker(
   useEffect(() => {
     if (!map || !active) return;
     const m = new maplibregl.Marker({
-      element: pinElement(),
+      element: logoPinElement(PIN_SIZE, "grab"),
       anchor: "bottom",
+      // Rasm kvadrat tuvalning pastki chetiga 2% yaqin: uchi shu yerda.
+      offset: [0, 1],
       draggable: true,
     });
     m.on("dragend", () => {

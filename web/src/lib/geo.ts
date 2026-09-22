@@ -34,6 +34,48 @@ export function pathLengthMeters(points: LngLat[]): number {
   return total;
 }
 
+/** Koordinatani 6 xonaga (~0.1 m) yaxlitlaydi: server ham shunday saqlaydi. */
+export function round6(v: number): number {
+  return Math.round(v * 1e6) / 1e6;
+}
+
+/**
+ * Chizilayotgan chiziqqa yangi nuqta qo'shadi va turning chegarasida ushlab turadi.
+ *
+ * • nuqta soni chegaradan oshsa — qo'shilmaydi;
+ * • uzunlik chegaradan oshsa (masalan, piyodalar o'tish joyi ≤10 m) — nuqta
+ *   bosilgan yo'nalishda, aynan chegaragacha QISQARTIRILADI: foydalanuvchi uzun
+ *   chizib qo'yib xato olmaydi, chiziq chegarada «to'xtaydi»;
+ * • nuqta 6 xonaga yaxlitlanadi (server ham shunday): mijoz hisoblagan
+ *   uzunlik server hisoblagani bilan bir xil bo'ladi va chegara chetida
+ *   ikkilanish bo'lmaydi.
+ */
+export function extendLine(
+  prev: LngLat[],
+  p: LngLat,
+  rule: { max_m: number; max_points: number },
+): LngLat[] {
+  if (prev.length >= rule.max_points) return prev;
+  const q: LngLat = { lng: round6(p.lng), lat: round6(p.lat) };
+  if (prev.length === 0) return [q];
+
+  const last = prev[prev.length - 1];
+  const room = rule.max_m - pathLengthMeters(prev);
+  const dist = metersBetween(last, q);
+  if (dist <= room) return [...prev, q];
+  // Chegara: 5 sm zaxira (yaxlitlash va sferoid farqi uchun).
+  const usable = room - 0.05;
+  if (usable <= 0.05 || dist === 0) return prev;
+  const t = usable / dist;
+  return [
+    ...prev,
+    {
+      lng: round6(last.lng + (q.lng - last.lng) * t),
+      lat: round6(last.lat + (q.lat - last.lat) * t),
+    },
+  ];
+}
+
 /**
  * Masofani o'qishga qulay ko'rinishda.
  *

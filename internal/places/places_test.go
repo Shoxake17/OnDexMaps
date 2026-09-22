@@ -95,18 +95,64 @@ func TestValidateAccepts(t *testing.T) {
 		"organization": {Kind: "organization", Lat: f(41), Lng: f(71.2), Name: "  Chust   Non ", Category: "Kafe", Phone: "+998 90 123-45-67", Hours: "09:00–18:00"},
 		"address":      {Kind: "address", Lat: f(41), Lng: f(71.2), Street: "Navoiy ko'chasi", House: "12/A"},
 		"entrance":     {Kind: "entrance", Lat: f(41), Lng: f(71.2), Description: "2-kirish"},
-		"road":         {Kind: "road", Lat: f(41), Lng: f(71.2), Description: "Yo'l qazilgan"},
+		"road":         {Kind: "road", Line: roadLine(), Description: "Yo'l qazilgan"},
 		"barrier":      {Kind: "barrier", Lat: f(41), Lng: f(71.2), Description: "Avtomatik shlagbaum"},
 		"stop":         {Kind: "stop", Lat: f(41), Lng: f(71.2), Name: "Bozor bekati"},
 		"parking":      {Kind: "parking", Lat: f(41), Lng: f(71.2), Name: "Pullik turargoh"},
-		"crossing":     base("crossing"),
-		"fence":        base("fence"),
+		"crossing":     {Kind: "crossing", Line: crossingLine(), Description: "Svetoforli"},
+		"fence":        {Kind: "fence", Line: roadLine(), Description: "Temir panjara"},
 		"gate":         base("gate"),
 		"other":        {Kind: "other", Lat: f(41), Lng: f(71.2), Description: "Ko'l"},
 	}
 	for name, in := range cases {
 		if _, err := Validate(in); err != nil {
 			t.Errorf("%s: qabul qilinishi kerak edi: %v", name, err)
+		}
+	}
+}
+
+// Izoh (tavsif) HECH QAYSI turda majburiy emas (foydalanuvchi talabi,
+// 2026-09-21): na `Required` da, na `AnyOf` da bo'lmaydi va faqat koordinata
+// bilan yuborilgan ob'ekt ham qabul qilinadi — tur o'z majburiy maydonlarini
+// (nom, turkum, uy raqami, bekat nomi) to'ldirgan bo'lsa.
+func TestDescriptionIsNeverRequired(t *testing.T) {
+	for _, k := range Kinds {
+		for _, r := range k.Required {
+			if r == FDescription {
+				t.Errorf("%s: izoh majburiy bo'lmasligi kerak (Required)", k.Key)
+			}
+		}
+		for _, r := range k.AnyOf {
+			if r == FDescription {
+				t.Errorf("%s: izoh majburiy bo'lmasligi kerak (AnyOf)", k.Key)
+			}
+		}
+	}
+
+	bare := map[string]Input{
+		"organization": {Kind: "organization", Lat: f(41), Lng: f(71.2), Name: "Non", Category: "Kafe"},
+		"address":      {Kind: "address", Lat: f(41), Lng: f(71.2), House: "12"},
+		"entrance":     {Kind: "entrance", Lat: f(41), Lng: f(71.2)},
+		"road":         {Kind: "road", Line: roadLine()},
+		"barrier":      {Kind: "barrier", Lat: f(41), Lng: f(71.2)},
+		"stop":         {Kind: "stop", Lat: f(41), Lng: f(71.2), Name: "Bozor bekati"},
+		"parking":      {Kind: "parking", Lat: f(41), Lng: f(71.2)},
+		"crossing":     {Kind: "crossing", Line: crossingLine()},
+		"fence":        {Kind: "fence", Line: roadLine()},
+		"gate":         {Kind: "gate", Lat: f(41), Lng: f(71.2)},
+		"other":        {Kind: "other", Lat: f(41), Lng: f(71.2)},
+	}
+	if len(bare) != len(Kinds) {
+		t.Fatalf("har bir tur sinalishi kerak: %d ta tur, %d ta holat", len(Kinds), len(bare))
+	}
+	for name, in := range bare {
+		c, err := Validate(in)
+		if err != nil {
+			t.Errorf("%s: izohsiz qabul qilinishi kerak edi: %v", name, err)
+			continue
+		}
+		if c.Description != "" {
+			t.Errorf("%s: izoh bo'sh qolishi kerak: %q", name, c.Description)
 		}
 	}
 }
@@ -138,11 +184,8 @@ func TestValidateRejects(t *testing.T) {
 		"turkum ro'yxatda yo'q":      {Kind: "organization", Lat: f(41), Lng: f(71), Name: "X", Category: "<script>"},
 		"manzilda uy yo'q":           {Kind: "address", Lat: f(41), Lng: f(71), Street: "Navoiy"},
 		"uyda taqiqlangan belgi":     {Kind: "address", Lat: f(41), Lng: f(71), House: "12<b>"},
-		"boshqada tavsif yo'q":       {Kind: "other", Lat: f(41), Lng: f(71)},
 		"tavsif juda uzun":           {Kind: "other", Lat: f(41), Lng: f(71), Description: long},
-		"kirishda hech narsa yo'q":   {Kind: "entrance", Lat: f(41), Lng: f(71)},
-		"turargohda hech narsa yo'q": {Kind: "parking", Lat: f(41), Lng: f(71)},
-		"to'siqda nom (ruxsat yo'q)": {Kind: "fence", Lat: f(41), Lng: f(71), Name: "X"},
+		"to'siqda nom (ruxsat yo'q)": {Kind: "fence", Line: roadLine(), Name: "X"},
 		"kalitkada telefon":          {Kind: "gate", Lat: f(41), Lng: f(71), Phone: "+998901234567"},
 		"telefon harf":               {Kind: "organization", Lat: f(41), Lng: f(71), Name: "X", Category: "Kafe", Phone: "abc"},
 		"telefon qisqa":              {Kind: "organization", Lat: f(41), Lng: f(71), Name: "X", Category: "Kafe", Phone: "123"},
@@ -185,7 +228,7 @@ func TestDescriptionKeepsNewlinesButLimitsBlankRuns(t *testing.T) {
 }
 
 func TestIsBot(t *testing.T) {
-	in := base("crossing")
+	in := base("gate")
 	if in.IsBot() {
 		t.Error("bo'sh asalari bot emas")
 	}

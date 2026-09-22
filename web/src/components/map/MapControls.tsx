@@ -27,6 +27,8 @@ import {
   SQUARE_OFF,
   SQUARE_ON,
 } from "@/components/panels/controlStyles";
+import { Minus, Navigation, Navigation2, Plus } from "lucide-react";
+
 import { useMap } from "./MapProvider";
 import { useGeolocate } from "./useGeolocate";
 
@@ -71,10 +73,14 @@ export default function MapControls() {
           onClick={() => map?.easeTo({ bearing: 0, duration: 400 })}
           className={`${BTN_LG} ${SQUARE} ${SQUARE_OFF}`}
         >
-          <svg ref={needle} width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 2.5l4 9.5H8z" fill="#ef4444" />
-            <path d="M12 21.5l-4-9.5h8z" fill="#a1a1aa" />
-          </svg>
+          {/* Shimolga qaratuvchi ko'rsatkich: xarita burilganda igna teskari buriladi. */}
+          <Navigation2
+            ref={needle}
+            size={26}
+            strokeWidth={1.8}
+            className="text-[#ef4444]"
+            fill="currentColor"
+          />
         </button>
       )}
 
@@ -86,9 +92,7 @@ export default function MapControls() {
           onClick={() => map?.zoomIn({ duration: 250 })}
           className={`${BTN_LG} ${OFF}`}
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
+          <Plus size={22} strokeWidth={2.2} />
         </button>
         <button
           type="button"
@@ -97,9 +101,7 @@ export default function MapControls() {
           onClick={() => map?.zoomOut({ duration: 250 })}
           className={`${BTN_LG} ${OFF}`}
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-            <path d="M5 12h14" />
-          </svg>
+          <Minus size={22} strokeWidth={2.2} />
         </button>
       </div>
 
@@ -112,9 +114,8 @@ export default function MapControls() {
           onClick={locate}
           className={`${BTN_LG} ${SQUARE} ${tracking ? SQUARE_ON : SQUARE_OFF}`}
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M3.5 11.2 20.5 3.5l-7.7 17-1.9-7.4z" />
-          </svg>
+          {/* Joylashuv: Lucide «navigatsiya» strelkasi (to'ldirilgan), ilgarigi belgi. */}
+          <Navigation size={22} strokeWidth={1.8} fill="currentColor" />
         </button>
         {toast && (
           <p

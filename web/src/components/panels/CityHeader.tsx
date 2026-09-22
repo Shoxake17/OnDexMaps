@@ -8,9 +8,17 @@
  * "ma'lumot yo'q" dan battar — foydalanuvchi unga ishonadi.
  */
 
+import {
+  Cloud as CloudIcon,
+  CloudRain,
+  Snowflake,
+  Sun as SunIcon,
+  Zap,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, type Weather } from "@/lib/api";
 import { useMap } from "@/components/map/MapProvider";
+import { useCategories } from "./categories";
 
 /**
  * Ob-havo manzilini SHU SHAHAR uchun moslaydi.
@@ -74,6 +82,7 @@ export function useWeather(): Weather | null {
 
 export default function CityHeader() {
   const { place } = useMap();
+  const { expanded, setExpanded } = useCategories();
   const weather = useWeather();
   const inCity = place.inCity;
 
@@ -90,7 +99,16 @@ export default function CityHeader() {
         </span>
       )}
 
-      <span className="ml-auto text-sm text-zinc-400">Barcha joylar</span>
+      {/* «Barcha joylar»: bosilsa asosiy 10 turkumga qo'shimcha turkumlar ochiladi. */}
+      <button
+        type="button"
+        aria-expanded={expanded}
+        onClick={() => setExpanded(!expanded)}
+        data-testid="all-places"
+        className="ml-auto rounded-md px-1.5 py-0.5 text-sm font-medium text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-white/10"
+      >
+        {expanded ? "Kamroq" : "Barcha joylar"}
+      </button>
     </div>
   );
 }
@@ -109,51 +127,25 @@ export function WeatherIcon({ code }: { code: number }) {
   return <Sun />;
 }
 
-const SVG = {
-  width: 17,
-  height: 17,
-  viewBox: "0 0 24 24",
-  "aria-hidden": true as const,
-};
+/** Ob-havo belgilari — Lucide; rang har holatga xos (quyosh sariq, bulut kulrang, ...). */
+const W = { size: 17, strokeWidth: 2 } as const;
 
 function Sun() {
-  return (
-    <svg {...SVG} fill="none" stroke="#f5a623" strokeWidth="2" strokeLinecap="round">
-      <circle cx="12" cy="12" r="4" fill="#f5a623" stroke="none" />
-      <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4" />
-    </svg>
-  );
+  return <SunIcon {...W} color="#f5a623" />;
 }
 
 function Cloud() {
-  return (
-    <svg {...SVG} fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinejoin="round">
-      <path d="M6.5 18h11a3.5 3.5 0 0 0 .3-7 5.5 5.5 0 0 0-10.6-1.2A4 4 0 0 0 6.5 18z" />
-    </svg>
-  );
+  return <CloudIcon {...W} color="#94a3b8" />;
 }
 
 function Rain() {
-  return (
-    <svg {...SVG} fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M7 14h10a3.2 3.2 0 0 0 .3-6.4A5.2 5.2 0 0 0 7.2 6.5 3.8 3.8 0 0 0 7 14z" />
-      <path d="M9 17.5l-1 2.5M13 17.5l-1 2.5M17 17.5l-1 2.5" />
-    </svg>
-  );
+  return <CloudRain {...W} color="#60a5fa" />;
 }
 
 function Snow() {
-  return (
-    <svg {...SVG} fill="none" stroke="#7dd3fc" strokeWidth="2" strokeLinecap="round">
-      <path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9" />
-    </svg>
-  );
+  return <Snowflake {...W} color="#7dd3fc" />;
 }
 
 function Bolt() {
-  return (
-    <svg {...SVG} fill="#f59e0b" stroke="none">
-      <path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" />
-    </svg>
-  );
+  return <Zap {...W} color="#f59e0b" fill="#f59e0b" />;
 }

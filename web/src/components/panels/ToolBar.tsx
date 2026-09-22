@@ -10,6 +10,8 @@
  * Zoom (+/−), kompas va geolokatsiya alohida — `MapControls`.
  */
 
+import { Globe, Ruler, X } from "lucide-react";
+
 import type { ToolMode } from "@/components/map/useMapTools";
 import { useMap } from "@/components/map/MapProvider";
 import { BTN, OFF, ON, PILL } from "./controlStyles";
@@ -81,9 +83,7 @@ export default function ToolBar({ mode, onMode, onClear, hasMeasure }: Props) {
             onClick={onClear}
             className={`${BTN} ${OFF}`}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
+            <X size={20} strokeWidth={2} />
           </button>
         )}
       </div>
@@ -96,22 +96,9 @@ export default function ToolBar({ mode, onMode, onClear, hasMeasure }: Props) {
 }
 
 function SatelliteIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M3.4 9.5h17.2M3.4 14.5h17.2" />
-      <path d="M12 3c2.6 2.8 2.6 15.2 0 18M12 3c-2.6 2.8-2.6 15.2 0 18" />
-    </svg>
-  );
+  return <Globe size={24} strokeWidth={1.9} />;
 }
 
 function RulerIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <g transform="rotate(-45 12 12)">
-        <rect x="1.5" y="8" width="21" height="8" rx="1.8" />
-        <path d="M6 8v3.2M10 8v2M14 8v3.2M18 8v2" />
-      </g>
-    </svg>
-  );
+  return <Ruler size={24} strokeWidth={1.9} />;
 }

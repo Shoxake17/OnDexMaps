@@ -60,6 +60,13 @@ const (
 var (
 	errSatelliteUpstream = errors.New("sun'iy yo'ldosh manbasi javob bermadi")
 	errSatelliteBadURL   = errors.New("sun'iy yo'ldosh manzili noto'g'ri")
+	// errSatelliteNotFound — provayder BU tile uchun rasm SAQLAMAGAN
+	// (masalan, Esri World Imagery ba'zi hududlarda MAXZOOM'dan pastroq
+	// darajada ham to'liq keshlanmagan — bu XATO emas, tabiiy holat).
+	// `errSatelliteUpstream`dan farqli: bu haqiqiy javob (404), tarmoq
+	// yoki server nosozligi emas — shuning uchun mijozga 502 emas, 404
+	// qaytariladi.
+	errSatelliteNotFound = errors.New("bu tile uchun sun'iy yo'ldosh tasviri yo'q")
 )
 
 // redactURLError — tarmoq xatosidan MANZILNI olib tashlaydi.
@@ -139,6 +146,13 @@ func (s *Server) handleSatelliteTile(w http.ResponseWriter, r *http.Request) {
 
 	body, contentType, err := s.fetchSatelliteTile(r, upstream)
 	if err != nil {
+		if errors.Is(err, errSatelliteNotFound) {
+			// Bu joyda bu darajada tasvir yo'q — kutilgan holat, 404.
+			// `symbol`/MapLibre buni oddiy "bo'sh katak" deb qabul
+			// qiladi va konsolni 502-oqimi bilan to'ldirmaydi.
+			http.NotFound(w, r)
+			return
+		}
 		// Haqiqiy sabab FAQAT logga: yuqori oqim manzili (va undagi
 		// kalit) mijozga hech qachon ko'rinmasligi kerak.
 		slog.Warn("sun'iy yo'ldosh tile olinmadi", "z", z, "err", err)
@@ -208,6 +222,9 @@ func (s *Server) fetchSatelliteTile(
 	}
 	defer func() { _ = resp.Body.Close() }()
 
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, "", errSatelliteNotFound
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, "", errSatelliteUpstream
 	}

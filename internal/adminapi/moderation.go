@@ -25,13 +25,15 @@ const reviewer = "local-admin"
 // ikki nusxa bo'lmasin).
 func (s *Server) handlePlacesMeta(w http.ResponseWriter, r *http.Request) {
 	type kind struct {
-		Key     string         `json:"key"`
-		Label   string         `json:"label"`
-		Allowed []places.Field `json:"allowed"`
+		Key   string `json:"key"`
+		Label string `json:"label"`
+		// Geometry — "point" yoki "line" (yo'l): moderator ekrani shunga qarab ko'rsatadi.
+		Geometry string         `json:"geometry"`
+		Allowed  []places.Field `json:"allowed"`
 	}
 	kinds := make([]kind, len(places.Kinds))
 	for i, k := range places.Kinds {
-		kinds[i] = kind{Key: k.Key, Label: k.Label, Allowed: k.Allowed}
+		kinds[i] = kind{Key: k.Key, Label: k.Label, Geometry: string(k.Shape()), Allowed: k.Allowed}
 	}
 	ok(w, map[string]any{
 		"kinds":      kinds,

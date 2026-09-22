@@ -16,7 +16,7 @@ import { api } from "@/lib/api";
 import { formatDistance, pathLengthMeters, type LngLat } from "@/lib/geo";
 import { MAHALLA_ZOOM_IN } from "@/lib/config";
 import { LAYER } from "./MapProvider";
-import { PLACES_LAYER } from "@/components/places/usePlacesLayer";
+import { PLACES_HIT_LAYERS } from "@/components/places/usePlacesLayer";
 
 export type ToolMode = "idle" | "measure" | "route";
 
@@ -28,7 +28,8 @@ export type ToolMode = "idle" | "measure" | "route";
  * qaytadi — bu kutilgan holat, xato emas.
  */
 const STYLE_LYR = {
-  poi: ["poi-label", "poi-dot"],
+  // 4 muhimlik darajasi (`importance.ts`) — hammasi «poi» sifatida so'raladi.
+  poi: ["poi-tier1", "poi-tier2", "poi-tier3", "poi-tier4"],
   house: ["housenumber"],
   building: ["ms-building-3d", "ms-building-flat"],
 } as const;
@@ -608,10 +609,11 @@ export function useMapTools({
       // Foydalanuvchi qo'shgan ob'ekt belgisi bosilgan bo'lsa, uni qatlamning
       // o'z ishlovchisi ochadi (`usePlacesLayer`). Bu yerda ham manzil so'ralsa,
       // ikkalasi bir bosishga javob berib, panel ikki marta almashardi.
+      // (Belgi VA yo'l chizig'i: ikkalasining ham o'z ishlovchisi bor.)
+      const placeLayers = present(map, PLACES_HIT_LAYERS);
       if (
-        map.getLayer(PLACES_LAYER) &&
-        map.queryRenderedFeatures(boxAround(e.point), { layers: [PLACES_LAYER] })
-          .length > 0
+        placeLayers.length > 0 &&
+        map.queryRenderedFeatures(boxAround(e.point), { layers: placeLayers }).length > 0
       ) {
         return;
       }

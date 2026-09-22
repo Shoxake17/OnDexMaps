@@ -23,13 +23,32 @@ export type PlaceField =
   | "category"
   | "description"
   | "phone"
+  | "site"
+  | "social"
   | "hours"
   | "street"
   | "house";
 
+/**
+ * Ob'ekt shakli: "point" — bitta belgi, "line" — xaritada CHIZILADIGAN chiziq
+ * (yo'l, piyodalar o'tish joyi, to'siq).
+ */
+export type PlaceGeometry = "point" | "line";
+
+/** Chiziq turining chegaralari (server qoidasi; har tur o'ziniki). */
+export interface LineRule {
+  min_m: number;
+  max_m: number;
+  max_points: number;
+}
+
 export interface KindMeta {
   key: string;
   label: string;
+  /** Shakl. Chiziq turida foydalanuvchi joyni belgi bilan emas, nuqtalar bilan CHIZADI. */
+  geometry: PlaceGeometry;
+  /** Chiziq chegaralari — faqat `geometry === "line"` da bor. */
+  line?: LineRule;
   /** Shu turda bo'lishi MUMKIN maydonlar. */
   allowed: PlaceField[];
   /** Har doim to'ldirilishi shart. */
@@ -43,8 +62,15 @@ export interface PlacesMeta {
   enabled: boolean;
   kinds: KindMeta[];
   categories: string[];
+  /** Ijtimoiy tarmoq akkaunti faqat shu domenlardan bo'lishi mumkin. */
+  social_hosts: string[];
   max_photos: number;
-  limits: Record<"name" | "description" | "hours" | "street" | "house", number>;
+  limits: Record<
+    "name" | "description" | "hours" | "street" | "house" | "site" | "social",
+    number
+  > &
+    /** Yo'l chegaralari (eski mijozlar uchun). Har turning o'zi: `kinds[].line`. */
+    Record<"line_points" | "line_min_m" | "line_max_m", number>;
 }
 
 /** Xaritadagi tasdiqlangan ob'ekt (yengil: faqat belgi uchun). */
@@ -63,24 +89,37 @@ export interface PlaceDetail {
   category?: string;
   description?: string;
   phone?: string;
+  /** Veb-sayt va ijtimoiy tarmoq manzili (server tekshirgan http/https URL). */
+  site?: string;
+  social?: string;
   hours?: string;
   street?: string;
   house?: string;
+  /** Nuqta uchun o'zi; chiziq uchun chiziq USTIDAGI bitta nuqta. */
   lat: number;
   lng: number;
   photos: number;
+  /** GeoJSON: Point yoki LineString (yo'l). */
+  geometry?: GeoJSON.Point | GeoJSON.LineString;
+  /** Chiziq uzunligi (metr); nuqtada yo'q. */
+  length_m?: number;
   created_at: string;
 }
 
 /** Yuboriladigan ob'ekt. `website` — asalari (odamga ko'rinmaydi, DOIM bo'sh). */
 export interface PlaceInput {
   kind: string;
-  lat: number;
-  lng: number;
+  /** Nuqta turlari uchun. Chiziq turlarida YUBORILMAYDI. */
+  lat?: number;
+  lng?: number;
+  /** Chiziq (yo'l) turlari uchun: har nuqta [uzunlik, kenglik] (GeoJSON tartibi). */
+  line?: [number, number][];
   name: string;
   category: string;
   description: string;
   phone: string;
+  site: string;
+  social: string;
   hours: string;
   street: string;
   house: string;
@@ -88,9 +127,12 @@ export interface PlaceInput {
 }
 
 export type PlacesCollection = GeoJSON.FeatureCollection<
-  GeoJSON.Point,
+  GeoJSON.Point | GeoJSON.LineString,
   PlaceSummary
 >;
+
+// Koordinatani 6 xonaga yaxlitlash `lib/geo.ts` da (yagona nusxa).
+export { round6 } from "./geo";
 
 /** Ob'ekt rasmining manzili (server tozalagan JPEG). */
 export function placePhotoUrl(id: string, n: number): string {

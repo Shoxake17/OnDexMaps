@@ -12,6 +12,12 @@ import type { NextConfig } from "next";
  * Qolgan sarlavhalar so'rovga bog'liq emas, shuning uchun shu yerda.
  */
 const nextConfig: NextConfig = {
+  // Production image (`web/Dockerfile`) faqat `.next/standalone`ni
+  // ko'chiradi — bu ChustApp'dagi (`apps/web/next.config.ts`) bilan
+  // bir xil naqsh: `node_modules` konteynerga umuman kirmaydi,
+  // faqat shu ilova kod ishlashi uchun kerakli minimal to'plam.
+  output: "standalone",
+
   // Server versiyasi javob sarlavhasida oshkor qilinmaydi: bu
   // hujumchiga qaysi zaifliklarni sinashni aytib qo'yadi.
   poweredByHeader: false,

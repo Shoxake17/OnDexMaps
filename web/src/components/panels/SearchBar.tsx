@@ -18,15 +18,19 @@
  * ketmasligi uchun bekor qilinadi.
  */
 
+import { Building2, Droplet, House, MapPin, Milestone, Route, Search, X } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 
+import { logoPinElement } from "@/components/map/logoPin";
 import { useMap } from "@/components/map/MapProvider";
 import { api, type SearchMatch } from "@/lib/api";
 import { UZ_BOUNDS } from "@/lib/config";
 
 const DEBOUNCE_MS = 250;
+/** Qidiruv natijasi belgisi o'lchami (CSS px) — «ob'ekt qo'shish» belgisi bilan bir xil. */
+const PIN_SIZE = 46;
 const MIN_CHARS = 2;
 
 /** Natijaga uchganda yaqinlashtirish darajasi (bbox bo'lmaganda). */
@@ -191,7 +195,11 @@ export default function SearchBar({
       }
 
       clearMarker();
-      marker.current = new maplibregl.Marker({ element: pinElement(), anchor: "bottom" })
+      marker.current = new maplibregl.Marker({
+        element: logoPinElement(PIN_SIZE),
+        anchor: "bottom",
+        offset: [0, 1],
+      })
         .setLngLat([m.lng, m.lat])
         .addTo(map);
     },
@@ -280,9 +288,7 @@ export default function SearchBar({
             onClick={clearAll}
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-zinc-400 transition hover:bg-zinc-200 hover:text-zinc-700"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
+            <X size={14} strokeWidth={2.4} />
           </button>
         )}
 
@@ -384,18 +390,6 @@ export default function SearchBar({
   );
 }
 
-/** Xarita belgisi — natija qo'yilgan joy. */
-function pinElement(): HTMLElement {
-  const el = document.createElement("div");
-  el.setAttribute("aria-hidden", "true");
-  el.innerHTML =
-    '<svg width="30" height="40" viewBox="0 0 30 40" xmlns="http://www.w3.org/2000/svg">' +
-    '<path d="M15 0C6.7 0 0 6.6 0 14.8 0 25.4 15 40 15 40s15-14.6 15-25.2C30 6.6 23.3 0 15 0z" fill="#ff4d3a"/>' +
-    '<circle cx="15" cy="14.5" r="5.5" fill="#fff"/></svg>';
-  el.style.cssText = "filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); cursor: default;";
-  return el;
-}
-
 /** Tur guruhi bo'yicha rang. */
 function colorFor(type: string): string {
   switch (type) {
@@ -425,36 +419,15 @@ function colorFor(type: string): string {
 }
 
 function KindIcon({ type }: { type: string }) {
-  const p = {
-    width: 18,
-    height: 18,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 2,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-  };
+  const p = { size: 18, strokeWidth: 2 };
   switch (type) {
     case "street":
-      return (
-        <svg {...p}>
-          <path d="M9 3L6 21M15 3l3 18M12 5v3M12 11v3M12 17v3" />
-        </svg>
-      );
+      return <Milestone {...p} />;
     case "water":
-      return (
-        <svg {...p}>
-          <path d="M12 3c3.5 4.5 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 2.5-6.5 6-11z" />
-        </svg>
-      );
+      return <Droplet {...p} />;
     case "building":
     case "address":
-      return (
-        <svg {...p}>
-          <path d="M4 21V9l8-6 8 6v12M9 21v-6h6v6" />
-        </svg>
-      );
+      return <House {...p} />;
     case "region":
     case "district":
     case "city":
@@ -466,36 +439,18 @@ function KindIcon({ type }: { type: string }) {
     case "mahalla":
     case "qishloq":
     case "daha":
-      return (
-        <svg {...p}>
-          <path d="M3 21h18M5 21V10l4-3v14M13 21V4l6 3v14" />
-        </svg>
-      );
+      return <Building2 {...p} />;
     default:
-      return (
-        <svg {...p}>
-          <path d="M12 21s-7-6.2-7-11.2A7 7 0 0 1 19 9.8C19 14.8 12 21 12 21z" />
-          <circle cx="12" cy="10" r="2.4" />
-        </svg>
-      );
+      return <MapPin {...p} />;
   }
 }
 
 function CloseIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-      <path d="M6 6l12 12M18 6L6 18" />
-    </svg>
-  );
+  return <X size={20} strokeWidth={2} />;
 }
 
 function MagnifierIcon() {
-  return (
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <circle cx="11" cy="11" r="7" />
-      <path d="M20 20l-3.6-3.6" strokeLinecap="round" />
-    </svg>
-  );
+  return <Search size={19} strokeWidth={2} />;
 }
 
 /**
@@ -507,11 +462,5 @@ function MagnifierIcon() {
  * tushunarsiz edi. Bitta amal — bitta tugma.
  */
 function RouteIcon() {
-  return (
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-      <circle cx="6" cy="19" r="2.5" />
-      <circle cx="18" cy="5" r="2.5" />
-      <path d="M8.5 19h6a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7h6" />
-    </svg>
-  );
+  return <Route size={19} strokeWidth={1.8} />;
 }

@@ -285,13 +285,14 @@
       }
     },
     {
-      "id": "poi-dot",
+      "id": "poi-tier1",
       "type": "symbol",
       "source": "ondex",
       "source-layer": "poi",
-      "minzoom": 14,
+      "minzoom": 12,
+      "filter": ["in", ["get", "class"], ["literal", ["hospital", "fuel", "college", "place_of_worship", "railway", "police", "town_hall", "stadium", "aerialway", "harbor", "castle"]]],
       "metadata": {
-        "ondex:note": "Ilgari bu `circle` edi va HAR BIR joy bir xil sabzi nuqta bo'lib ko'rinardi — kafe ham, dorixona ham, bankomat ham farqsiz. Endi turkum belgisi chiziladi. Belgilar sprite FAYLIDA emas: mijoz `styleimagemissing` hodisasida ularni tuvalda chizib beradi (`poiIcons.ts`). Shuning uchun yangi turkum qo'shish uchun serverni qayta qurish SHART EMAS."
+        "ondex:note": "MUHIMLIK DARAJASI 1/4 (Google/Yandex kabi dinamik ko'rinish uchun). Belgi va nom BITTA qatlamda: belgi doim birinchi, nom sig'masa text-optional bilan FAQAT nom yashiriladi. Belgilar sprite FAYLIDA emas — mijoz styleimagemissing hodisasida tuvalda chizib beradi (poiIcons.ts). Nom rangi mijozdan (poiLabelColor, style.load da). Har tur qaysi darajaga tushishi va daraja->minzoom jadvali: web/src/components/map/importance.ts (BIR XIL shkala — u yerda o'zgarsa bu yerda ham o'zgartiriladi). Daraja 1 eng uzoqdan (z12) ko'rinadi, kam sonli/muhim orientir turlar shu yerda. symbol-sort-key shu darajadan hisoblanadi: joy torlashsa past raqamli (muhimroq) daraja g'olib chiqadi, yaqinlashtirilganda kamroq muhimlari ham ko'rina boshlaydi — bu STATIK emas, DINAMIK ko'rinishning o'zi. OnDexMap ob'ektlari (usePlacesLayer.ts) ham AYNAN shu 4 darajadan foydalanadi, shuning uchun ikki manba bitta umumiy to'qnashuvda ishtirok etadi."
       },
       "layout": {
         "icon-image": [
@@ -299,33 +300,147 @@
           "ondex-poi-",
           ["coalesce", ["get", "class"], "other"]
         ],
-        "icon-size": ["interpolate", ["linear"], ["zoom"], 14, 0.7, 17, 1],
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 12, 0.75, 17, 1],
         "icon-allow-overlap": false,
-        "icon-padding": 2
-      }
-    },
-    {
-      "id": "poi-label",
-      "type": "symbol",
-      "source": "ondex",
-      "source-layer": "poi",
-      "minzoom": 15,
-      "metadata": {
-        "ondex:note": "z16 dan z15 ga tushirildi: OSM nomlari z12 dan tile ichida bor edi, lekin uslub ularni faqat z16 dan chizardi — shu sababli \"OSM'da nom bor, OnDexMap'da yo'q\" bo'lib ko'rinardi."
-      },
-      "layout": {
-        "text-field": ["coalesce", ["get", "name:uz"], ["get", "name:latin"], ["get", "name"]],
-        "text-font": ["Noto Sans Regular"],
-        "text-size": 11,
-        "text-anchor": "top",
-        "text-offset": [0, 1],
+        "icon-padding": 3,
+        "icon-anchor": ["case", ["in", ["get", "class"], ["literal", ["hospital", "college"]]], "bottom", "center"],
+        "symbol-sort-key": ["+", 1000, ["coalesce", ["get", "rank"], 500]],
+        "text-field": [
+          "step", ["zoom"], "",
+          15, ["case", ["==", ["get", "class"], "bus"], "", ["coalesce", ["get", "name:uz"], ["get", "name:latin"], ["get", "name"], ""]]
+        ],
+        "text-font": ["Noto Sans Bold"],
+        "text-size": 12,
+        "text-anchor": "left",
+        "text-justify": "left",
+        "text-offset": ["interpolate", ["linear"], ["zoom"], 14, ["literal", [1.0, 0]], 17, ["literal", [1.2, 0]]],
         "text-max-width": 9,
-        "text-padding": 3
+        "text-padding": 2,
+        "text-optional": true
       },
       "paint": {
         "text-color": "#7c2d12",
         "text-halo-color": "#ffffff",
-        "text-halo-width": 1.4
+        "text-halo-width": 1.6
+      }
+    },
+    {
+      "id": "poi-tier2",
+      "type": "symbol",
+      "source": "ondex",
+      "source-layer": "poi",
+      "minzoom": 14,
+      "filter": ["in", ["get", "class"], ["literal", ["bank", "lodging", "school", "library", "bus", "post", "park", "garden", "attraction", "information", "office", "golf", "campsite", "grocery", "cemetery", "art_gallery", "zoo"]]],
+      "metadata": {
+        "ondex:note": "MUHIMLIK DARAJASI 2/4 — qarang poi-tier1 izohi va web/src/components/map/importance.ts. `grocery`/`lodging`/`school`/`library` — PNG pin (poiIcons.ts `loadPoiPngIcon`; `grocery` OnDexMap'ning o'z «Oziq-ovqat do'koni», `lodging` — «Mehmonxona», `school` — «Maktab» rasmi bilan BIR XIL, `library`ga OnDexMap tomonida mos turkum yo'q), shuning uchun `icon-anchor` shu to'rttasi uchun `bottom` (pin uchi nuqtaga tegadi), qolganlari `center`."
+      },
+      "layout": {
+        "icon-image": [
+          "concat",
+          "ondex-poi-",
+          ["coalesce", ["get", "class"], "other"]
+        ],
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 14, 0.75, 17, 1],
+        "icon-allow-overlap": false,
+        "icon-padding": 3,
+        "icon-anchor": ["case", ["in", ["get", "class"], ["literal", ["grocery", "lodging", "school", "library"]]], "bottom", "center"],
+        "symbol-sort-key": ["+", 2000, ["coalesce", ["get", "rank"], 500]],
+        "text-field": [
+          "step", ["zoom"], "",
+          15, ["case", ["==", ["get", "class"], "bus"], "", ["coalesce", ["get", "name:uz"], ["get", "name:latin"], ["get", "name"], ""]]
+        ],
+        "text-font": ["Noto Sans Bold"],
+        "text-size": 12,
+        "text-anchor": "left",
+        "text-justify": "left",
+        "text-offset": ["interpolate", ["linear"], ["zoom"], 14, ["literal", [1.0, 0]], 17, ["literal", [1.2, 0]]],
+        "text-max-width": 9,
+        "text-padding": 2,
+        "text-optional": true
+      },
+      "paint": {
+        "text-color": "#7c2d12",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1.6
+      }
+    },
+    {
+      "id": "poi-tier3",
+      "type": "symbol",
+      "source": "ondex",
+      "source-layer": "poi",
+      "minzoom": 15,
+      "filter": ["in", ["get", "class"], ["literal", ["restaurant", "fast_food", "cafe", "bar", "beer", "alcohol_shop", "ice_cream", "laundry", "pharmacy", "doctors", "dentist", "atm", "car", "pitch", "sport", "sports_centre", "swimming", "swimming_pool", "parking", "music"]]],
+      "metadata": {
+        "ondex:note": "MUHIMLIK DARAJASI 3/4 — qarang poi-tier1 izohi va web/src/components/map/importance.ts. `restaurant`/`cafe`/`pharmacy`/`doctors`/`dentist` — har biri O'Z PNG pinida (poiIcons.ts `loadPoiPngIcon`), shuning uchun `icon-anchor` shularga `bottom`, qolganlari `center` (qarang poi-tier2 izohi)."
+      },
+      "layout": {
+        "icon-image": [
+          "concat",
+          "ondex-poi-",
+          ["coalesce", ["get", "class"], "other"]
+        ],
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 15, 0.75, 17, 1],
+        "icon-allow-overlap": false,
+        "icon-padding": 3,
+        "icon-anchor": ["case", ["in", ["get", "class"], ["literal", ["restaurant", "cafe", "pharmacy", "doctors", "dentist"]]], "bottom", "center"],
+        "symbol-sort-key": ["+", 3000, ["coalesce", ["get", "rank"], 500]],
+        "text-field": [
+          "step", ["zoom"], "",
+          15, ["case", ["==", ["get", "class"], "bus"], "", ["coalesce", ["get", "name:uz"], ["get", "name:latin"], ["get", "name"], ""]]
+        ],
+        "text-font": ["Noto Sans Bold"],
+        "text-size": 12,
+        "text-anchor": "left",
+        "text-justify": "left",
+        "text-offset": ["interpolate", ["linear"], ["zoom"], 14, ["literal", [1.0, 0]], 17, ["literal", [1.2, 0]]],
+        "text-max-width": 9,
+        "text-padding": 2,
+        "text-optional": true
+      },
+      "paint": {
+        "text-color": "#7c2d12",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1.6
+      }
+    },
+    {
+      "id": "poi-tier4",
+      "type": "symbol",
+      "source": "ondex",
+      "source-layer": "poi",
+      "minzoom": 16.5,
+      "filter": ["in", ["get", "class"], ["literal", ["bakery", "shop", "clothing_store", "entrance", "toilets", "other"]]],
+      "metadata": {
+        "ondex:note": "MUHIMLIK DARAJASI 4/4 (eng past, faqat yaqindan) — qarang poi-tier1 izohi va web/src/components/map/importance.ts."
+      },
+      "layout": {
+        "icon-image": [
+          "concat",
+          "ondex-poi-",
+          ["coalesce", ["get", "class"], "other"]
+        ],
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 16.5, 0.75, 17, 1],
+        "icon-allow-overlap": false,
+        "icon-padding": 3,
+        "symbol-sort-key": ["+", 4000, ["coalesce", ["get", "rank"], 500]],
+        "text-field": [
+          "step", ["zoom"], "",
+          15, ["case", ["==", ["get", "class"], "bus"], "", ["coalesce", ["get", "name:uz"], ["get", "name:latin"], ["get", "name"], ""]]
+        ],
+        "text-font": ["Noto Sans Bold"],
+        "text-size": 12,
+        "text-anchor": "left",
+        "text-justify": "left",
+        "text-offset": ["interpolate", ["linear"], ["zoom"], 14, ["literal", [1.0, 0]], 17, ["literal", [1.2, 0]]],
+        "text-max-width": 9,
+        "text-padding": 2,
+        "text-optional": true
+      },
+      "paint": {
+        "text-color": "#7c2d12",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1.6
       }
     },
     {
