@@ -8,6 +8,14 @@
 # ataylab teskari: avval .gitignore, keyin `git init`.
 # ─────────────────────────────────────────────────────────────────────
 
+# ── Hujjatlar (.md) ─────────────────────────────────────────────────
+# Repo PRIVATE, lekin qaror: GitHub'da .md hujjat ko'rsatish shart
+# emas — ular lokal loyiha papkasida (F:\OnDexMap) qoladi, git bilan
+# versiyalanmaydi. `git:embed` yoki boshqa kodga BOG'LIQ EMASLIGI
+# tekshirilgan (2026-09-23). Yangi .md fayl qo'shsangiz ham avtomatik
+# chiqarib tashlanadi.
+*.md
+
 # ── Sirlar ───────────────────────────────────────────────────────────
 # `.env.example` ATAYLAB istisno qilingan: u shablon, ichida haqiqiy
 # qiymat bo'lmasligi SHART (gitleaks tekshiradi).
@@ -72,3 +80,6 @@ Desktop.ini
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+
+README.md
