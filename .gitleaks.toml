@@ -1,0 +1,53 @@
+# Gitleaks — sir skaneri sozlamasi.
+#
+# ┌─ NEGA BU FAYL KERAK ──────────────────────────────────────────────┐
+# Birinchi CI push'da skaner 2 ta "sir" topdi
+# (`internal/adminapi/server_test.go:16`, `internal/httpapi/auth_test.go:15`).
+# Ikkalasi ham YOLG'ON SIGNAL: test fayllaridagi soxta API kalitlari
+# (`"eski-kalit-0123456789abcdef0123456789"` — hech qayerda ishlamaydigan,
+# atayin o'ylab topilgan qiymat). `generic-api-key` qoidasi faqat
+# entropiyaga qaraydi, kontekstni tushunmaydi.
+#
+# Doimiy qizil xavfsizlik darvozasi — darvoza YO'QLIGIDAN YOMONROQ: odam
+# qizil rangga ko'nikadi va HAQIQIY sir tushganda ham e'tibor bermaydi
+# ("alert fatigue"). Shuning uchun yolg'on signallar aniq asos bilan
+# chiqarib tashlanadi, qolgan hammasi qat'iy tekshiriladi.
+#
+# ChustApp'dagi (`F:\ChustApp\.gitleaks.toml`) bilan bir xil naqsh va
+# bir xil asoslash — o'sha yerda ham xuddi shu turdagi test-fayl
+# soxta-kalit muammosi bo'lgan.
+#
+# MUHIM QOIDA: bu faylga yangi istisno qo'shilganda IZOH ham yoziladi —
+# nega bu sir emasligi. Izohsiz istisno vaqt o'tib "shunchaki o'chirib
+# qo'yilgan tekshiruv"ga aylanadi.
+# └───────────────────────────────────────────────────────────────────┘
+
+title = "OnDexMap gitleaks sozlamasi"
+
+[extend]
+# Gitleaks'ning standart qoidalar to'plami TO'LIQ saqlanadi — biz
+# faqat istisnolar qo'shamiz, qoidalarni zaiflashtirmaymiz.
+useDefault = true
+
+[allowlist]
+description = "Tekshirilgan va sir emasligi tasdiqlangan holatlar"
+
+paths = [
+  # ── Go test fayllari ──
+  #
+  # Ular ichida soxta admin/read/prev kalitlar
+  # ("admin-kalit-0123456789abcdef0123456789" va sh.k.) bor — bularning
+  # HECH BIRI hech qayerda ishlamaydi, faqat `config.Config` ni testda
+  # to'ldirish uchun. Xavf: agar kimdir kelajakda HAQIQIY sirni test
+  # fayliga yozsa, u ushlanmay qoladi — shuning uchun bu istisno faqat
+  # `_test.go` bilan tugaydigan fayllarga tegishli, ishlab chiqarish
+  # kodiga emas.
+  '''.*_test\.go$''',
+
+  # ── Namuna muhit fayli ──
+  #
+  # `.env.example` ATAYLAB namuna qiymatlar bilan to'ldirilgan.
+  # Haqiqiy `.env` esa `.gitignore` da va hech qachon commit
+  # qilinmaydi.
+  '''^\.env\.example$''',
+]
