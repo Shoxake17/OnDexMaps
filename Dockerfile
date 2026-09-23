@@ -47,6 +47,17 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
         -o /out/migrate \
         ./cmd/migrate
 
+# `cmd/adminserver` — moderatsiya/muharrirlik uchun production admin
+# serveri (Caddy ortida, `ONDEXMAP_ADMIN_KEY` bilan himoyalangan).
+# `cmd/admin`dan farqli: operator kompyuteriga EMAS, shu image'ga
+# kiradi — compose'da alohida `adminserver` xizmati sifatida ishga
+# tushiriladi, tashqi portga chiqarilmaydi.
+RUN CGO_ENABLED=0 GOOS=linux go build \
+        -trimpath \
+        -ldflags="-s -w" \
+        -o /out/adminserver \
+        ./cmd/adminserver
+
 # ---------- 2-bosqich: ishlash ----------
 #
 # distroless/static — ichida shell, paket menejeri, coreutils YO'Q.
@@ -60,6 +71,7 @@ FROM gcr.io/distroless/static-debian12:nonroot
 # qo'yamiz: bazani almashtirganda unutilmasin.
 COPY --from=build /out/api /api
 COPY --from=build /out/migrate /migrate
+COPY --from=build /out/adminserver /adminserver
 
 # ⚠️ `cmd/migrate` migratsiyalarni `go:embed` bilan EMAS, oddiy
 # `os.ReadDir("migrations")` bilan o'qiydi (nisbiy yo'l, ishchi

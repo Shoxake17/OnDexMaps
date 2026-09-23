@@ -20,6 +20,8 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
+	"strings"
 
 	"ondexmap/internal/apikey"
 	"ondexmap/internal/config"
@@ -123,7 +125,7 @@ func (s *Server) handleVerify(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 	body := map[string]string{}
 	if s.cfg.SatelliteURL != "" {
-		body["satellite_url"] = "http://127.0.0.1:" + apiPort(s.cfg.HTTPAddr) +
+		body["satellite_url"] = satelliteConfigOrigin(s.cfg.HTTPAddr) +
 			"/tiles/satellite/{z}/{x}/{y}"
 		if s.cfg.SatelliteAttribution != "" {
 			body["satellite_attribution"] = s.cfg.SatelliteAttribution
@@ -133,6 +135,28 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	ok(w, body)
+}
+
+// satelliteConfigOrigin — ommaviy API (`cmd/api`, sun'iy yo'ldosh proksisi)
+// muharrirga qaysi manzildan ko'rinishi.
+//
+// ┌─ IKKI HOLAT ────────────────────────────────────────────────────────┐
+// • Lokal (`cmd/admin`, 127.0.0.1): admin serveri va ommaviy API BIR XIL
+//   mashinada — `127.0.0.1:<ommaviy_port>` yetadi.
+// • Masofaviy (`cmd/adminserver`, Caddy ortida): ular ALOHIDA
+//   konteynerlar, `127.0.0.1` adminserver konteynerining O'ZIGA
+//   ishora qilardi — ommaviy API'ga UMUMAN yetib bormaydi. Shu sabab
+//   `PUBLIC_BASE_URL` (routes_map.go'dagi bilan BIR XIL o'zgaruvchi —
+//   production compose'da allaqachon bor) sozlangan bo'lsa, o'sha
+//   ommaviy manzil (`https://maps.ondex.uz`) ishlatiladi: sun'iy
+//   yo'ldosh proksisi ham AYNAN shu domenda, `cmd/api` orqali xizmat
+//   qiladi.
+// └────────────────────────────────────────────────────────────────────┘
+func satelliteConfigOrigin(httpAddr string) string {
+	if v := strings.TrimSpace(os.Getenv("PUBLIC_BASE_URL")); v != "" {
+		return strings.TrimRight(v, "/")
+	}
+	return "http://127.0.0.1:" + apiPort(httpAddr)
 }
 
 // apiPort — ommaviy API porti (`HTTP_ADDR`: ":8090" yoki "host:8090").
