@@ -202,9 +202,13 @@ jobs:
 
       - name: Run OSV-Scanner
         run: |
+          # ⚠️ `--config` OCHIQ ko'rsatilishi SHART: bu versiyada
+          # `osv-scanner.toml`ni skanerlanadigan papka tugidan avtomatik
+          # topsa ham (log'da "Loaded filter from" chiqadi), istisno
+          # QO'LLANMAYDI — sinab tasdiqlangan (2026-09-23).
           docker run --rm -v "$PWD:/src:ro" -w /src \
             ghcr.io/google/osv-scanner:v2.6.0@sha256:afd838850ac1a0fcc15ff4a041dc9ba11123c3f0d2666217a5f0fcf9222b55fa \
-            scan source -r /src
+            scan source -r --config /src/osv-scanner.toml /src
 
   # ══════════════════════════════════════════════════════════════════
   # 2. SAST — Semgrep

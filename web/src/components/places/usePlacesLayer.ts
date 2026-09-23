@@ -28,8 +28,7 @@
  */
 
 import { useEffect, useRef } from "react";
-// maplibre-gl v6 `default` export'ni olib tashladi — nomlangan import.
-import type * as maplibregl from "maplibre-gl";
+import type maplibregl from "maplibre-gl";
 import type { GeoJSONSource, Map as MLMap } from "maplibre-gl";
 
 import { TIER_MINZOOM, TIER_SORT_BASE, TIERS, placeTierExpr, type Tier } from "@/components/map/importance";

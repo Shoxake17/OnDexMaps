@@ -12,8 +12,7 @@
 
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
-// maplibre-gl v6 `default` export'ni olib tashladi — nomlangan import.
-import * as maplibregl from "maplibre-gl";
+import maplibregl from "maplibre-gl";
 
 import { useMap } from "@/components/map/MapProvider";
 import { prettyUrl, safeHref, socialName } from "@/lib/contactCheck";

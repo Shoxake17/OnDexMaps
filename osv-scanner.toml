@@ -1,0 +1,34 @@
+# OSV-Scanner — zaifliklarni tekshirish sozlamasi.
+#
+# ┌─ NEGA BU FAYL KERAK ──────────────────────────────────────────────┐
+# `.golangci.yml`/`.gitleaks.toml` bilan bir xil tamoyil: standart
+# tekshiruv TO'LIQ saqlanadi, faqat ANIQ TEKSHIRILGAN va asoslangan
+# istisnolar qo'shiladi — izohsiz istisno YO'Q.
+# └───────────────────────────────────────────────────────────────────┘
+
+[[IgnoredVulns]]
+id = "GHSA-jrc7-96c5-q579"
+reason = '''
+maplibre-gl <=6.4.0 — kritik XSS (CVE-2026-85061, CVSS 9.6). Tuzatilgan
+zaiflik MapLibre'ning O'Z `AttributionControl`i (`DOM.sanitize()`)
+ichida: ishonchsiz/uchinchi tomon atribut satrlarini HTML sifatida
+kiritganda ekspluatatsiya qilinadi.
+
+OnDexMap bu qatlamni UMUMAN ULAMAYDI: xarita `attributionControl: false`
+bilan yaratiladi (`web/src/components/map/MapProvider.tsx`), krediti
+o'zimizning React komponenti (`MapCredits.tsx`) orqali chiqadi — u
+faqat sobit, kodda yozilgan matn ko'rsatadi, MapLibre'ning zaif
+`DOM.sanitize()` yo'liga UMUMAN kirmaydi. Demak zaiflik BIZNING
+ishlatish usulimizda ekspluatatsiya qilinmaydi.
+
+Tuzatilgan versiya (6.4.1+) WebGL2'ni MAJBURIY qiladi (WebGL1 qo'llovi
+BUTUNLAY olib tashlangan). 2026-09-23 da sinab ko'rilgan: production'da
+haqiqiy foydalanuvchi brauzerida xarita butunlay OQ (bo'sh) bo'lib
+qoldi — WebGL2 qo'llamaydigan qurilma/brauzer uchun xarita to'liq
+ishlamay qoladi (kod xatosi emas, MapLibre'ning o'z platforma talabi).
+Bu OnDexMap uchun v4.7.1'ni ushlab turishdan KO'RA OG'IRROQ regressiya.
+
+Qayta ko'rib chiqish sharti: (a) 6.x/keyingi minor versiya WebGL1'ni
+qaytarsa, YOKI (b) foydalanuvchilar bazasida WebGL2 qo'llovi 100%
+ekanligi alohida tasdiqlansa.
+'''
