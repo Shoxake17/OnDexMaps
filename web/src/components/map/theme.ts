@@ -94,12 +94,17 @@ export function applyMapTheme(map: MLMap, dark: boolean): void {
         // Birinchi marta — yorug' (asl) qiymatni eslab qolamiz. Qorong'i
         // qiymat allaqachon qo'llangan bo'lsa (qatlam kech qo'shilgan) asl
         // qiymat noma'lum va yorug' rejimga qaytishda tegilmaydi.
-        saved.set(key, map.getPaintProperty(layer, prop));
+        // v6: `getPaintProperty`/`setPaintProperty` xossa nomini qat'iy
+        // `keyof AllPaintProperties` deb talab qiladi — bu yerda esa
+        // `DARK` obyektidan olingan umumiy `string`. Qiymat kabi shu
+        // yerda ham `as never` bilan o'tkazamiz (real xossa nomi
+        // to'g'ri, faqat tur tekshiruvi buni bilmaydi).
+        saved.set(key, map.getPaintProperty(layer, prop as never));
       }
       if (dark) {
-        map.setPaintProperty(layer, prop, darkValue as never);
+        map.setPaintProperty(layer, prop as never, darkValue as never);
       } else if (saved.get(key) !== undefined) {
-        map.setPaintProperty(layer, prop, saved.get(key) as never);
+        map.setPaintProperty(layer, prop as never, saved.get(key) as never);
       }
     }
   }

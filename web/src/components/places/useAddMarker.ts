@@ -10,7 +10,9 @@
  */
 
 import { useEffect, useRef } from "react";
-import maplibregl, { type Map as MLMap, type Marker } from "maplibre-gl";
+// maplibre-gl v6 `default` export'ni olib tashladi — nomlangan import.
+import * as maplibregl from "maplibre-gl";
+import type { Map as MLMap, Marker } from "maplibre-gl";
 
 import { logoPinElement } from "@/components/map/logoPin";
 import type { LngLat } from "@/lib/geo";

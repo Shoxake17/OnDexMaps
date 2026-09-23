@@ -17,7 +17,9 @@
  */
 
 import { useEffect, useRef } from "react";
-import maplibregl, { type GeoJSONSource, type Map as MLMap, type Marker } from "maplibre-gl";
+// maplibre-gl v6 `default` export'ni olib tashladi — nomlangan import.
+import * as maplibregl from "maplibre-gl";
+import type { GeoJSONSource, Map as MLMap, Marker } from "maplibre-gl";
 
 import type { LngLat } from "@/lib/geo";
 

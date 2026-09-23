@@ -21,7 +21,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import maplibregl, { type Map as MLMap } from "maplibre-gl";
+// maplibre-gl v6 `default` export'ni olib tashladi — nomlangan import.
+import * as maplibregl from "maplibre-gl";
+import type { Map as MLMap } from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -151,10 +153,12 @@ function applyBuildings(map: MLMap, is3D: boolean, satellite: boolean) {
       flatOpacity.set(map, map.getPaintProperty(BUILDING.flat, "fill-opacity"));
     }
     map.setLayoutProperty(BUILDING.flat, "visibility", satellite ? "none" : "visible");
+    // v6: qiymat turi qat'iyroq — asl qiymat `unknown` sifatida
+    // saqlangan (uslubdan o'qilgan, turi oldindan noma'lum).
     map.setPaintProperty(
       BUILDING.flat,
       "fill-opacity",
-      is3D ? flatOpacity.get(map) : 1,
+      (is3D ? flatOpacity.get(map) : 1) as never,
     );
   }
 }
@@ -312,7 +316,8 @@ export function MapProvider({
       bearing: start3D ? -17 : 0,
       maxBounds: UZ_BOUNDS,
       minZoom: 5.5,
-      antialias: true,
+      // v6: `antialias` endi `canvasContextAttributes` ichida.
+      canvasContextAttributes: { antialias: true },
       attributionControl: false,
     });
     setMap(map);

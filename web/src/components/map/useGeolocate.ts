@@ -9,7 +9,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import maplibregl from "maplibre-gl";
+// maplibre-gl v6 `default` export'ni olib tashladi — nomlangan import.
+import * as maplibregl from "maplibre-gl";
 
 import { useMap } from "./MapProvider";
 
