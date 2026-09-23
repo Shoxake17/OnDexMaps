@@ -122,6 +122,12 @@ jobs:
       # └───────────────────────────────────────────────────────────────┘
       - name: Run migrations (CI database)
         env:
+          # `APP_ENV=development` SHART: `cmd/migrate` ham `config.Load()`
+          # orqali TO'LIQ sozlamani tekshiradi (`internal/config/config.go`
+          # `validate()`), ALLOWED_ORIGINS/ONDEXMAP_READ_KEY/ADMIN_KEY/
+          # DATABASE_URL kabi FAQAT-PRODUCTION maydonlarini ham talab
+          # qiladi — ular CI'ning bir martalik test bazasiga aloqasi yo'q.
+          APP_ENV: development
           DATABASE_URL_MIGRATE: postgres://ondexmap:ondexmap@localhost:5432/ondexmap_test?sslmode=disable
           ONDEXMAP_APP_DB_PASSWORD: ci-app-password-not-real
           ONDEXMAP_SUBMIT_DB_PASSWORD: ci-submit-password-not-real
@@ -434,6 +440,10 @@ jobs:
 
       - name: Run migrations (ZAP uchun bo'sh baza)
         env:
+          # Yuqoridagi "Run migrations (CI database)" bosqichi bilan bir
+          # xil sabab: `cmd/migrate` ham to'liq production validatsiyasidan
+          # o'tadi, APP_ENV bo'lmasa yiqiladi.
+          APP_ENV: development
           DATABASE_URL_MIGRATE: postgres://ondexmap:ondexmap@localhost:5432/ondexmap?sslmode=disable
           ONDEXMAP_APP_DB_PASSWORD: ci-app-password-not-real
           ONDEXMAP_SUBMIT_DB_PASSWORD: ci-submit-password-not-real
