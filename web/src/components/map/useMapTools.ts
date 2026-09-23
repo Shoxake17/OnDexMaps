@@ -337,23 +337,27 @@ export function useMapTools({
     (screen: { x: number; y: number }, p: LngLat) => {
       if (!map) return;
 
-      // Chegara mahalla HUDUDINING ISTALGAN NUQTASIGA bosilganda chiziladi
-      // (`mahallaFill` — butun poligon, ekranda ko'rinmasa ham, oldindan
-      // `queryRenderedFeatures` uni topadi). Bino/joy bosilsa BUNDAN
-      // OLDINROQ (yuqorida, `placeLayers` tekshiruvida) qaytib
-      // ketilgan — demak bu yerga faqat "aniq obyekt yo'q" holatlar
-      // yetib keladi.
+      // Chegara mahalla HUDUDINING ISTALGAN NUQTASIGA bosilganda chiziladi.
+      // Bino/joy bosilsa BUNDAN OLDINROQ (yuqorida, `placeLayers`
+      // tekshiruvida) qaytib ketilgan — demak bu yerga faqat "aniq
+      // obyekt yo'q" holatlar yetib keladi.
       //
-      // ⚠️ ILGARI faqat mahalla NOMI YOZUVIGA (`mahallaLabel`) bosilganda
-      // ishlagan — juda tor nishon (bir necha piksellik matn) va
-      // qo'shimcha `MAHALLA_ZOOM_IN` sharti bilan cheklangan edi. Endi
-      // butun hudud bo'yicha ishlaydi — foydalanuvchi mahalla ICHIDAGI
-      // istalgan bo'sh joyga bossa ham chegara chiqadi (2026-09-23,
-      // mahalla ma'lumoti production'ga endigina qo'shilgandan keyin
-      // sinab ko'rilganda aniqlangan).
-      if (map.getLayer(LAYER.mahallaFill)) {
+      // ⚠️ `mahallaHit` ishlatiladi, `mahallaFill` EMAS: `mahallaFill`ning
+      // filtri odatda hech narsani ko'rsatmaydi (faqat TANLANGAN
+      // mahalla) — `queryRenderedFeatures` esa faqat chizilgan (filtrdan
+      // o'tgan) obyektni topadi, ya'ni tanlanguncha undan HECH QACHON
+      // natija chiqmasdi ("tovuq-tuxum": mahalla ma'lumoti production'ga
+      // qo'shilgandan keyin BIRINCHI marta sinalganda aniqlangan bug —
+      // 2026-09-23). `mahallaHit` — filtrsiz, ko'rinmas qatlam, doim
+      // barcha mahallalarni "chizadi" (`LAYER.mahallaHit` izohiga qarang).
+      //
+      // ILGARI (bundan ham oldin) faqat mahalla NOMI YOZUVIGA
+      // (`mahallaLabel`) bosilganda ishlagan — juda tor nishon (bir
+      // necha piksellik matn) va qo'shimcha zoom sharti bilan
+      // cheklangan edi.
+      if (map.getLayer(LAYER.mahallaHit)) {
         const hit = map.queryRenderedFeatures(boxAround(screen), {
-          layers: [LAYER.mahallaFill],
+          layers: [LAYER.mahallaHit],
         })[0];
         if (hit?.properties?.id) {
           onSelectArea(String(hit.properties.id));
