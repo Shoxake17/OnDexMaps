@@ -713,7 +713,7 @@ jobs:
             # (ishlash vaqtida, shu faylda) — `NEXT_PUBLIC_API_URL`
             # bundan mustasno, u ochiq domen nomi, sir emas.
             # └───────────────────────────────────────────────────────┘
-            docker compose pull api web migrate
+            docker compose pull api web adminserver migrate
 
             # Migratsiya — API/web qayta ishga tushishidan OLDIN. Bir
             # martalik konteyner (`restart` yo'q), muvaffaqiyatsiz
@@ -721,7 +721,11 @@ jobs:
             # ishga tushmasin).
             docker compose run --rm migrate
 
-            docker compose up -d --no-deps --force-recreate api web
+            # ⚠️ `adminserver` HAM shu ro'yxatda: u ham `ondexmap-api`
+            # image'ining bir qismi (bitta binar ko'proq) — busiz eski
+            # tag'da qolib ketardi (2026-09-23 aynan shunday chiqqan edi:
+            # api/web yangilangan, adminserver eski qolgan).
+            docker compose up -d --no-deps --force-recreate api web adminserver
 
             docker image prune -f
 
