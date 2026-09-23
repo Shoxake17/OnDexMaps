@@ -14,6 +14,7 @@ import type { GeoJSONSource, Map as MLMap, MapMouseEvent } from "maplibre-gl";
 
 import { api } from "@/lib/api";
 import { formatDistance, pathLengthMeters, type LngLat } from "@/lib/geo";
+import { MAHALLA_ZOOM_IN } from "@/lib/config";
 import { LAYER } from "./MapProvider";
 import { PLACES_HIT_LAYERS } from "@/components/places/usePlacesLayer";
 
@@ -337,27 +338,35 @@ export function useMapTools({
     (screen: { x: number; y: number }, p: LngLat) => {
       if (!map) return;
 
-      // Chegara mahalla HUDUDINING ISTALGAN NUQTASIGA bosilganda chiziladi.
-      // Bino/joy bosilsa BUNDAN OLDINROQ (yuqorida, `placeLayers`
-      // tekshiruvida) qaytib ketilgan — demak bu yerga faqat "aniq
-      // obyekt yo'q" holatlar yetib keladi.
-      //
-      // ⚠️ `mahallaHit` ishlatiladi, `mahallaFill` EMAS: `mahallaFill`ning
-      // filtri odatda hech narsani ko'rsatmaydi (faqat TANLANGAN
-      // mahalla) — `queryRenderedFeatures` esa faqat chizilgan (filtrdan
-      // o'tgan) obyektni topadi, ya'ni tanlanguncha undan HECH QACHON
-      // natija chiqmasdi ("tovuq-tuxum": mahalla ma'lumoti production'ga
-      // qo'shilgandan keyin BIRINCHI marta sinalganda aniqlangan bug —
-      // 2026-09-23). `mahallaHit` — filtrsiz, ko'rinmas qatlam, doim
-      // barcha mahallalarni "chizadi" (`LAYER.mahallaHit` izohiga qarang).
-      //
-      // ILGARI (bundan ham oldin) faqat mahalla NOMI YOZUVIGA
-      // (`mahallaLabel`) bosilganda ishlagan — juda tor nishon (bir
-      // necha piksellik matn) va qo'shimcha zoom sharti bilan
-      // cheklangan edi.
-      if (map.getLayer(LAYER.mahallaHit)) {
+      // ┌─ TARTIB — Yandex/Google uslubida, 3 daraja ──────────────────────┐
+      // 1) ANIQ OBYEKT (POI belgisi yoki uy raqami) — ENG BIRINCHI.
+      //    `OnDexMap`ning o'z ob'ektlari (`PLACES_HIT_LAYERS`) bu yerga
+      //    UMUMAN yetib kelmaydi (yuqorida, chaqiruvchida, allaqachon
+      //    ushlab qolingan) — bu yerdagi `describeAt` FAQAT bazaviy
+      //    xaritaning o'z OSM belgilarini (`poi-tier1..4`, dorixona,
+      //    do'kon, shifoxona kabi) va uy raqamlarini tekshiradi. Ular
+      //    ILGARI bu yerga UMUMAN qamrab olinmagan edi — natijada
+      //    mahalla ICHIDAGI istalgan OSM belgisiga bosish (masalan,
+      //    dorixona belgisi) HAM mahalla chegarasini chiqarib
+      //    yuborardi, garchi foydalanuvchi aynan o'sha belgi nomini
+      //    ko'rmoqchi bo'lsa ham (2026-09-23 aniqlangan bug).
+      // 2) MAHALLA NOMI YOZUVI — aniq obyekt topilmasa. Chegara FAQAT
+      //    nomga bosilganda chiqadi, mahalla hududining istalgan boshqa
+      //    (bo'sh) joyiga emas — bino/POI/uy tanlanganda chegara
+      //    "aralashib" ko'rinib qolmasin uchun.
+      // 3) Hech biri topilmasa — server orqali manzil (reverse-geocode).
+      // └────────────────────────────────────────────────────────────────┘
+      const named = describeAt(map, screen);
+      if (named) {
+        onSelectArea(null);
+        pending.current?.abort();
+        onAddress(named, false);
+        return;
+      }
+
+      if (map.getZoom() >= MAHALLA_ZOOM_IN && map.getLayer(LAYER.mahallaLabel)) {
         const hit = map.queryRenderedFeatures(boxAround(screen), {
-          layers: [LAYER.mahallaHit],
+          layers: [LAYER.mahallaLabel],
         })[0];
         if (hit?.properties?.id) {
           onSelectArea(String(hit.properties.id));
@@ -366,14 +375,6 @@ export function useMapTools({
         }
       }
       onSelectArea(null);
-
-      // Nom tile ichida bo'lsa — so'rovsiz, darhol.
-      const named = describeAt(map, screen);
-      if (named) {
-        pending.current?.abort();
-        onAddress(named, false);
-        return;
-      }
 
       // Hudud tashqarisi — so'rov YUBORILMAYDI. Server uni baribir
       // 400 bilan rad etadi; bekorga so'rash konsolni xato bilan

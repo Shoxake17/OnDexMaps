@@ -44,18 +44,6 @@ export const LAYER = {
   mahallaFill: "mahalla-fill",
   mahallaLine: "mahalla-line",
   mahallaLabel: "mahalla-label",
-  // Bosishni ANIQLASH uchun — `mahallaFill`dan ALOHIDA, ATAYLAB.
-  //
-  // ⚠️ `mahallaFill`ning filtri odatda HECH NARSANI ko'rsatmaydi
-  // (`selectionFilter(null)` — faqat TANLANGAN mahalla ko'rinadi).
-  // `map.queryRenderedFeatures` esa faqat HAQIQATAN chizilgan
-  // (filtrdan o'tgan) obyektlarni topadi — ya'ni tanlanguncha
-  // `mahallaFill`da HECH QACHON hech narsa topilmaydi ("tovuq va
-  // tuxum": tanlash uchun avval tanlangan bo'lishi kerak edi).
-  // Shu sabab FILTRSIZ, ko'rinmas (`fill-opacity: 0`) alohida
-  // qatlam — u doim BARCHA mahallalarni "chizadi" (ko'rinmas holda),
-  // shuning uchun bosish HAR doim to'g'ri mahallani topadi.
-  mahallaHit: "mahalla-hit",
 } as const;
 
 const SOURCE = {
@@ -658,17 +646,6 @@ async function addMahallaLayers(
 
   const under = map.getLayer("road-label") ? "road-label" : undefined;
 
-  // Bosishni aniqlash uchun — FILTRSIZ, har doim BARCHA mahallalarni
-  // "chizadi" (ko'zga ko'rinmas holda). `LAYER.mahallaHit` izohiga qarang.
-  map.addLayer(
-    {
-      id: LAYER.mahallaHit,
-      type: "fill",
-      source: SOURCE.shapes,
-      paint: { "fill-color": "#000000", "fill-opacity": 0 },
-    },
-    under,
-  );
   map.addLayer(
     {
       id: LAYER.mahallaFill,
