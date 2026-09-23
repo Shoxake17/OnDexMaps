@@ -14,7 +14,6 @@ import type { GeoJSONSource, Map as MLMap, MapMouseEvent } from "maplibre-gl";
 
 import { api } from "@/lib/api";
 import { formatDistance, pathLengthMeters, type LngLat } from "@/lib/geo";
-import { MAHALLA_ZOOM_IN } from "@/lib/config";
 import { LAYER } from "./MapProvider";
 import { PLACES_HIT_LAYERS } from "@/components/places/usePlacesLayer";
 
@@ -338,17 +337,23 @@ export function useMapTools({
     (screen: { x: number; y: number }, p: LngLat) => {
       if (!map) return;
 
-      // Chegara FAQAT mahalla NOMIGA bosilganda chiziladi. Bino yoki
-      // bo'sh joyga bosish — o'sha mahalla ICHIDA bo'lsa ham —
-      // chegarani chizmaydi.
+      // Chegara mahalla HUDUDINING ISTALGAN NUQTASIGA bosilganda chiziladi
+      // (`mahallaFill` — butun poligon, ekranda ko'rinmasa ham, oldindan
+      // `queryRenderedFeatures` uni topadi). Bino/joy bosilsa BUNDAN
+      // OLDINROQ (yuqorida, `placeLayers` tekshiruvida) qaytib
+      // ketilgan — demak bu yerga faqat "aniq obyekt yo'q" holatlar
+      // yetib keladi.
       //
-      // ⚠️ Zoom sharti SHART: yozuv z13 dan pastda shaffof (opacity 0),
-      // lekin `queryRenderedFeatures` shaffof obyektni ham topadi.
-      // Shartsiz, uzoqlashtirilgan xaritada ko'rinmayotgan yozuvga
-      // bosilib, chegara "o'zidan-o'zi" chiqib qolardi.
-      if (map.getZoom() >= MAHALLA_ZOOM_IN && map.getLayer(LAYER.mahallaLabel)) {
+      // ⚠️ ILGARI faqat mahalla NOMI YOZUVIGA (`mahallaLabel`) bosilganda
+      // ishlagan — juda tor nishon (bir necha piksellik matn) va
+      // qo'shimcha `MAHALLA_ZOOM_IN` sharti bilan cheklangan edi. Endi
+      // butun hudud bo'yicha ishlaydi — foydalanuvchi mahalla ICHIDAGI
+      // istalgan bo'sh joyga bossa ham chegara chiqadi (2026-09-23,
+      // mahalla ma'lumoti production'ga endigina qo'shilgandan keyin
+      // sinab ko'rilganda aniqlangan).
+      if (map.getLayer(LAYER.mahallaFill)) {
         const hit = map.queryRenderedFeatures(boxAround(screen), {
-          layers: [LAYER.mahallaLabel],
+          layers: [LAYER.mahallaFill],
         })[0];
         if (hit?.properties?.id) {
           onSelectArea(String(hit.properties.id));
