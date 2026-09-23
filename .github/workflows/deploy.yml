@@ -139,6 +139,19 @@ jobs:
           ONDEXMAP_SUBMIT_DB_PASSWORD: ci-submit-password-not-real
         run: go run ./cmd/migrate
 
+      # ┌─ UCH ALOHIDA ROL — BIR XIL ULANISH EMAS ─────────────────────────┐
+      # `config.validate()` DATABASE_URL/DATABASE_URL_MIGRATE/
+      # SUBMIT_DATABASE_URL bir-biriga TENG bo'lishini (dev/prod farqisiz,
+      # bu HAR DOIM tekshiriladigan xavfsizlik invarianti) rad etadi —
+      # "egasi bilan ulanib SQL inyeksiya DROP TABLE qila oladi" degan
+      # xatoni CI'da ham ushlash uchun ATAYLAB shunday. Uchtasini bitta
+      # `ondexmap:ondexmap` bilan to'ldirish shu tekshiruvni yiqitardi
+      # (sinab tasdiqlangan, 2026-09-23). Yuqoridagi migratsiya bosqichi
+      # `ondexmap_app`/`ondexmap_submit` rollarini ANIQ shu parollar bilan
+      # ALLAQACHON yaratgan — shu rollardan foydalanamiz, egasidan emas.
+      # `APP_ENV=development` esa FAQAT-PRODUCTION maydonlarini
+      # (ALLOWED_ORIGINS, kalitlar, SUBMIT_HINT_SECRET) yumshatadi.
+      # └───────────────────────────────────────────────────────────────────┘
       - name: Test (integratsiya bilan)
         # ┌─ O'ZGARUVCHILAR SHU YERDA ─────────────────────────────────┐
         # Ular berilmasa integratsiya testlari `t.Skip` qiladi va
@@ -147,10 +160,11 @@ jobs:
         #   ONDEXMAP_INTEGRATION → internal/storage/*_integration_test.go
         # └───────────────────────────────────────────────────────────┘
         env:
+          APP_ENV: development
           ONDEXMAP_INTEGRATION: "1"
           DATABASE_URL_MIGRATE: postgres://ondexmap:ondexmap@localhost:5432/ondexmap?sslmode=disable
-          DATABASE_URL: postgres://ondexmap:ondexmap@localhost:5432/ondexmap?sslmode=disable
-          SUBMIT_DATABASE_URL: postgres://ondexmap:ondexmap@localhost:5432/ondexmap?sslmode=disable
+          DATABASE_URL: postgres://ondexmap_app:ci-app-password-not-real@localhost:5432/ondexmap?sslmode=disable
+          SUBMIT_DATABASE_URL: postgres://ondexmap_submit:ci-submit-password-not-real@localhost:5432/ondexmap?sslmode=disable
         run: go test -count=1 ./...
 
       # Poyga detektori (`-race`) gcc talab qiladi — Linux runner'da bor.
@@ -158,10 +172,11 @@ jobs:
       # butun to'plamni yana poyga tekshiruvi bilan sinaydi.
       - name: Test (race detector)
         env:
+          APP_ENV: development
           ONDEXMAP_INTEGRATION: "1"
           DATABASE_URL_MIGRATE: postgres://ondexmap:ondexmap@localhost:5432/ondexmap?sslmode=disable
-          DATABASE_URL: postgres://ondexmap:ondexmap@localhost:5432/ondexmap?sslmode=disable
-          SUBMIT_DATABASE_URL: postgres://ondexmap:ondexmap@localhost:5432/ondexmap?sslmode=disable
+          DATABASE_URL: postgres://ondexmap_app:ci-app-password-not-real@localhost:5432/ondexmap?sslmode=disable
+          SUBMIT_DATABASE_URL: postgres://ondexmap_submit:ci-submit-password-not-real@localhost:5432/ondexmap?sslmode=disable
         run: go test -race -count=1 ./...
 
       - name: Install govulncheck
