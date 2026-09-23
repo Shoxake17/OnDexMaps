@@ -151,6 +151,12 @@ func (in *Input) IsBot() bool { return strings.TrimSpace(in.Website) != "" }
 // Tartib: tur → koordinata → maydonlar. Har bir noto'g'ri qiymat darrov
 // rad etiladi (yumshoq "tuzatib qabul qilish" YO'Q — istisno: bo'sh joylar
 // va ko'rinmas belgilar tozalanadi, chunki ular xato emas, axlat).
+//
+//nolint:gocognit // Chiziqli, ILGARILAMAYDIGAN tekshiruvlar ketma-ketligi
+// (tur → koordinata → har bir maydon uchun bittadan `if`) — har bir shart
+// mustaqil va bo'laklarga ajratish o'qishni YAXSHILAMAYDI, faqat sakrashni
+// ko'paytiradi. `validate_test.go`da har bir shart alohida test bilan
+// qoplangan.
 func Validate(in Input) (Clean, error) {
 	spec, ok := Spec(in.Kind)
 	if !ok {

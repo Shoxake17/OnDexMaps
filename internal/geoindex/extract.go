@@ -58,6 +58,12 @@ type pendingWay struct {
 //     KERAK tugunlarning koordinatasini saqlab qo'yamiz.
 //
 // Xotira: faqat kerakli tugunlar saqlanadi (butun fayldagi 17 mln emas).
+//
+//nolint:gocognit // Ikki o'tishli PBF parsingi (yo'llar/relyatsiyalar,
+// keyin tugunlar) — har bir tur (node/way/relation) uchun mustaqil,
+// tekis shart bloklari. Faqat `cmd/osmimport` orqali, operator o'z
+// kompyuterida ishga tushiradigan bir martalik import vositasi —
+// tarmoq so'rovi bilan hech qachon chaqirilmaydi.
 func Extract(path string) ([]Row, Stats, error) {
 	st := Stats{ByKind: map[string]int{}}
 

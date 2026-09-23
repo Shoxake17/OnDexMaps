@@ -128,12 +128,18 @@ func (s *Server) fetchRoute(ctx context.Context, fromLat, fromLng, toLat, toLng 
 	ctx, cancel := context.WithTimeout(ctx, routeHTTPTimeout)
 	defer cancel()
 
+	//nolint:gosec // G704: SSRF emas — host qismi (`s.cfg.OSRMURL`)
+	// operator konfiguratsiyasi (config.go), so'rovdan kelmaydi; yo'lga
+	// qo'shiladigan yagona qism — yuqorida `strconv.FormatFloat` bilan
+	// qat'iy sonli qiymatga aylantirilgan koordinatalar.
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("User-Agent", "OnDexMap/1.0 (+internal routing proxy)")
 
+	//nolint:gosec // G704: yuqoridagi izohga qarang — `req` xavfsiz
+	// qurilgan `u`dan yaratilgan.
 	resp, err := routeHTTPClient.Do(req)
 	if err != nil {
 		return nil, err

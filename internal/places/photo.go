@@ -167,9 +167,12 @@ func resizeFlatten(src image.Image, dw, dh int) *image.RGBA {
 			r, g, bl, a = r/n, g/n, bl/n, a/n
 			inv := 65535 - a
 			o := dst.PixOffset(dx, dy)
-			dst.Pix[o+0] = uint8((r + inv) >> 8)
-			dst.Pix[o+1] = uint8((g + inv) >> 8)
-			dst.Pix[o+2] = uint8((bl + inv) >> 8)
+			// G115 emas: oldindan ko'paytirilgan alfada rang ≤ alfa
+			// (RGBA() invarianti), shuning uchun rang+inv ≤ 65535 —
+			// >>8 dan keyin har doim uint8'ga sig'adi.
+			dst.Pix[o+0] = uint8((r + inv) >> 8) //nolint:gosec
+			dst.Pix[o+1] = uint8((g + inv) >> 8) //nolint:gosec
+			dst.Pix[o+2] = uint8((bl + inv) >> 8) //nolint:gosec
 			dst.Pix[o+3] = 255
 		}
 	}

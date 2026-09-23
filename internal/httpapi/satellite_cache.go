@@ -67,7 +67,10 @@ func newTileCache(dir string, maxMB int) *tileCache {
 	if dir == "" || maxMB <= 0 {
 		return nil
 	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	// 0o750 — guruh/boshqalar papkaga kirmasin (gosec G301): kesh
+	// fayllari tashqi tile provayder javoblari, o'qish keraksiz keng
+	// bo'lmasin.
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		slog.Warn("sun'iy yo'ldosh keshi yoqilmadi", "dir", dir, "err", err)
 		return nil
 	}
@@ -137,7 +140,7 @@ func (c *tileCache) put(z, x, y int, body []byte) {
 	}
 
 	dst := c.path(z, x, y)
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dst), 0o750); err != nil {
 		return
 	}
 

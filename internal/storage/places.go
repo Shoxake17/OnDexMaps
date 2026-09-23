@@ -434,7 +434,10 @@ RETURNING id`,
 		}
 	} else {
 		for k := range keep {
-			positions = append(positions, int32(k))
+			// G115 emas: `keep` `places.MaxPhotos` (kichik sobit son)
+			// bilan chegaralangan — `k` hech qachon int32 sig'imidan
+			// oshmaydi.
+			positions = append(positions, int32(k)) //nolint:gosec
 		}
 	}
 	tag, err := tx.Exec(ctx, `

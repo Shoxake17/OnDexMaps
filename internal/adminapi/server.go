@@ -151,6 +151,9 @@ func (s *Server) handleFeatures(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	//nolint:gosec // G705: `body` — bazadan olingan JSON (Content-Type
+	// shu deb qo'yilgan), HTML EMAS. Bu server faqat operatorning o'z
+	// kompyuterida, 127.0.0.1'da ishlaydi (cmd/admin).
 	_, _ = w.Write(body)
 }
 

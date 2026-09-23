@@ -192,6 +192,9 @@ func (s *Server) handlePlaces(w http.ResponseWriter, r *http.Request) {
 	// Yangi tasdiqlangan ob'ekt tez ko'rinsin: uzoq kesh yo'q.
 	w.Header().Set("Cache-Control", "public, max-age=15")
 	w.WriteHeader(http.StatusOK)
+	//nolint:gosec // G705: `body` — PostGIS `ST_AsGeoJSON` chiqishi, JSON
+	// (Content-Type shu deb qo'yilgan), HTML EMAS — brauzerda ijro
+	// etilmaydi, XSS taxlili shu yerda tegishli emas.
 	_, _ = w.Write(body)
 }
 
@@ -259,7 +262,9 @@ func (s *Server) handlePlacePhoto(w http.ResponseWriter, r *http.Request) {
 func (s *Server) submitHint(r *http.Request) string {
 	secret := s.cfg.SubmitHintSecret
 	if secret == "" {
-		// Faqat dev: prod'da sir bo'lmasa server ishga tushmaydi (config).
+		//nolint:gosec // G101: haqiqiy sir EMAS — sobit satr, faqat
+		// lokal dev'da ishlatiladi. Prod'da `config.validate()` bo'sh
+		// SUBMIT_HINT_SECRET bilan serverni ishga tushirmaydi.
 		secret = "ondexmap-dev-hint-secret"
 	}
 	m := hmac.New(sha256.New, []byte(secret))

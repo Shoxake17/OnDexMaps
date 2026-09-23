@@ -79,6 +79,9 @@ func serve(w http.ResponseWriter, r *http.Request) {
 	// ishlab chiqishda eski nusxa qolib, "nega o'zgarmadi?" degan
 	// chalkashlik kelib chiqardi.
 	w.Header().Set("Cache-Control", "no-store")
+	//nolint:gosec // G705: `body` — build vaqtida `go:embed` qilingan
+	// sobit fayl (`allowed` ro'yxatidagi nomlardan biri), foydalanuvchi
+	// kiritgan matn EMAS.
 	_, _ = w.Write(body)
 }
 

@@ -371,6 +371,9 @@ func errorsFrom(problems []string) error {
 // Fayl bo'lmasa — bu xato EMAS (Docker/CI da o'zgaruvchilar to'g'ridan
 // muhitdan keladi).
 func loadDotEnv(path string) error {
+	//nolint:gosec // G304: `path` HAR DOIM sobit satr (`".env"`) — barcha
+	// chaqiruvchilarda (cmd/api, cmd/admin, cmd/migrate va h.k.) qattiq
+	// yozilgan, tarmoq/foydalanuvchi kiritmasidan hech qachon kelmaydi.
 	f, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
