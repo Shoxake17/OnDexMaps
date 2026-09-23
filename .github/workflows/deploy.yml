@@ -498,11 +498,20 @@ jobs:
       # └───────────────────────────────────────────────────────────────┘
       - name: Start API (ZAP skaneri uchun vaqtinchalik konteyner)
         run: |
+          # ⚠️ `sslmode=prefer`, `disable` EMAS: `APP_ENV=production`da
+          # `config.validate()` "sslmode=disable" MATNINI aniq rad etadi.
+          # CI'ning vaqtinchalik Postgres xizmatida SSL sertifikati
+          # sozlanmagan (production'dagi kabi emas) — `prefer` esa
+          # standart Postgres protokoli bo'yicha SSL so'raydi, server
+          # rad etsa (bu yerda aynan shunday) shifrlanmagan ulanishga
+          # JIMGINA tushadi. Ya'ni haqiqiy ulanish xatti-harakati BIR
+          # XIL qoladi, faqat validatsiya matni o'zgaradi (sinab
+          # tasdiqlangan, 2026-09-23).
           docker run -d --name ondexmap-api --network host \
             -e APP_ENV=production \
             -e ALLOWED_ORIGINS="https://maps.ondex.uz" \
             -e TRUSTED_PROXIES="" \
-            -e DATABASE_URL="postgres://ondexmap:ondexmap@localhost:5432/ondexmap?sslmode=disable" \
+            -e DATABASE_URL="postgres://ondexmap:ondexmap@localhost:5432/ondexmap?sslmode=prefer" \
             -e ONDEXMAP_READ_KEY="$(openssl rand -hex 32)" \
             -e ONDEXMAP_ADMIN_KEY="$(openssl rand -hex 32)" \
             -e HTTP_ADDR=":8090" \
