@@ -24,6 +24,7 @@ import (
 	"ondexmap/internal/adminapi"
 	"ondexmap/internal/config"
 	"ondexmap/internal/localsession"
+	"ondexmap/internal/r2"
 	"ondexmap/internal/storage"
 )
 
@@ -94,9 +95,30 @@ func main() {
 		sessionKeys = append(sessionKeys, sess.Token)
 	}
 
+	// ── R2 (ixtiyoriy): karantin rasmlarini ko'rish/tozalash uchun ────
+	// `pool.WithR2` — rad etish/o'chirishda R2 obyektini ham tozalaydi.
+	// `adminSrv.WithR2` — moderatorga rasmni ko'rsatadi (yuklab oladi).
+	adminSrv := adminapi.New(cfg, pool, sessionKeys...)
+	{
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		store, err := r2.FromConfig(ctx, cfg.R2AccountID, cfg.R2AccessKeyID, cfg.R2SecretAccessKey, cfg.R2Bucket)
+		cancel()
+		if err != nil {
+			slog.Error("R2 ulanishi ochilmadi", "err", err)
+			os.Exit(1)
+		}
+		if store != nil {
+			pool.WithR2(store)
+			adminSrv.WithR2(store)
+			slog.Info("R2 ombori ulandi", "bucket", cfg.R2Bucket)
+		} else {
+			slog.Warn("R2 sozlanmagan — karantin rasmlarini ko'rish o'chiq")
+		}
+	}
+
 	srv := &http.Server{
 		Addr:              adminAddr,
-		Handler:           adminapi.New(cfg, pool, sessionKeys...).Handler(),
+		Handler:           adminSrv.Handler(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,

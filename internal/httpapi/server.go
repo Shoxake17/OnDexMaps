@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -43,6 +44,21 @@ type Server struct {
 	submit placeSubmitter
 	// submitLimiter — POST /v1/places uchun ALOHIDA, qattiq chegara.
 	submitLimiter *rateLimiter
+	// r2 — rasm baytlarini R2'dan o'qiydigan do'kon (`WithR2`). `nil` —
+	// rasm endpointlari 503 qaytaradi (fail-closed, OSRM/Mapbox kabi).
+	r2 photoDownloader
+}
+
+// photoDownloader — R2'dan rasm o'qish (test uchun almashtiriladi).
+type photoDownloader interface {
+	Download(ctx context.Context, key string) ([]byte, error)
+}
+
+// WithR2 — rasm o'qish do'konini ulaydi. `nil` bo'lsa rasm endpointlari
+// 503 qaytaradi.
+func (s *Server) WithR2(store photoDownloader) *Server {
+	s.r2 = store
+	return s
 }
 
 func New(cfg *config.Config, db *storage.Pool) *Server {

@@ -14,6 +14,7 @@ func setEnv(t *testing.T, kv map[string]string) {
 		"ONDEXMAP_ADMIN_KEY", "ONDEXMAP_ADMIN_KEY_PREV",
 		"ALLOWED_ORIGINS", "TRUSTED_PROXIES", "MAPBOX_TOKEN",
 		"SUBMIT_DATABASE_URL", "SUBMIT_HINT_SECRET",
+		"R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET",
 	} {
 		t.Setenv(k, "")
 	}
@@ -263,5 +264,65 @@ func TestProductionWithoutSubmitNeedsNoSubmitSettings(t *testing.T) {
 	setEnv(t, prodEnv(nil))
 	if _, err := Load("yo'q-fayl.env"); err != nil {
 		t.Fatalf("yuborishsiz prod sozlamasi rad etildi: %v", err)
+	}
+}
+
+// ── R2: hammasi yoki hech qaysi biri ────────────────────────────────────
+
+func TestR2AllOrNothing(t *testing.T) {
+	full := map[string]string{
+		"R2_ACCOUNT_ID":        "acc",
+		"R2_ACCESS_KEY_ID":     "key",
+		"R2_SECRET_ACCESS_KEY": "secret",
+		"R2_BUCKET":            "ondexmaps",
+	}
+	// To'liq sozlama — qabul qilinadi.
+	setEnv(t, prodEnv(full))
+	cfg, err := Load("yo'q-fayl.env")
+	if err != nil {
+		t.Fatalf("to'liq R2 sozlamasi rad etildi: %v", err)
+	}
+	if !cfg.R2Configured() {
+		t.Error("R2Configured() false qaytardi, to'liq sozlama berilgan edi")
+	}
+
+	// Hech biri berilmagan — qabul qilinadi (R2 shunchaki o'chiq).
+	setEnv(t, prodEnv(nil))
+	cfg, err = Load("yo'q-fayl.env")
+	if err != nil {
+		t.Fatalf("R2'siz sozlama rad etildi: %v", err)
+	}
+	if cfg.R2Configured() {
+		t.Error("R2Configured() true qaytardi, hech narsa berilmagan edi")
+	}
+
+	// Yarim to'ldirilgan — HAR BIR yetishmayotgan maydon uchun rad etiladi.
+	for missing := range full {
+		t.Run(missing+" yo'q", func(t *testing.T) {
+			env := map[string]string{}
+			for k, v := range full {
+				env[k] = v
+			}
+			delete(env, missing)
+			setEnv(t, prodEnv(env))
+			if _, err := Load("yo'q-fayl.env"); err == nil {
+				t.Errorf("%s yo'q bo'lsa ham R2 sozlamasi qabul qilindi — yarim to'ldirilgan holat", missing)
+			} else if !strings.Contains(err.Error(), "R2") {
+				t.Errorf("xato xabarida R2 eslatilmagan: %v", err)
+			}
+		})
+	}
+}
+
+// Dev'da ham tekshiriladi (SUBMIT_DATABASE_URL bilan bir xil mantiq).
+func TestR2AllOrNothingCheckedInDevToo(t *testing.T) {
+	setEnv(t, map[string]string{
+		"APP_ENV":       "development",
+		"R2_ACCOUNT_ID": "acc",
+		"R2_BUCKET":     "ondexmaps",
+		// R2_ACCESS_KEY_ID va R2_SECRET_ACCESS_KEY YETISHMAYDI.
+	})
+	if _, err := Load("yo'q-fayl.env"); err == nil {
+		t.Fatal("dev'da ham yarim to'ldirilgan R2 rad etilishi kerak edi")
 	}
 }

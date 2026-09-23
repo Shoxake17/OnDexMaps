@@ -63,9 +63,19 @@ func (s *Server) handleSubmissionPhoto(w http.ResponseWriter, r *http.Request) {
 		fail(w, http.StatusNotFound, "topilmadi")
 		return
 	}
-	data, err := s.db.SubmissionPhoto(r.Context(), r.PathValue("id"), n)
+	if s.r2 == nil {
+		fail(w, http.StatusServiceUnavailable, "rasm ombori sozlanmagan")
+		return
+	}
+	key, err := s.db.SubmissionPhoto(r.Context(), r.PathValue("id"), n)
 	if err != nil {
 		fail(w, http.StatusNotFound, "topilmadi")
+		return
+	}
+	data, err := s.r2.Download(r.Context(), key)
+	if err != nil {
+		slog.Error("R2'dan rasm o'qilmadi", "err", err)
+		fail(w, http.StatusBadGateway, "so'rov bajarilmadi")
 		return
 	}
 	w.Header().Set("Content-Type", "image/jpeg")

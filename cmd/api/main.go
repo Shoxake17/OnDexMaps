@@ -13,6 +13,7 @@ import (
 
 	"ondexmap/internal/config"
 	"ondexmap/internal/httpapi"
+	"ondexmap/internal/r2"
 	"ondexmap/internal/storage"
 )
 
@@ -55,12 +56,35 @@ func main() {
 		slog.Warn("DATABASE_URL yo'q — geo endpointlar ishlamaydi")
 	}
 
+	// ── R2 (ixtiyoriy): rasm ombori ───────────────────────────────────
+	// Sozlanmagan bo'lsa rasm bilan bog'liq amallar 503 qaytaradi
+	// (fail-closed, OSRM/Mapbox kabi).
+	var store *r2.Store
+	{
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		s, err := r2.FromConfig(ctx, cfg.R2AccountID, cfg.R2AccessKeyID, cfg.R2SecretAccessKey, cfg.R2Bucket)
+		cancel()
+		if err != nil {
+			slog.Error("R2 ulanishi ochilmadi", "err", err)
+			os.Exit(1)
+		}
+		store = s
+		if store != nil {
+			slog.Info("R2 ombori ulandi", "bucket", cfg.R2Bucket)
+		} else {
+			slog.Warn("R2 sozlanmagan — rasm bilan bog'liq endpointlar o'chiq")
+		}
+	}
+
 	// ── Karantinga yozuvchi (ixtiyoriy) ──────────────────────────────
 	// Ommaviy API'ning YAGONA yozish yo'li: foydalanuvchi ob'ekti
 	// `place_submissions` ga tushadi, xaritaga emas (admin tasdiqlaydi).
 	// `ondexmap_submit` roli faqat shu jadvallarga INSERT qila oladi.
 	// `SUBMIT_DATABASE_URL` bo'sh bo'lsa qabul qilish O'CHIQ (503).
 	api := httpapi.New(cfg, db)
+	if store != nil {
+		api.WithR2(store)
+	}
 	if cfg.SubmitDatabaseURL != "" {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		sub, err := storage.OpenSubmitter(ctx, cfg.SubmitDatabaseURL)
@@ -70,6 +94,9 @@ func main() {
 			os.Exit(1)
 		}
 		defer sub.Close()
+		if store != nil {
+			sub.WithR2(store)
+		}
 		api.WithSubmitter(sub)
 		slog.Info("ob'ekt qabul qilish yoqilgan (karantinga yozadi)")
 		// ⚠️ Proksi ortida TRUSTED_PROXIES bo'lmasa hamma foydalanuvchi bitta IP

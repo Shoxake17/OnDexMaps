@@ -233,13 +233,23 @@ func (s *Server) handlePlacePhoto(w http.ResponseWriter, r *http.Request) {
 		httpError(w, http.StatusServiceUnavailable, "baza ulanmagan")
 		return
 	}
-	data, err := s.db.PlacePhoto(r.Context(), id, n)
+	if s.r2 == nil {
+		httpError(w, http.StatusServiceUnavailable, "rasm ombori sozlanmagan")
+		return
+	}
+	key, err := s.db.PlacePhoto(r.Context(), id, n)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			httpError(w, http.StatusNotFound, "topilmadi")
 			return
 		}
 		slog.Error("rasm so'rovi xatosi", "err", err)
+		httpError(w, http.StatusBadGateway, "so'rov bajarilmadi")
+		return
+	}
+	data, err := s.r2.Download(r.Context(), key)
+	if err != nil {
+		slog.Error("R2'dan rasm o'qilmadi", "err", err)
 		httpError(w, http.StatusBadGateway, "so'rov bajarilmadi")
 		return
 	}
@@ -361,6 +371,10 @@ func (s *Server) handleSubmitPlace(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.submit.Submit(ctx, storage.Submission{Clean: clean, Photos: photos, Hint: hint}); err != nil {
+		if errors.Is(err, storage.ErrPhotosUnavailable) {
+			httpError(w, http.StatusServiceUnavailable, "rasm qabul qilish vaqtincha o'chiq")
+			return
+		}
 		slog.Error("taklifni saqlab bo'lmadi", "err", err)
 		httpError(w, http.StatusBadGateway, "saqlab bo'lmadi")
 		return

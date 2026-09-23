@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"ondexmap/internal/places"
@@ -24,7 +25,18 @@ import (
 // ═══════════════════════════════════════════════════════════════════
 
 // Submitter — karantinga yozuvchi ulanish.
-type Submitter struct{ pool *Pool }
+type Submitter struct {
+	pool *Pool
+	r2   photoStore
+}
+
+// WithR2 — R2 do'konini ulaydi. Ulanmagan bo'lsa va yuboriluvchi
+// taklifda rasm bo'lsa, `Submit` `ErrPhotosUnavailable` bilan
+// rad etadi (fail-closed — rasm "yo'q joyga" jimgina yo'qolmaydi).
+func (s *Submitter) WithR2(store photoStore) *Submitter {
+	s.r2 = store
+	return s
+}
 
 // OpenSubmitter — `SUBMIT_DATABASE_URL` (`ondexmap_submit` roli) bilan ulanadi.
 // Hovuz ataylab KICHIK: ommaviy yozish yo'li bazani band qilib qo'ymasin.
@@ -55,15 +67,39 @@ type Submission struct {
 // ErrQueueFull — moderatsiya navbati to'lgan.
 var ErrQueueFull = errors.New("moderatsiya navbati to'lgan")
 
-// Submit — taklifni karantinga yozadi (taklif + rasmlar BITTA tranzaksiyada:
-// rasmlarsiz yarim taklif qolmaydi).
+// ErrPhotosUnavailable — R2 ulanmagan, lekin taklifda rasm bor.
+var ErrPhotosUnavailable = errors.New("rasm qabul qilish vaqtincha o'chiq")
+
+// Submit — taklifni karantinga yozadi (rasmlar avval R2'ga yuklanadi, so'ng
+// taklif + kalitlar BITTA tranzaksiyada yoziladi: rasmlarsiz yarim taklif
+// qolmaydi).
 func (s *Submitter) Submit(ctx context.Context, in Submission) error {
 	if in.Hint == "" || len(in.Photos) > places.MaxPhotos {
 		return ErrInvalidInput
 	}
+	if len(in.Photos) > 0 && s.r2 == nil {
+		return ErrPhotosUnavailable
+	}
 	id, err := newUUID()
 	if err != nil {
 		return errQuery
+	}
+
+	// ── R2'ga yuklash — TRANZAKSIYADAN TASHQARIDA ────────────────────
+	// R2 tarmoq chaqiruvi bo'lgani uchun uni DB tranzaksiyasi ichida
+	// qilsak, sekin R2 javobi butun tranzaksiyani (demak qulf
+	// vaqtini) cho'zib yuboradi. Kalit `submissions/<id>/<pos>.jpg`
+	// shablonida — taklif ID'si allaqachon yuqorida yaratildi.
+	keys := make([]string, len(in.Photos))
+	for i, data := range in.Photos {
+		key := fmt.Sprintf("submissions/%s/%d.jpg", id, i)
+		if err := s.r2.Upload(ctx, key, data, "image/jpeg"); err != nil {
+			// Shu chaqiruvda ALLAQACHON yuklangan rasmlarni tozalaymiz —
+			// DB yozuvi bo'lmasa, orfan R2 obyekti qolib ketmasin.
+			s.r2.DeleteMany(context.Background(), keys[:i]) //nolint:errcheck // best-effort
+			return errQuery
+		}
+		keys[i] = key
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 8*time.Second)
@@ -71,6 +107,7 @@ func (s *Submitter) Submit(ctx context.Context, in Submission) error {
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
+		s.cleanupKeys(keys)
 		return errQuery
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck // Commit'dan keyin no-op
@@ -87,19 +124,35 @@ VALUES ($1, $2, NULLIF($3,''), NULLIF($4,''), NULLIF($5,''), NULLIF($6,''),
 	if _, err := tx.Exec(ctx, ins, id, in.Kind, in.Name, in.Category, in.Description,
 		in.Phone, in.Hours, in.Street, in.House, in.Site, in.Social, xs, ys,
 		len(in.Photos), in.Hint); err != nil {
+		s.cleanupKeys(keys)
 		return errQuery
 	}
-	for i, data := range in.Photos {
+	for i, key := range keys {
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO place_submission_photos (submission_id, pos, data) VALUES ($1, $2, $3)`,
-			id, i, data); err != nil {
+			`INSERT INTO place_submission_photos (submission_id, pos, r2_key) VALUES ($1, $2, $3)`,
+			id, i, key); err != nil {
+			s.cleanupKeys(keys)
 			return errQuery
 		}
 	}
 	if err := tx.Commit(ctx); err != nil {
+		s.cleanupKeys(keys)
 		return errQuery
 	}
 	return nil
+}
+
+// cleanupKeys — DB yozuvi muvaffaqiyatsiz bo'lganda allaqachon R2'ga
+// yuklangan obyektlarni tozalaydi (best-effort: orfan obyekt xavfsizlik
+// muammosi emas, faqat behuda joy — shuning uchun xato loglanadi, lekin
+// chaqiruvchiga qaytarilmaydi).
+func (s *Submitter) cleanupKeys(keys []string) {
+	if s.r2 == nil || len(keys) == 0 {
+		return
+	}
+	if err := s.r2.DeleteMany(context.Background(), keys); err != nil {
+		slog.Warn("R2 tozalanmadi (orfan obyekt qoldi)", "err", err)
+	}
 }
 
 // RecentCount — shu yuboruvchidan oxirgi soatdagi takliflar soni.

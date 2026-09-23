@@ -23,6 +23,30 @@ import (
 // Pool — pgx ulanish hovuzi ustidagi ingichka qobiq.
 type Pool struct {
 	*pgxpool.Pool
+	r2 photoStore
+}
+
+// photoStore — R2 rasm ombori interfeysi.
+//
+// `storage` paketi AWS SDK'ga BEVOSITA bog'lanmaydi — faqat shu tor
+// interfeysga tayanadi (`internal/r2.Store` uni qanoatlantiradi).
+// `nil` bo'lsa (WithR2 chaqirilmagan) — rasm o'chirish/yuklash amallari
+// jimgina o'tkazib yuboriladi (fail-open EMAS: bu faqat R2'dagi
+// obyektni tozalash, DB tranzaksiyasi allaqachon muvaffaqiyatli
+// yakunlangan bo'ladi).
+type photoStore interface {
+	Upload(ctx context.Context, key string, data []byte, contentType string) error
+	Delete(ctx context.Context, key string) error
+	DeleteMany(ctx context.Context, keys []string) error
+}
+
+// WithR2 — R2 do'konini ulaydi (moderatsiya rad etilgan/o'chirilgan
+// rasmlarni tozalashi uchun). Ixtiyoriy: chaqirilmasa, R2 obyektlari
+// tozalanmaydi (baza qatori baribir o'chadi/o'zgaradi — faqat orfan
+// obyekt qoladi, xavfsizlik buzilmaydi).
+func (p *Pool) WithR2(store photoStore) *Pool {
+	p.r2 = store
+	return p
 }
 
 // ReadOnly — API uchun hovuz.

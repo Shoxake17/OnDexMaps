@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"regexp"
 	"strconv"
 	"strings"
@@ -180,23 +181,25 @@ func (p *Pool) PlaceByID(ctx context.Context, id string) (*PlaceDetail, error) {
 	return d, nil
 }
 
-// PlacePhoto — tasdiqlangan ob'ektning rasmi (tozalangan JPEG baytlari).
-func (p *Pool) PlacePhoto(ctx context.Context, id string, pos int) ([]byte, error) {
+// PlacePhoto — tasdiqlangan ob'ekt rasmining R2 kaliti (baytlar EMAS —
+// baytlar R2'da; chaqiruvchi kalitni HTTP qatlamidagi R2 do'koni orqali
+// yuklab oladi).
+func (p *Pool) PlacePhoto(ctx context.Context, id string, pos int) (string, error) {
 	if !ValidID(id) || pos < 0 || pos >= places.MaxPhotos {
-		return nil, ErrNotFound
+		return "", ErrNotFound
 	}
 	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
 	defer cancel()
-	var data []byte
+	var key string
 	err := p.QueryRow(ctx,
-		`SELECT data FROM place_photos WHERE place_id = $1 AND pos = $2`, id, pos).Scan(&data)
+		`SELECT r2_key FROM place_photos WHERE place_id = $1 AND pos = $2`, id, pos).Scan(&key)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, ErrNotFound
+		return "", ErrNotFound
 	}
 	if err != nil {
-		return nil, errQuery
+		return "", errQuery
 	}
-	return data, nil
+	return key, nil
 }
 
 // ── 2. Qidiruv ───────────────────────────────────────────────────────
@@ -325,24 +328,25 @@ LIMIT $2`, status, limit)
 	return out, rows.Err()
 }
 
-// SubmissionPhoto — karantindagi taklifning rasmi (moderator ko'rishi uchun).
-func (p *Pool) SubmissionPhoto(ctx context.Context, id string, pos int) ([]byte, error) {
+// SubmissionPhoto — karantindagi taklif rasmining R2 kaliti (moderator
+// ko'rishi uchun; baytlar R2'da, kalit HTTP qatlamida yuklab olinadi).
+func (p *Pool) SubmissionPhoto(ctx context.Context, id string, pos int) (string, error) {
 	if !ValidID(id) || pos < 0 || pos >= places.MaxPhotos {
-		return nil, ErrNotFound
+		return "", ErrNotFound
 	}
 	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
 	defer cancel()
-	var data []byte
+	var key string
 	err := p.QueryRow(ctx,
-		`SELECT data FROM place_submission_photos WHERE submission_id = $1 AND pos = $2`,
-		id, pos).Scan(&data)
+		`SELECT r2_key FROM place_submission_photos WHERE submission_id = $1 AND pos = $2`,
+		id, pos).Scan(&key)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, ErrNotFound
+		return "", ErrNotFound
 	}
 	if err != nil {
-		return nil, errQuery
+		return "", errQuery
 	}
-	return data, nil
+	return key, nil
 }
 
 // ApprovePlace — tasdiqlash. Moderator taklifni TAHRIRLAB tasdiqlaydi:
@@ -426,23 +430,22 @@ RETURNING id`,
 		return "", errQuery
 	}
 
-	// Tanlangan rasmlarni 0..n-1 qilib qayta raqamlab ko'chiramiz.
-	var positions []int32
-	if in.KeepPhotos == nil {
-		for i := 0; i < places.MaxPhotos; i++ {
-			positions = append(positions, int32(i))
-		}
-	} else {
-		for k := range keep {
-			// G115 emas: `keep` `places.MaxPhotos` (kichik sobit son)
-			// bilan chegaralangan — `k` hech qachon int32 sig'imidan
-			// oshmaydi.
-			positions = append(positions, int32(k)) //nolint:gosec
-		}
+	// R2 tozalash uchun: KO'CHIRISHDAN OLDIN barcha karantin rasm
+	// kalitlarini o'qib olamiz. Tashlab yuboriladigan (KeepPhotos'ga
+	// kirmagan) pozitsiyalarning R2 obyekti hech qayerdan
+	// ko'rsatilmay qoladi — tranzaksiya muvaffaqiyatli yakunlangach
+	// ularni R2'dan ham o'chiramiz (pastda).
+	subKeys, err := submissionPhotoKeys(ctx, tx, in.ID)
+	if err != nil {
+		return "", err
 	}
+
+	// Tanlangan rasmlarni 0..n-1 qilib qayta raqamlab ko'chiramiz.
+	keepAll := in.KeepPhotos == nil
+	positions := keptPositions(keepAll, keep)
 	tag, err := tx.Exec(ctx, `
-INSERT INTO place_photos (place_id, pos, data)
-SELECT $1, (row_number() OVER (ORDER BY pos) - 1)::smallint, data
+INSERT INTO place_photos (place_id, pos, r2_key)
+SELECT $1, (row_number() OVER (ORDER BY pos) - 1)::smallint, r2_key
 FROM place_submission_photos
 WHERE submission_id = $2 AND pos = ANY($3::smallint[])`, placeID, in.ID, positions)
 	if err != nil {
@@ -485,7 +488,74 @@ WHERE id = $1`, in.ID, in.Reviewer, placeID); err != nil {
 	if err := tx.Commit(ctx); err != nil {
 		return "", errQuery
 	}
+
+	// Tashlab yuborilgan rasmlarni R2'dan tozalaymiz (best-effort — DB
+	// tranzaksiyasi allaqachon committed, bu yerdagi xato tasdiqlashni
+	// bekor qilmaydi).
+	if !keepAll && p.r2 != nil {
+		p.cleanupUnkept(subKeys, keep)
+	}
 	return placeID, nil
+}
+
+// submissionPhotoKeys — karantindagi taklifning barcha rasm kalitlari
+// (pozitsiya bo'yicha). `ApproveSubmission`dan ajratilgan — R2 tozalash
+// uchun ko'chirishdan OLDIN kerak.
+func submissionPhotoKeys(ctx context.Context, tx pgx.Tx, submissionID string) (map[int]string, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT pos, r2_key FROM place_submission_photos WHERE submission_id = $1`, submissionID)
+	if err != nil {
+		return nil, errQuery
+	}
+	defer rows.Close()
+	keys := map[int]string{}
+	for rows.Next() {
+		var pos int
+		var key string
+		if err := rows.Scan(&pos, &key); err != nil {
+			return nil, errQuery
+		}
+		keys[pos] = key
+	}
+	if err := rows.Err(); err != nil {
+		return nil, errQuery
+	}
+	return keys, nil
+}
+
+// keptPositions — tasdiqlashda ko'chiriladigan pozitsiyalar ro'yxati.
+// `keepAll` bo'lsa (KeepPhotos == nil) — barcha mumkin bo'lgan pozitsiya.
+func keptPositions(keepAll bool, keep map[int]bool) []int32 {
+	var positions []int32
+	if keepAll {
+		for i := 0; i < places.MaxPhotos; i++ {
+			positions = append(positions, int32(i))
+		}
+		return positions
+	}
+	for k := range keep {
+		// G115 emas: `keep` `places.MaxPhotos` (kichik sobit son) bilan
+		// chegaralangan — `k` hech qachon int32 sig'imidan oshmaydi.
+		positions = append(positions, int32(k)) //nolint:gosec
+	}
+	return positions
+}
+
+// cleanupUnkept — tasdiqlashda TANLANMAGAN rasmlarni R2'dan o'chiradi
+// (best-effort, DB tranzaksiyasi allaqachon committed).
+func (p *Pool) cleanupUnkept(subKeys map[int]string, keep map[int]bool) {
+	var drop []string
+	for pos, key := range subKeys {
+		if !keep[pos] {
+			drop = append(drop, key)
+		}
+	}
+	if len(drop) == 0 {
+		return
+	}
+	if err := p.r2.DeleteMany(context.Background(), drop); err != nil {
+		slog.Warn("R2 tozalanmadi (tanlanmagan rasm)", "err", err)
+	}
 }
 
 // RejectSubmission — taklifni rad etadi. Yozuvning O'ZI qoladi (kim nima
@@ -516,12 +586,40 @@ WHERE id = $1 AND status = 'pending'`, id, reviewer, strings.TrimSpace(note))
 	if tag.RowsAffected() == 0 {
 		return ErrNotFound
 	}
+
+	// R2 tozalash uchun: o'chirilishidan OLDIN kalitlarni o'qib olamiz.
+	var dropKeys []string
+	rows, err := tx.Query(ctx,
+		`SELECT r2_key FROM place_submission_photos WHERE submission_id = $1`, id)
+	if err != nil {
+		return errQuery
+	}
+	for rows.Next() {
+		var key string
+		if err := rows.Scan(&key); err != nil {
+			rows.Close()
+			return errQuery
+		}
+		dropKeys = append(dropKeys, key)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return errQuery
+	}
+	rows.Close()
+
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM place_submission_photos WHERE submission_id = $1`, id); err != nil {
 		return errQuery
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return errQuery
+	}
+
+	if p.r2 != nil && len(dropKeys) > 0 {
+		if err := p.r2.DeleteMany(context.Background(), dropKeys); err != nil {
+			slog.Warn("R2 tozalanmadi (rad etilgan taklif)", "err", err)
+		}
 	}
 	return nil
 }
@@ -579,6 +677,29 @@ FROM places WHERE id = $1 FOR UPDATE`, id).Scan(&before)
 	if err != nil {
 		return errQuery
 	}
+
+	// R2 tozalash uchun: `places` o'chirilishidan OLDIN kalitlarni o'qib
+	// olamiz — `place_photos` qatorlari CASCADE bilan avtomatik ketadi
+	// (0007_places.sql), lekin R2 obyekti CASCADE bilmaydi.
+	var dropKeys []string
+	rows, err := tx.Query(ctx, `SELECT r2_key FROM place_photos WHERE place_id = $1`, id)
+	if err != nil {
+		return errQuery
+	}
+	for rows.Next() {
+		var key string
+		if err := rows.Scan(&key); err != nil {
+			rows.Close()
+			return errQuery
+		}
+		dropKeys = append(dropKeys, key)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return errQuery
+	}
+	rows.Close()
+
 	if _, err := tx.Exec(ctx, `DELETE FROM places WHERE id = $1`, id); err != nil {
 		return errQuery
 	}
@@ -589,6 +710,12 @@ VALUES ('place', $1, 'delete', $2::jsonb, NULL, $3)`, id, string(before), review
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return errQuery
+	}
+
+	if p.r2 != nil && len(dropKeys) > 0 {
+		if err := p.r2.DeleteMany(context.Background(), dropKeys); err != nil {
+			slog.Warn("R2 tozalanmadi (o'chirilgan ob'ekt)", "err", err)
+		}
 	}
 	return nil
 }

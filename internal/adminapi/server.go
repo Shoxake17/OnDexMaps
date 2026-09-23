@@ -15,6 +15,7 @@
 package adminapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -38,6 +39,16 @@ type Server struct {
 	cfg  *config.Config
 	db   *storage.Pool
 	keys *apikey.Set
+	// r2 — karantin rasmlarini R2'dan o'qish uchun (`WithR2`). `nil` —
+	// rasm endpointi 503 qaytaradi. `internal/httpapi`'dan MUSTAQIL
+	// nusxa: paket "BUTUNLAY AJRATILGAN" tamoyiliga ko'ra bu yerda
+	// o'zining ulanishi bor.
+	r2 photoDownloader
+}
+
+// photoDownloader — R2'dan rasm o'qish (test uchun almashtiriladi).
+type photoDownloader interface {
+	Download(ctx context.Context, key string) ([]byte, error)
 }
 
 // New — admin serveri.
@@ -54,6 +65,12 @@ func New(cfg *config.Config, db *storage.Pool, sessionKeys ...string) *Server {
 		db:   db,
 		keys: apikey.New(keys...),
 	}
+}
+
+// WithR2 — rasm o'qish do'konini ulaydi.
+func (s *Server) WithR2(store photoDownloader) *Server {
+	s.r2 = store
+	return s
 }
 
 func (s *Server) Handler() http.Handler {
@@ -141,16 +158,17 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 // muharrirga qaysi manzildan ko'rinishi.
 //
 // ┌─ IKKI HOLAT ────────────────────────────────────────────────────────┐
-// • Lokal (`cmd/admin`, 127.0.0.1): admin serveri va ommaviy API BIR XIL
-//   mashinada — `127.0.0.1:<ommaviy_port>` yetadi.
-// • Masofaviy (`cmd/adminserver`, Caddy ortida): ular ALOHIDA
-//   konteynerlar, `127.0.0.1` adminserver konteynerining O'ZIGA
-//   ishora qilardi — ommaviy API'ga UMUMAN yetib bormaydi. Shu sabab
-//   `PUBLIC_BASE_URL` (routes_map.go'dagi bilan BIR XIL o'zgaruvchi —
-//   production compose'da allaqachon bor) sozlangan bo'lsa, o'sha
-//   ommaviy manzil (`https://maps.ondex.uz`) ishlatiladi: sun'iy
-//   yo'ldosh proksisi ham AYNAN shu domenda, `cmd/api` orqali xizmat
-//   qiladi.
+//   - Lokal (`cmd/admin`, 127.0.0.1): admin serveri va ommaviy API BIR XIL
+//     mashinada — `127.0.0.1:<ommaviy_port>` yetadi.
+//   - Masofaviy (`cmd/adminserver`, Caddy ortida): ular ALOHIDA
+//     konteynerlar, `127.0.0.1` adminserver konteynerining O'ZIGA
+//     ishora qilardi — ommaviy API'ga UMUMAN yetib bormaydi. Shu sabab
+//     `PUBLIC_BASE_URL` (routes_map.go'dagi bilan BIR XIL o'zgaruvchi —
+//     production compose'da allaqachon bor) sozlangan bo'lsa, o'sha
+//     ommaviy manzil (`https://maps.ondex.uz`) ishlatiladi: sun'iy
+//     yo'ldosh proksisi ham AYNAN shu domenda, `cmd/api` orqali xizmat
+//     qiladi.
+//
 // └────────────────────────────────────────────────────────────────────┘
 func satelliteConfigOrigin(httpAddr string) string {
 	if v := strings.TrimSpace(os.Getenv("PUBLIC_BASE_URL")); v != "" {

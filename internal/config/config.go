@@ -207,6 +207,25 @@ type Config struct {
 	// Bo'sh bo'lsa — bino qatlami uslubdan BUTUNLAY olib tashlanadi
 	// (manzilsiz manba qolsa, xarita kutubxonasi xato beradi).
 	BuildingsURL string
+
+	// R2AccountID/R2AccessKeyID/R2SecretAccessKey/R2Bucket — foydalanuvchi
+	// yuborgan rasmlarni (joy/karantin fotosi) saqlash uchun Cloudflare R2.
+	//
+	// ┌─ NEGA BAZADA EMAS ─────────────────────────────────────────────┐
+	// Rasm baytlari BYTEA ustunida saqlansa, har bir yuklama Postgres
+	// replikatsiyasi/zaxirasi hajmini shishiradi va serverning o'z
+	// diskini yeydi (bitta submission — 4 rasm × ~0.7 MB ≈ 2.8 MB,
+	// ko'p foydalanuvchi bilan tez yig'iladi). R2 — shu uchun maxsus,
+	// arzon va cheksiz kengayadigan ombor.
+	// └─────────────────────────────────────────────────────────────────┘
+	//
+	// To'rttasi ham bo'sh bo'lsa — rasm bilan bog'liq amallar 503
+	// qaytaradi (fail-closed, xuddi OSRM/Mapbox kabi). Berilsa —
+	// TO'RTTASI HAM bo'lishi SHART (validate() tekshiradi).
+	R2AccountID       string
+	R2AccessKeyID     string
+	R2SecretAccessKey string
+	R2Bucket          string
 }
 
 // Load — `.env` faylini (bo'lsa) o'qiydi, so'ng muhitdan sozlamani
@@ -249,6 +268,11 @@ func Load(envPath string) (*Config, error) {
 		OSRMURL:      strings.TrimSpace(os.Getenv("OSRM_URL")),
 		TilesURL:     strings.TrimSpace(os.Getenv("TILES_URL")),
 		BuildingsURL: strings.TrimSpace(os.Getenv("TILES_BUILDINGS_URL")),
+
+		R2AccountID:       strings.TrimSpace(os.Getenv("R2_ACCOUNT_ID")),
+		R2AccessKeyID:     strings.TrimSpace(os.Getenv("R2_ACCESS_KEY_ID")),
+		R2SecretAccessKey: strings.TrimSpace(os.Getenv("R2_SECRET_ACCESS_KEY")),
+		R2Bucket:          strings.TrimSpace(os.Getenv("R2_BUCKET")),
 	}
 	c.DevMode = c.AppEnv == devEnvValue
 
@@ -295,6 +319,36 @@ func (c *Config) validate() error {
 			problems = append(problems,
 				"SUBMIT_DATABASE_URL va DATABASE_URL BIR XIL — o'qish roli yozishga ishlatilmaydi")
 		}
+	}
+
+	// ── R2: hammasi yoki hech qaysi biri ─────────────────────────────
+	// Yarim to'ldirilgan sozlama (masalan kalit bor, bucket yo'q) ishga
+	// tushish vaqtida aniqlanishi kerak — birinchi rasm yuklanganda
+	// emas. Dev'da ham tekshiriladi (SUBMIT_DATABASE_URL bilan bir xil
+	// mantiq): sozlash xatosi hech qaerda jimgina o'tib ketmasin.
+	r2Fields := []struct {
+		name, val string
+	}{
+		{"R2_ACCOUNT_ID", c.R2AccountID},
+		{"R2_ACCESS_KEY_ID", c.R2AccessKeyID},
+		{"R2_SECRET_ACCESS_KEY", c.R2SecretAccessKey},
+		{"R2_BUCKET", c.R2Bucket},
+	}
+	r2Set := 0
+	for _, f := range r2Fields {
+		if f.val != "" {
+			r2Set++
+		}
+	}
+	if r2Set != 0 && r2Set != len(r2Fields) {
+		var missing []string
+		for _, f := range r2Fields {
+			if f.val == "" {
+				missing = append(missing, f.name)
+			}
+		}
+		problems = append(problems, fmt.Sprintf(
+			"R2 sozlamasi yarim to'ldirilgan — yetishmayapti: %s", strings.Join(missing, ", ")))
 	}
 
 	if c.DevMode {
@@ -351,6 +405,13 @@ func (c *Config) validate() error {
 	}
 
 	return errorsFrom(problems)
+}
+
+// R2Configured — R2 to'liq sozlanganmi (validate() to'rttasi ham yo yoki
+// hammasi borligini kafolatlagan, shuning uchun bitta maydonni tekshirish
+// yetarli).
+func (c *Config) R2Configured() bool {
+	return c.R2Bucket != ""
 }
 
 func errorsFrom(problems []string) error {
