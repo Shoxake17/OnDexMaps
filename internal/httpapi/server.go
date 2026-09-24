@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"ondexmap/internal/config"
+	"ondexmap/internal/devplatform"
 	"ondexmap/internal/storage"
 )
 
@@ -47,6 +48,10 @@ type Server struct {
 	// r2 — rasm baytlarini R2'dan o'qiydigan do'kon (`WithR2`). `nil` —
 	// rasm endpointlari 503 qaytaradi (fail-closed, OSRM/Mapbox kabi).
 	r2 photoDownloader
+	// platform — dasturchi kalitlari (`WithPlatform`). `nil` — /v2 o'chiq (503).
+	platform *devplatform.Platform
+	// v2RouteSem — bir vaqtdagi /v2/directions chegarasi.
+	v2RouteSem chan struct{}
 }
 
 // photoDownloader — R2'dan rasm o'qish (test uchun almashtiriladi).
@@ -72,6 +77,7 @@ func New(cfg *config.Config, db *storage.Pool) *Server {
 			satelliteRateBurst, satelliteRatePerSec),
 		satCache:      newTileCache(cfg.SatelliteCacheDir, cfg.SatelliteCacheMaxMB),
 		submitLimiter: newRateLimiterWith(submitRateBurst, submitRatePerSec),
+		v2RouteSem:    make(chan struct{}, v2MaxConcurrentRoutes),
 	}
 }
 
@@ -83,7 +89,7 @@ func New(cfg *config.Config, db *storage.Pool) *Server {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	s.registerRoutes(mux)
-	return s.securityHeaders(s.cors(mux))
+	return s.securityHeaders(s.cors(s.v1Guard(mux)))
 }
 
 func (s *Server) registerRoutes(mux *http.ServeMux) {
@@ -161,6 +167,7 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	s.registerGeoRoutes(mux)
 	s.registerPlacesRoutes(mux)
 	s.registerRouteRoutes(mux)
+	s.registerV2Routes(mux)
 	s.registerSatelliteRoute(mux) // sozlanmagan bo'lsa ro'yxatdan o'tmaydi
 	s.registerMapAssets(mux)      // uslub, shriftlar, zaxira tile fayli
 }
@@ -220,6 +227,16 @@ func cachedPublicAsset(p string) bool {
 func (s *Server) cors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
+		if isV2Path(r.URL.Path) {
+			// Dasturchi API'si: o'z CORS qoidasi (v2CORS), ALLOWED_ORIGINS'ga bog'liq emas.
+			v2CORS(w, r)
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			next.ServeHTTP(w, r)
+			return
+		}
 		if cachedPublicAsset(r.URL.Path) {
 			h.Set("Access-Control-Allow-Origin", "*")
 			h.Set("Access-Control-Allow-Methods", "GET, OPTIONS")

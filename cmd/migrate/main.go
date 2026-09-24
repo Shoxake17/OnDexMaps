@@ -167,6 +167,8 @@ func apply(ctx context.Context, pool *storage.Pool, path string) error {
 	for _, v := range []struct{ placeholder, env, role string }{
 		{":app_password", "ONDEXMAP_APP_DB_PASSWORD", "ilova"},
 		{":submit_password", "ONDEXMAP_SUBMIT_DB_PASSWORD", "yuboruvchi"},
+		{":meter_password", "ONDEXMAP_METER_DB_PASSWORD", "hisoblovchi (meter)"},
+		{":console_password", "ONDEXMAP_CONSOLE_DB_PASSWORD", "konsol"},
 	} {
 		if !strings.Contains(sql, v.placeholder) {
 			continue

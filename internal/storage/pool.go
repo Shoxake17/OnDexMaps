@@ -68,6 +68,18 @@ func ReadWrite(ctx context.Context, dsn string) (*Pool, error) {
 	return newPool(ctx, dsn, false)
 }
 
+// OpenMeter — `ondexmap_meter` roli (cmd/api): dasturchi kalitini O'QIYDI va faqat hisoblagichga
+// (api_usage_daily) yozadi. Hovuz kichik: hisoblash yo'li asosiy o'qish hovuzini band qilmasin.
+func OpenMeter(ctx context.Context, dsn string) (*Pool, error) {
+	return newPoolOpts(ctx, dsn, false, 4, "ondexmap-api-meter")
+}
+
+// OpenConsole — `ondexmap_console` roli (cmd/console): hisob/kalit/sessiya boshqaruvi.
+// Obuna flagi, ekotizim belgisi va pul ustunlariga grantlar YO'Q (migrations/0012).
+func OpenConsole(ctx context.Context, dsn string) (*Pool, error) {
+	return newPoolOpts(ctx, dsn, false, 8, "ondexmap-console")
+}
+
 func newPool(ctx context.Context, dsn string, readOnly bool) (*Pool, error) {
 	return newPoolOpts(ctx, dsn, readOnly, 10, "")
 }

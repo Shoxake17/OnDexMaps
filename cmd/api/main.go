@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"ondexmap/internal/config"
+	"ondexmap/internal/devplatform"
 	"ondexmap/internal/httpapi"
 	"ondexmap/internal/r2"
 	"ondexmap/internal/storage"
@@ -109,6 +110,33 @@ func main() {
 		slog.Warn("SUBMIT_DATABASE_URL yo'q — ob'ekt qabul qilish o'chiq")
 	}
 
+	// ── Dasturchilar platformasi (/v2) ───────────────────────────────
+	// `ondexmap_meter` roli: dasturchi kalitini O'QIYDI va faqat hisoblagichga yozadi.
+	// METER_DATABASE_URL bo'sh bo'lsa /v2 O'CHIQ (503), /v1 esa o'zgarishsiz ishlaydi.
+	meterCtx, stopMeter := context.WithCancel(context.Background())
+	meterDone := make(chan struct{})
+	if cfg.PlatformEnabled() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		mp, err := storage.OpenMeter(ctx, cfg.MeterDatabaseURL)
+		cancel()
+		if err != nil {
+			slog.Error("hisoblagich ulanishi ochilmadi", "err", err)
+			os.Exit(1)
+		}
+		defer mp.Close()
+		plat := devplatform.New(devplatform.NewPGStore(mp),
+			devplatform.Config{Pepper: []byte(cfg.KeyPepper), Plans: devplatform.DefaultPlans()})
+		api.WithPlatform(plat)
+		go func() {
+			defer close(meterDone)
+			plat.Meter().Run(meterCtx, 10*time.Second)
+		}()
+		slog.Info("dasturchi API'si (/v2) yoqilgan", "v1_first_party_only", cfg.V1FirstPartyOnly)
+	} else {
+		close(meterDone)
+		slog.Warn("METER_DATABASE_URL yo'q — dasturchi API'si (/v2) o'chiq")
+	}
+
 	srv := &http.Server{
 		Addr:    cfg.HTTPAddr,
 		Handler: api.Handler(),
@@ -143,6 +171,13 @@ func main() {
 	if err := srv.Shutdown(ctx); err != nil {
 		slog.Error("nazokatli to'xtash muvaffaqiyatsiz", "err", err)
 		os.Exit(1)
+	}
+	// So'rovlar tugadi — endi hisoblagichning OXIRGI yuvilishini kutamiz (hisob yo'qolmasin).
+	stopMeter()
+	select {
+	case <-meterDone:
+	case <-time.After(10 * time.Second):
+		slog.Error("hisoblagich yuvilishi kutilgan vaqtda tugamadi")
 	}
 	slog.Info("to'xtatildi")
 }

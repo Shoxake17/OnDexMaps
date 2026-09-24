@@ -9,6 +9,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -226,6 +227,33 @@ type Config struct {
 	R2AccessKeyID     string
 	R2SecretAccessKey string
 	R2Bucket          string
+
+	// ── Dasturchilar platformasi (docs/developer-platform.md) ─────────────
+	//
+	// KeyPepper — API kalit xeshlash siri (HMAC). Baza sizib chiqsa ham kalitlar
+	// shu sirsiz tiklanmaydi. ALMASHTIRIB BO'LMAYDI: almashsa barcha kalitlar yaroqsiz bo'ladi.
+	KeyPepper string
+	// MeterDatabaseURL — cmd/api ning `ondexmap_meter` roli (kalitni o'qiydi, hisoblagichga yozadi).
+	// Bo'sh bo'lsa `/v2` O'CHIQ (503) — fail-closed.
+	MeterDatabaseURL string
+	// FirstPartyOrigins — /v1 ni brauzerdan chaqirishi mumkin bo'lgan O'Z saytlar (aniq origin, wildcard yo'q).
+	FirstPartyOrigins []string
+	// V1FirstPartyOnly — true: /v1 faqat o'z saytlar va ichki kalitlar uchun (dasturchi kalitlari /v2 dan).
+	V1FirstPartyOnly bool
+
+	// ConsoleDatabaseURL — cmd/console ning `ondexmap_console` roli.
+	ConsoleDatabaseURL string
+	ConsoleHTTPAddr    string
+	// ConsoleOrigin — konsol saytining origin'i (CORS/CSRF: `https://console.ondex.uz`).
+	ConsoleOrigin string
+	// ResendAPIKey/MailFrom — bir martalik kodlarni email orqali yuborish.
+	// Bo'sh bo'lsa (faqat dev) kod logga yoziladi; prod'da MAJBURIY.
+	ResendAPIKey string
+	MailFrom     string
+	// TurnstileSecret — ixtiyoriy Cloudflare Turnstile (bot himoyasi); bo'sh = o'chiq.
+	TurnstileSecret string
+	// BillingInstructions — hisob-fakturada ko'rsatiladigan to'lov ko'rsatmasi (karta/rekvizit).
+	BillingInstructions string
 }
 
 // Load — `.env` faylini (bo'lsa) o'qiydi, so'ng muhitdan sozlamani
@@ -273,6 +301,18 @@ func Load(envPath string) (*Config, error) {
 		R2AccessKeyID:     strings.TrimSpace(os.Getenv("R2_ACCESS_KEY_ID")),
 		R2SecretAccessKey: strings.TrimSpace(os.Getenv("R2_SECRET_ACCESS_KEY")),
 		R2Bucket:          strings.TrimSpace(os.Getenv("R2_BUCKET")),
+
+		KeyPepper:           os.Getenv("KEY_PEPPER"),
+		MeterDatabaseURL:    os.Getenv("METER_DATABASE_URL"),
+		FirstPartyOrigins:   splitList(os.Getenv("FIRST_PARTY_ORIGINS")),
+		V1FirstPartyOnly:    strings.EqualFold(strings.TrimSpace(os.Getenv("V1_FIRST_PARTY_ONLY")), "true"),
+		ConsoleDatabaseURL:  os.Getenv("CONSOLE_DATABASE_URL"),
+		ConsoleHTTPAddr:     envOr("CONSOLE_HTTP_ADDR", ":8093"),
+		ConsoleOrigin:       strings.TrimSpace(os.Getenv("CONSOLE_ORIGIN")),
+		ResendAPIKey:        strings.TrimSpace(os.Getenv("RESEND_API_KEY")),
+		MailFrom:            strings.TrimSpace(os.Getenv("MAIL_FROM")),
+		TurnstileSecret:     strings.TrimSpace(os.Getenv("TURNSTILE_SECRET")),
+		BillingInstructions: strings.TrimSpace(os.Getenv("BILLING_INSTRUCTIONS")),
 	}
 	c.DevMode = c.AppEnv == devEnvValue
 
@@ -351,6 +391,8 @@ func (c *Config) validate() error {
 			"R2 sozlamasi yarim to'ldirilgan — yetishmayapti: %s", strings.Join(missing, ", ")))
 	}
 
+	problems = append(problems, c.validatePlatform()...)
+
 	if c.DevMode {
 		// Dev'da kalitlar ixtiyoriy, lekin berilgan bo'lsa jiddiy bo'lsin.
 		if err := errorsFrom(problems); err != nil {
@@ -405,6 +447,88 @@ func (c *Config) validate() error {
 	}
 
 	return errorsFrom(problems)
+}
+
+// PlatformEnabled — /v2 (dasturchi kalitlari) yoqilganmi.
+func (c *Config) PlatformEnabled() bool { return c.MeterDatabaseURL != "" }
+
+// ConsoleEnabled — cmd/console ishga tushishi mumkinmi.
+func (c *Config) ConsoleEnabled() bool { return c.ConsoleDatabaseURL != "" }
+
+// validatePlatform — dasturchilar platformasi sozlamalari. Dev'da ham tekshiriladi
+// (rol tengligi kabi xatolar hech qaerda jimgina o'tmasin); faqat prod'ga xos talablar
+// (TLS, https origin, email) `!DevMode` bilan.
+func (c *Config) validatePlatform() []string {
+	var p []string
+	dsns := []struct{ name, val string }{
+		{"DATABASE_URL", c.DatabaseURL},
+		{"DATABASE_URL_MIGRATE", c.DatabaseURLMigrate},
+		{"SUBMIT_DATABASE_URL", c.SubmitDatabaseURL},
+		{"METER_DATABASE_URL", c.MeterDatabaseURL},
+		{"CONSOLE_DATABASE_URL", c.ConsoleDatabaseURL},
+	}
+	// Har rol MUSTAQIL: bir xil ulanish satri = huquqlar ajratmasi amalda yo'q.
+	for i := range dsns {
+		for j := i + 1; j < len(dsns); j++ {
+			if dsns[i].val != "" && dsns[i].val == dsns[j].val && (i >= 3 || j >= 3) {
+				p = append(p, dsns[i].name+" va "+dsns[j].name+" BIR XIL — platforma rollari mustaqil bo'lishi shart")
+			}
+		}
+	}
+
+	for _, o := range c.FirstPartyOrigins {
+		if !validExactOrigin(o, c.DevMode) {
+			p = append(p, "FIRST_PARTY_ORIGINS da noto'g'ri element: "+o+" (aniq https origin, wildcard yo'q)")
+		}
+	}
+	if c.V1FirstPartyOnly && len(c.FirstPartyOrigins) == 0 {
+		p = append(p, "V1_FIRST_PARTY_ONLY=true, lekin FIRST_PARTY_ORIGINS bo'sh — o'z saytingiz ham /v1 ga kira olmay qoladi")
+	}
+
+	if !c.PlatformEnabled() && !c.ConsoleEnabled() {
+		return p
+	}
+	if len(c.KeyPepper) < minKeyLen {
+		p = append(p, fmt.Sprintf("KEY_PEPPER yo'q yoki juda qisqa (kamida %d belgi)", minKeyLen))
+	}
+	if !c.DevMode {
+		for _, d := range dsns[3:] {
+			if strings.Contains(d.val, "sslmode=disable") {
+				p = append(p, d.name+" da sslmode=disable — production'da baza aloqasi shifrlanishi SHART")
+			}
+		}
+	}
+	if c.ConsoleEnabled() {
+		if !validExactOrigin(c.ConsoleOrigin, c.DevMode) {
+			p = append(p, "CONSOLE_ORIGIN yo'q yoki noto'g'ri (masalan: https://console.ondex.uz)")
+		}
+		if !c.DevMode {
+			if c.ResendAPIKey == "" || c.MailFrom == "" {
+				p = append(p, "RESEND_API_KEY va MAIL_FROM production'da majburiy (kirish kodi emailga yuboriladi)")
+			}
+			if !strings.HasPrefix(c.ConsoleOrigin, "https://") {
+				p = append(p, "CONSOLE_ORIGIN production'da https bo'lishi SHART (__Host- cookie)")
+			}
+		}
+	}
+	return p
+}
+
+// validExactOrigin — `scheme://host[:port]`, yo'l/wildcard yo'q; http faqat dev/localhost.
+func validExactOrigin(o string, dev bool) bool {
+	u, err := url.Parse(o)
+	if err != nil || u.Host == "" || u.Path != "" || u.RawQuery != "" || u.Fragment != "" ||
+		u.User != nil || strings.Contains(o, "*") || strings.HasSuffix(o, "/") {
+		return false
+	}
+	switch u.Scheme {
+	case "https":
+		return true
+	case "http":
+		h := u.Hostname()
+		return dev || h == "localhost" || h == "127.0.0.1"
+	}
+	return false
 }
 
 // R2Configured — R2 to'liq sozlanganmi (validate() to'rttasi ham yo yoki
