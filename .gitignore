@@ -17,11 +17,11 @@
 *.md
 
 # ── Sirlar ───────────────────────────────────────────────────────────
-# `.env.example` ATAYLAB istisno qilingan: u shablon, ichida haqiqiy
-# qiymat bo'lmasligi SHART (gitleaks tekshiradi).
+# `.env.example` ham repoga KIRITILMAYDI (kerak emas): `.env.*` uni qamrab oladi,
+# aniq yozib qo'yildi — lokal nusxasi tursa ham git ko'rmaydi.
 .env
 .env.*
-!.env.example
+.env.example
 *.env
 secrets/
 *.pem

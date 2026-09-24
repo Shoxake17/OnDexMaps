@@ -8,6 +8,5 @@ image/
 *.md
 .env
 .env.*
-!.env.example
 secrets/
 *.pmtiles

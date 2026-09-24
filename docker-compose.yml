@@ -34,7 +34,7 @@ services:
     container_name: ondexmap_postgis
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:?".env da POSTGRES_USER yo'q — .env.example dan ko'chiring"}
+      POSTGRES_USER: ${POSTGRES_USER:?".env da POSTGRES_USER yo'q"}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?".env da POSTGRES_PASSWORD yo'q — bo'sh parol bilan ishga tushirilmaydi"}
       POSTGRES_DB: ${POSTGRES_DB:?".env da POSTGRES_DB yo'q"}
       # `C.UTF-8`, oddiy `C` EMAS — bu farq qidiruvni buzadi.
