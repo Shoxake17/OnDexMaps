@@ -8,7 +8,7 @@ module ondexmap
 // kutubxonaning o'zida 23 ta CVE topgan edi.
 //
 // Yangi CVE chiqqanda bu raqamni oshiring.
-go 1.26.5
+go 1.26.6
 
 // ── BOG'LIQLIKLAR ATAYLAB KAM ────────────────────────────────────────
 // Ikkita to'g'ridan-to'g'ri bog'liqlik: `pgx` (PostgreSQL drayveri) va
