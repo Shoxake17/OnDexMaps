@@ -105,6 +105,12 @@ func main() {
 		}
 	}
 
+	// Obuna hisob-fakturalari: soatlik, idempotent (UNIQUE davr). Migratsiya 0012 bajarilmagan bo'lsa
+	// har soat xato loglanadi, server ishlashda davom etadi.
+	billCtx, stopBilling := context.WithCancel(context.Background())
+	defer stopBilling()
+	go adminSrv.RunBilling(billCtx, time.Hour)
+
 	srv := &http.Server{
 		Addr:              addr,
 		Handler:           adminSrv.Handler(),

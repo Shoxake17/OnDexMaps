@@ -44,6 +44,8 @@ type Server struct {
 	// nusxa: paket "BUTUNLAY AJRATILGAN" tamoyiliga ko'ra bu yerda
 	// o'zining ulanishi bor.
 	r2 photoDownloader
+	// staff — dasturchilar platformasi: obuna flagi, hisob-faktura, ekotizim (devstaff.go).
+	staff DevStaffStore
 }
 
 // photoDownloader — R2'dan rasm o'qish (test uchun almashtiriladi).
@@ -61,9 +63,10 @@ type photoDownloader interface {
 func New(cfg *config.Config, db *storage.Pool, sessionKeys ...string) *Server {
 	keys := append([]string{cfg.AdminKey, cfg.AdminKeyPrev}, sessionKeys...)
 	return &Server{
-		cfg:  cfg,
-		db:   db,
-		keys: apikey.New(keys...),
+		cfg:   cfg,
+		db:    db,
+		keys:  apikey.New(keys...),
+		staff: newDevStaffPG(db),
 	}
 }
 
@@ -106,6 +109,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/submissions/reject", s.requireKey(s.handleReject))
 	mux.HandleFunc("GET /api/places", s.requireKey(s.handlePlacesList))
 	mux.HandleFunc("POST /api/places/delete", s.requireKey(s.handlePlaceDelete))
+
+	s.registerDevStaffRoutes(mux)
 
 	return securityHeaders(mux)
 }

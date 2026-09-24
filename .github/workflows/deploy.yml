@@ -137,6 +137,8 @@ jobs:
           DATABASE_URL_MIGRATE: postgres://ondexmap:ondexmap@localhost:5432/ondexmap?sslmode=disable
           ONDEXMAP_APP_DB_PASSWORD: ci-app-password-not-real
           ONDEXMAP_SUBMIT_DB_PASSWORD: ci-submit-password-not-real
+          ONDEXMAP_METER_DB_PASSWORD: ci-meter-password-not-real
+          ONDEXMAP_CONSOLE_DB_PASSWORD: ci-console-password-not-real
         run: go run ./cmd/migrate
 
       # ┌─ UCH ALOHIDA ROL — BIR XIL ULANISH EMAS ─────────────────────────┐
@@ -165,6 +167,10 @@ jobs:
           DATABASE_URL_MIGRATE: postgres://ondexmap:ondexmap@localhost:5432/ondexmap?sslmode=disable
           DATABASE_URL: postgres://ondexmap_app:ci-app-password-not-real@localhost:5432/ondexmap?sslmode=disable
           SUBMIT_DATABASE_URL: postgres://ondexmap_submit:ci-submit-password-not-real@localhost:5432/ondexmap?sslmode=disable
+          METER_DATABASE_URL: postgres://ondexmap_meter:ci-meter-password-not-real@localhost:5432/ondexmap?sslmode=disable
+          CONSOLE_DATABASE_URL: postgres://ondexmap_console:ci-console-password-not-real@localhost:5432/ondexmap?sslmode=disable
+          KEY_PEPPER: ci-pepper-not-real-0123456789abcdef0123456789
+          CONSOLE_ORIGIN: http://localhost:3200
         run: go test -count=1 ./...
 
       # Poyga detektori (`-race`) gcc talab qiladi — Linux runner'da bor.
@@ -177,6 +183,10 @@ jobs:
           DATABASE_URL_MIGRATE: postgres://ondexmap:ondexmap@localhost:5432/ondexmap?sslmode=disable
           DATABASE_URL: postgres://ondexmap_app:ci-app-password-not-real@localhost:5432/ondexmap?sslmode=disable
           SUBMIT_DATABASE_URL: postgres://ondexmap_submit:ci-submit-password-not-real@localhost:5432/ondexmap?sslmode=disable
+          METER_DATABASE_URL: postgres://ondexmap_meter:ci-meter-password-not-real@localhost:5432/ondexmap?sslmode=disable
+          CONSOLE_DATABASE_URL: postgres://ondexmap_console:ci-console-password-not-real@localhost:5432/ondexmap?sslmode=disable
+          KEY_PEPPER: ci-pepper-not-real-0123456789abcdef0123456789
+          CONSOLE_ORIGIN: http://localhost:3200
         run: go test -race -count=1 ./...
 
       - name: Install govulncheck
@@ -472,6 +482,8 @@ jobs:
           DATABASE_URL_MIGRATE: postgres://ondexmap:ondexmap@localhost:5432/ondexmap?sslmode=disable
           ONDEXMAP_APP_DB_PASSWORD: ci-app-password-not-real
           ONDEXMAP_SUBMIT_DB_PASSWORD: ci-submit-password-not-real
+          ONDEXMAP_METER_DB_PASSWORD: ci-meter-password-not-real
+          ONDEXMAP_CONSOLE_DB_PASSWORD: ci-console-password-not-real
         run: go run ./cmd/migrate
 
       - name: Download image artifact
