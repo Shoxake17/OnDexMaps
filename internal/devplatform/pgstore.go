@@ -99,7 +99,7 @@ func (s *PGStore) TouchKeys(ctx context.Context, ids []string, at time.Time) err
 		return nil
 	}
 	_, err := s.pool.Exec(ctx, `
-UPDATE api_keys SET last_used_at = $2
-WHERE id = ANY($1::text[]) AND (last_used_at IS NULL OR last_used_at < $2 - interval '1 minute')`, ids, at)
+UPDATE api_keys SET last_used_at = $2::timestamptz
+WHERE id = ANY($1::text[]) AND (last_used_at IS NULL OR last_used_at < $2::timestamptz - interval '1 minute')`, ids, at)
 	return err
 }

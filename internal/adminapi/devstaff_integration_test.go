@@ -32,17 +32,17 @@ func TestIntegrationSubscriptionBillingChain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer owner.Close()
+	t.Cleanup(owner.Close)
 	cpool, err := storage.OpenConsole(ctx, cfg.ConsoleDatabaseURL)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer cpool.Close()
+	t.Cleanup(cpool.Close)
 	mpool, err := storage.OpenMeter(ctx, cfg.MeterDatabaseURL)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer mpool.Close()
+	t.Cleanup(mpool.Close)
 
 	clean := func() {
 		for _, q := range []string{
