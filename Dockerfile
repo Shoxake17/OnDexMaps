@@ -69,6 +69,16 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
         -o /out/osmimport \
         ./cmd/osmimport
 
+# `cmd/console` — console.ondex.uz backend (dasturchi hisobi, API kalit,
+# foydalanish, hisob-faktura). `ondexmap_console` roli bilan ulanadi;
+# tashqi portga to'g'ridan-to'g'ri chiqarilmaydi — `console-web` (Next.js)
+# uni ichki tarmoqdan proksilaydi.
+RUN CGO_ENABLED=0 GOOS=linux go build \
+        -trimpath \
+        -ldflags="-s -w" \
+        -o /out/console \
+        ./cmd/console
+
 # ---------- 2-bosqich: ishlash ----------
 #
 # distroless/static — ichida shell, paket menejeri, coreutils YO'Q.
@@ -84,6 +94,7 @@ COPY --from=build /out/api /api
 COPY --from=build /out/migrate /migrate
 COPY --from=build /out/adminserver /adminserver
 COPY --from=build /out/osmimport /osmimport
+COPY --from=build /out/console /console
 
 # ⚠️ `cmd/migrate` migratsiyalarni `go:embed` bilan EMAS, oddiy
 # `os.ReadDir("migrations")` bilan o'qiydi (nisbiy yo'l, ishchi

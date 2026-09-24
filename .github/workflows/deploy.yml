@@ -441,6 +441,70 @@ jobs:
           docker push "$IMAGE:latest"
 
   # ══════════════════════════════════════════════════════════════════
+  # 3c. Console-web image — yig'ish, skanerlash
+  # ══════════════════════════════════════════════════════════════════
+  #
+  # `console` (backend, `ondexmap_console` roli) alohida image TALAB
+  # QILMAYDI — u API image'ining bir qismi (`cmd/console`, xuddi
+  # `adminserver` kabi). Faqat frontend (`console/`, Next.js) o'zining
+  # image'iga ega. NEXT_PUBLIC_* YO'Q (console/Dockerfile izohi):
+  # `CONSOLE_ORIGIN` domenini biluvchi yagona joy — bu build-args EMAS.
+  build-console-web:
+    name: Build and Push Console-Web Image
+    runs-on: ubuntu-latest
+    needs: [ go_quality, go_lint, dependency_scan, semgrep_sast ]
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Compute image name
+        id: meta
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "image=ghcr.io/$OWNER/ondexmap-console-web" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Console-Web Image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: ./console
+          load: true
+          tags: ${{ steps.meta.outputs.image }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Trivy - Console-Web image vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.meta.outputs.image }}:${{ github.sha }}
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+          vuln-type: 'os,library'
+
+      - name: Push
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        run: |
+          IMAGE="${{ steps.meta.outputs.image }}"
+          docker tag "$IMAGE:${{ github.sha }}" "$IMAGE:latest"
+          docker push "$IMAGE:${{ github.sha }}"
+          docker push "$IMAGE:latest"
+
+  # ══════════════════════════════════════════════════════════════════
   # 4. DAST — OWASP ZAP
   # ══════════════════════════════════════════════════════════════════
   dast_zap:
@@ -637,7 +701,7 @@ jobs:
   preflight:
     name: Deploy Preflight
     runs-on: ubuntu-latest
-    needs: [ push_image, build-web ]
+    needs: [ push_image, build-web, build-console-web ]
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     outputs:
       ready: ${{ steps.check.outputs.ready }}
@@ -688,6 +752,7 @@ jobs:
         env:
           API_TAG: ${{ github.sha }}
           WEB_TAG: ${{ github.sha }}
+          CONSOLE_WEB_TAG: ${{ github.sha }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
@@ -696,7 +761,7 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           timeout: 30s
           command_timeout: 10m
-          envs: API_TAG,WEB_TAG
+          envs: API_TAG,WEB_TAG,CONSOLE_WEB_TAG
           script: |
             set -euo pipefail
             cd ~/ondexmap
@@ -704,11 +769,12 @@ jobs:
             touch .env
             [ -s .env ] && [ "$(tail -c1 .env | wc -l)" -eq 0 ] && echo >> .env
 
-            sed -i '/^API_TAG=/d;/^WEB_TAG=/d' .env
+            sed -i '/^API_TAG=/d;/^WEB_TAG=/d;/^CONSOLE_WEB_TAG=/d' .env
             echo "API_TAG=${API_TAG}" >> .env
             echo "WEB_TAG=${WEB_TAG}" >> .env
+            echo "CONSOLE_WEB_TAG=${CONSOLE_WEB_TAG}" >> .env
 
-            for v in API_TAG WEB_TAG; do
+            for v in API_TAG WEB_TAG CONSOLE_WEB_TAG; do
               grep -q "^${v}=${API_TAG}$" .env || {
                 echo "::error::${v} .env ga yozilmadi"
                 exit 1
@@ -719,25 +785,32 @@ jobs:
             # GHCR'da PAT yaratish faqat GitHub veb-interfeysida mumkin
             # (API orqali yo'q) — shuning uchun bu ikki image ATAYLAB
             # OCHIQ (public) qilib qo'yilgan (birinchi push'dan keyin:
-            # Settings → Packages → ondexmap-api/ondexmap-web →
+            # Settings → Packages → ondexmap-api/ondexmap-web/ondexmap-console-web →
             # Package settings → Change visibility → Public). Ochiq
             # image xavfsiz: sirlar image ICHIDA emas, `.env`da
             # (ishlash vaqtida, shu faylda) — `NEXT_PUBLIC_API_URL`
             # bundan mustasno, u ochiq domen nomi, sir emas.
             # └───────────────────────────────────────────────────────┘
-            docker compose pull api web adminserver migrate
+            # ⚠️ `console` alohida image EMAS — `ondexmap-api` image'ining
+            # bir qismi (xuddi `adminserver` kabi, boshqa entrypoint bilan).
+            # `console-web` esa yangi, alohida image (`ondexmap-console-web`).
+            # Ikkalasi ham VPS compose faylida (`~/ondexmap/docker-compose.yml`,
+            # git'da YO'Q) ONGLI ravishda qo'shilgan bo'lishi kerak —
+            # aks holda bu qatorlar "no such service" bilan yiqiladi.
+            docker compose pull api web adminserver migrate console console-web
 
             # Migratsiya — API/web qayta ishga tushishidan OLDIN. Bir
             # martalik konteyner (`restart` yo'q), muvaffaqiyatsiz
             # bo'lsa DEPLOY TO'XTAYDI (eski kod yangi sxemaga qarshi
-            # ishga tushmasin).
+            # ishga tushmasin). `.env`da endi ONDEXMAP_METER_DB_PASSWORD
+            # va ONDEXMAP_CONSOLE_DB_PASSWORD ham SHART (migrations/0012).
             docker compose run --rm migrate
 
             # ⚠️ `adminserver` HAM shu ro'yxatda: u ham `ondexmap-api`
             # image'ining bir qismi (bitta binar ko'proq) — busiz eski
             # tag'da qolib ketardi (2026-09-23 aynan shunday chiqqan edi:
             # api/web yangilangan, adminserver eski qolgan).
-            docker compose up -d --no-deps --force-recreate api web adminserver
+            docker compose up -d --no-deps --force-recreate api web adminserver console console-web
 
             docker image prune -f
 
