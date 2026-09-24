@@ -21,6 +21,7 @@ import (
 	"image/jpeg"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -62,6 +63,52 @@ func itestPhoto(t *testing.T, w, h int) []byte {
 
 func fp(v float64) *float64 { return &v }
 
+// fakeR2 — xotiradagi R2 do'koni (haqiqiy R2'ga tarmoq chaqiruvisiz). Test uni
+// `Submitter`/`Pool` ga `WithR2` orqali ulaydi va R2 obyektlarining YASHASH
+// TSIKLINI tekshiradi: yuklash → (tasdiqlash: tanlanmaganlar o'chadi) →
+// (rad etish/o'chirish: o'chadi). Aks holda R2'da orfan obyekt qolib ketishi
+// hech qayerda ko'rinmas edi.
+type fakeR2 struct {
+	mu   sync.Mutex
+	objs map[string][]byte
+}
+
+func newFakeR2() *fakeR2 { return &fakeR2{objs: map[string][]byte{}} }
+
+func (f *fakeR2) Upload(_ context.Context, key string, data []byte, _ string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.objs[key] = data
+	return nil
+}
+
+func (f *fakeR2) Delete(_ context.Context, key string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.objs, key)
+	return nil
+}
+
+func (f *fakeR2) DeleteMany(ctx context.Context, keys []string) error {
+	for _, k := range keys {
+		_ = f.Delete(ctx, k)
+	}
+	return nil
+}
+
+func (f *fakeR2) count() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return len(f.objs)
+}
+
+func (f *fakeR2) has(key string) bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	_, ok := f.objs[key]
+	return ok
+}
+
 func TestIntegrationPlacesLifecycleAndPrivileges(t *testing.T) {
 	ownerDSN, appDSN, submitDSN := itestDSNs(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
@@ -85,6 +132,12 @@ func TestIntegrationPlacesLifecycleAndPrivileges(t *testing.T) {
 	}
 	t.Cleanup(sub.Close)
 
+	// R2 soxta do'koni: yuboruvchi (yuklaydi) va moderator hovuzi (tozalaydi) BIR
+	// xil do'konga ulanadi, shuning uchun yashash tsiklini oxirigacha kuzatamiz.
+	r2 := newFakeR2()
+	sub.WithR2(r2)
+	owner.WithR2(r2)
+
 	tag := "ITEST-" + time.Now().Format("150405.000")
 	hint := "itest-" + strings.ReplaceAll(tag, ".", "")
 	t.Cleanup(func() {
@@ -103,6 +156,10 @@ func TestIntegrationPlacesLifecycleAndPrivileges(t *testing.T) {
 	photos := [][]byte{itestPhoto(t, 300, 200), itestPhoto(t, 320, 240)}
 	if err := sub.Submit(ctx, Submission{Clean: clean, Photos: photos, Hint: hint}); err != nil {
 		t.Fatalf("Submit: %v", err)
+	}
+	// Ikkala rasm R2'ga yuklangan (bazaga baytlar EMAS, faqat kalit yoziladi).
+	if n := r2.count(); n != 2 {
+		t.Fatalf("Submit'dan keyin R2'da %d obyekt (2 kutilgan)", n)
 	}
 	if n, err := sub.RecentCount(ctx, hint); err != nil || n != 1 {
 		t.Fatalf("RecentCount = %d, %v", n, err)
@@ -146,8 +203,8 @@ func TestIntegrationPlacesLifecycleAndPrivileges(t *testing.T) {
 	mustFail("karantin UPDATE", `UPDATE place_submissions SET status='approved'`)
 	mustFail("karantin DELETE", `DELETE FROM place_submissions`)
 	mustFail("karantin matnini o'qish", `SELECT name, description FROM place_submissions`)
-	mustFail("karantin rasmini o'qish", `SELECT data FROM place_submission_photos`)
-	mustFail("jonli rasmni o'qish", `SELECT data FROM place_photos`)
+	mustFail("karantin rasmini o'qish", `SELECT r2_key FROM place_submission_photos`)
+	mustFail("jonli rasmni o'qish", `SELECT r2_key FROM place_photos`)
 	mustFail("jonli ob'ektni o'qish", `SELECT name FROM places`)
 	mustFail("mahallalarni o'qish", `SELECT name FROM mahallas`)
 	mustFail("reviziyalarni o'qish", `SELECT * FROM geo_revisions`)
@@ -180,7 +237,7 @@ func TestIntegrationPlacesLifecycleAndPrivileges(t *testing.T) {
 		}
 	}
 	mustFailApp("karantinni o'qish", `SELECT * FROM place_submissions`)
-	mustFailApp("karantin rasmini o'qish", `SELECT data FROM place_submission_photos`)
+	mustFailApp("karantin rasmini o'qish", `SELECT r2_key FROM place_submission_photos`)
 	mustFailApp("places ga yozish", `INSERT INTO places (kind, geom, approved_by) VALUES ('other', ST_SetSRID(ST_MakePoint(71,41),4326)::geography, 'x')`)
 	mustFailApp("karantinga yozish", `INSERT INTO place_submissions (kind, geom, submitter_hint) VALUES ('other', ST_SetSRID(ST_MakePoint(71,41),4326)::geography, 'x')`)
 
@@ -236,15 +293,29 @@ func TestIntegrationPlacesLifecycleAndPrivileges(t *testing.T) {
 	if d.Name != tag+" Non (tuzatildi)" || d.Photos != 1 || d.KindLabel != "Tashkilot" {
 		t.Errorf("ob'ekt: %+v", d)
 	}
-	if _, err := app.PlacePhoto(ctx, placeID, 0); err != nil {
-		t.Errorf("0-rasm: %v", err)
+	// Faqat 2-rasm (pos 1) qoldirilgan: jonli ob'ektning 0-o'rni ASL karantin
+	// kalitiga ishora qiladi (R2'da qayta yuklash yo'q — obyekt joyida qoladi).
+	keptKey := "submissions/" + subID + "/1.jpg"
+	droppedKey := "submissions/" + subID + "/0.jpg"
+	if k, err := app.PlacePhoto(ctx, placeID, 0); err != nil || k != keptKey {
+		t.Errorf("0-rasm kaliti = %q, %v (kutilgan %q)", k, err, keptKey)
 	}
 	if _, err := app.PlacePhoto(ctx, placeID, 1); err != ErrNotFound {
 		t.Errorf("1-rasm tashlangan edi, xato = %v", err)
 	}
-	// Karantindagi rasmlar tasdiqlangach o'chirilgan.
+	// Karantindagi rasm yozuvlari tasdiqlangach o'chirilgan.
 	if _, err := owner.SubmissionPhoto(ctx, subID, 0); err != ErrNotFound {
 		t.Errorf("karantin rasmi tasdiqdan keyin qolgan: %v", err)
+	}
+	// R2: qoldirilgan obyekt SAQLANGAN, TANLANMAGANI (pos 0) O'CHIRILGAN (orfan yo'q).
+	if !r2.has(keptKey) {
+		t.Errorf("qoldirilgan rasm R2'dan yo'qolgan: %s", keptKey)
+	}
+	if r2.has(droppedKey) {
+		t.Errorf("tanlanmagan rasm R2'da orfan bo'lib qoldi: %s", droppedKey)
+	}
+	if n := r2.count(); n != 1 {
+		t.Errorf("tasdiqdan keyin R2'da %d obyekt (1 kutilgan)", n)
 	}
 
 	// Qidiruv: yangi ob'ekt topiladi.
@@ -277,11 +348,21 @@ func TestIntegrationPlacesLifecycleAndPrivileges(t *testing.T) {
 	if rejID == "" {
 		t.Fatal("ikkinchi taklif ko'rinmadi")
 	}
+	if n := r2.count(); n != 2 { // tasdiqlangan ob'ektning 1 ta + yangi taklifning 1 ta
+		t.Fatalf("ikkinchi Submit'dan keyin R2'da %d obyekt (2 kutilgan)", n)
+	}
 	if err := owner.RejectSubmission(ctx, rejID, "itest", "spam"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := owner.SubmissionPhoto(ctx, rejID, 0); err != ErrNotFound {
 		t.Errorf("rad etilgan taklif rasmi qolgan: %v", err)
+	}
+	// R2: rad etilgan taklifning rasmi O'CHIRILGAN; tasdiqlangan ob'ektniki tegilmagan.
+	if r2.has("submissions/" + rejID + "/0.jpg") {
+		t.Errorf("rad etilgan taklif rasmi R2'da orfan bo'lib qoldi")
+	}
+	if !r2.has(keptKey) || r2.count() != 1 {
+		t.Errorf("rad etish tasdiqlangan ob'ekt rasmiga tegdi: %d obyekt", r2.count())
 	}
 	if err := owner.RejectSubmission(ctx, rejID, "itest", ""); err == nil {
 		t.Error("rad etilgan taklif ikkinchi marta rad etildi")
@@ -293,6 +374,11 @@ func TestIntegrationPlacesLifecycleAndPrivileges(t *testing.T) {
 	}
 	if _, err := app.PlaceByID(ctx, placeID); err != ErrNotFound {
 		t.Errorf("olib tashlangan ob'ekt hamon ko'rinadi: %v", err)
+	}
+	// R2: ob'ekt o'chirilgach uning rasmi ham ketgan (CASCADE R2'ni bilmaydi — kalitlar
+	// DELETE'dan OLDIN o'qilib, commit'dan keyin R2'dan o'chiriladi).
+	if n := r2.count(); n != 0 {
+		t.Errorf("ob'ekt o'chirilgach R2'da %d orfan obyekt qoldi", n)
 	}
 	var revs int
 	if err := owner.QueryRow(ctx,
