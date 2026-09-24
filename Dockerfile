@@ -58,6 +58,17 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
         -o /out/adminserver \
         ./cmd/adminserver
 
+# `cmd/osmimport` — OSM `.pbf` dan qidiruv indeksini (`geo_names`) qayta qurish.
+# Doimiy xizmat EMAS: kerak bo'lganda BIR MARTALIK ishga tushiriladi:
+#   docker compose run --rm --entrypoint /osmimport migrate -file /data/uzbekistan.osm.pbf
+# (fayl `-v` bilan ulanadi). `migrate` xizmati bilan bir xil muhit/tarmoq kerak
+# (DATABASE_URL_MIGRATE — baza egasi), shuning uchun ALOHIDA xizmat qo'shilmadi.
+RUN CGO_ENABLED=0 GOOS=linux go build \
+        -trimpath \
+        -ldflags="-s -w" \
+        -o /out/osmimport \
+        ./cmd/osmimport
+
 # ---------- 2-bosqich: ishlash ----------
 #
 # distroless/static — ichida shell, paket menejeri, coreutils YO'Q.
@@ -72,6 +83,7 @@ FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=build /out/api /api
 COPY --from=build /out/migrate /migrate
 COPY --from=build /out/adminserver /adminserver
+COPY --from=build /out/osmimport /osmimport
 
 # ⚠️ `cmd/migrate` migratsiyalarni `go:embed` bilan EMAS, oddiy
 # `os.ReadDir("migrations")` bilan o'qiydi (nisbiy yo'l, ishchi
