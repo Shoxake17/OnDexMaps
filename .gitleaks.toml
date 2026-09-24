@@ -43,11 +43,4 @@ paths = [
   # `_test.go` bilan tugaydigan fayllarga tegishli, ishlab chiqarish
   # kodiga emas.
   '''.*_test\.go$''',
-
-  # ── Namuna muhit fayli ──
-  #
-  # `.env.example` ATAYLAB namuna qiymatlar bilan to'ldirilgan.
-  # Haqiqiy `.env` esa `.gitignore` da va hech qachon commit
-  # qilinmaydi.
-  '''^\.env\.example$''',
 ]
