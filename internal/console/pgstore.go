@@ -391,13 +391,23 @@ VALUES ($1, $2, NULLIF($3,''), NULLIF($4,''), $5::jsonb)`, actor, action, target
 	return err
 }
 
+// PurgeExpired — muddati o'tgan sessiya va kodlarni o'chiradi (soatlik ish, cmd/console).
+//
+// ⚠️ `$1::timestamptz` — CAST SHART. Usiz `$1 - interval '7 days'` da Postgres
+// parametr turini `interval` deb taxmin qiladi va butun so'rov
+// "operator does not exist: timestamp with time zone < interval" bilan yiqiladi
+// (2026-09-25 lokal sinovda aynan shu chiqdi; `devplatform.TouchKeys` da ham
+// xuddi shu xato bo'lgan). Bu jimgina yuz beradi: xato faqat WARN bo'lib logga
+// tushadi, tozalash esa hech qachon ishlamaydi va jadvallar shishib boraveradi.
 func (s *PGStore) PurgeExpired(ctx context.Context, now time.Time) error {
 	ctx, cancel := tctx(ctx)
 	defer cancel()
-	if _, err := s.pool.Exec(ctx,
-		`DELETE FROM dev_sessions WHERE expires_at < $1 OR last_seen_at < $1 - interval '7 days'`, now); err != nil {
+	if _, err := s.pool.Exec(ctx, `
+DELETE FROM dev_sessions
+WHERE expires_at < $1::timestamptz OR last_seen_at < $1::timestamptz - interval '7 days'`, now); err != nil {
 		return err
 	}
-	_, err := s.pool.Exec(ctx, `DELETE FROM dev_otps WHERE expires_at < $1 - interval '1 day'`, now)
+	_, err := s.pool.Exec(ctx,
+		`DELETE FROM dev_otps WHERE expires_at < $1::timestamptz - interval '1 day'`, now)
 	return err
 }

@@ -1,18 +1,19 @@
 package devplatform_test
 
-// Integratsiya testi — HAQIQIY bazada (docker PostGIS, migratsiyalar qo'llangan).
+// Integratsiya testi â€” HAQIQIY bazada (docker PostGIS, migratsiyalar qo'llangan).
 //
 //	$env:ONDEXMAP_INTEGRATION='1'; go test ./internal/devplatform/ -run Integration -count=1 -v
 //
 // Isbotlaydi:
 //  1. meter/console do'konlari haqiqiy SQL bilan ishlaydi (kalit qidirish, hisoblagich UPSERT, oylik yig'indi);
-//  2. XAVFSIZLIK: rol grantlari haqiqatan ushlaydi — konsol o'ziga obuna/ekotizim bera olmaydi, hisob-fakturaga
+//  2. XAVFSIZLIK: rol grantlari haqiqatan ushlaydi â€” konsol o'ziga obuna/ekotizim bera olmaydi, hisob-fakturaga
 //     yozolmaydi; hisoblovchi kalit yarata olmaydi; ommaviy rollar yangi jadvallarni ko'rmaydi.
 //
 // Test o'z qatorlarini o'zi tozalaydi (`itest-` email prefiksi).
 
 import (
 	"context"
+	"errors"
 	"net/netip"
 	"os"
 	"testing"
@@ -32,7 +33,7 @@ type dsns struct{ owner, app, submit, meter, console string }
 func itestDSNs(t *testing.T) dsns {
 	t.Helper()
 	if os.Getenv("ONDEXMAP_INTEGRATION") != "1" {
-		t.Skip("ONDEXMAP_INTEGRATION=1 emas — integratsiya testi o'tkazib yuborildi")
+		t.Skip("ONDEXMAP_INTEGRATION=1 emas â€” integratsiya testi o'tkazib yuborildi")
 	}
 	cfg, err := config.Load("../../.env")
 	if err != nil {
@@ -58,7 +59,7 @@ func exec(t *testing.T, dsn, sql string, args ...any) error {
 	return err
 }
 
-// denied — 42501 (insufficient_privilege) kutiladi: boshqa xato ham "ruxsat yo'q" degani EMAS.
+// denied â€” 42501 (insufficient_privilege) kutiladi: boshqa xato ham "ruxsat yo'q" degani EMAS.
 func denied(t *testing.T, name string, err error) {
 	t.Helper()
 	var pe *pgconn.PgError
@@ -239,6 +240,65 @@ func TestIntegrationConstraints(t *testing.T) {
 	}
 }
 
+// PurgeExpired â€” soatlik tozalash ishi (cmd/console). Bu test AYNAN 2026-09-25 da
+// lokal sinovda chiqqan xatoni ushlaydi: `$1 - interval '7 days'` da cast bo'lmasa
+// Postgres parametrni `interval` deb taxmin qilib "operator does not exist:
+// timestamp with time zone < interval" beradi. Unit test buni KO'RMAYDI (SQL faqat
+// haqiqiy bazada tekshiriladi), xato esa jimgina WARN bo'lib logga tushardi.
+func TestIntegrationPurgeExpired(t *testing.T) {
+	d := itestDSNs(t)
+	cleanup(t, d.owner)
+	t.Cleanup(func() { cleanup(t, d.owner) })
+	ctx := context.Background()
+
+	cpool, err := storage.OpenConsole(ctx, d.console)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cpool.Close)
+	cs := console.NewPGStore(cpool)
+
+	acc, err := cs.CreateAccount(ctx, "itest-purge@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now()
+
+	// Muddati o'tgan kod (2 kun oldin) va sessiya (1 soat oldin).
+	if err := cs.CreateOTP(ctx, acc.Email, []byte("0123456789abcdef"), now.Add(-48*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	tokenHash := []byte("0123456789abcdef0123456789abcdef")
+	if err := cs.CreateSession(ctx, tokenHash, acc.ID, "csrf", now.Add(-time.Hour), "", ""); err != nil {
+		t.Fatal(err)
+	}
+
+	// ASOSIY TEKSHIRUV: xatosiz bajarilishi (regressiya shu yerda ushlanadi).
+	if err := cs.PurgeExpired(ctx, now); err != nil {
+		t.Fatalf("PurgeExpired xato qaytardi: %v", err)
+	}
+
+	// ...va haqiqatan o'chirgan bo'lishi.
+	if _, err := cs.SessionByHash(ctx, tokenHash); !errors.Is(err, console.ErrNotFound) {
+		t.Errorf("muddati o'tgan sessiya o'chmadi: %v", err)
+	}
+	if _, err := cs.LatestOTP(ctx, acc.Email); !errors.Is(err, console.ErrNotFound) {
+		t.Errorf("muddati o'tgan kod o'chmadi: %v", err)
+	}
+
+	// Yangi yozuvlarga TEGMASLIGI kerak.
+	fresh := []byte("ffffffffffffffffffffffffffffffff")
+	if err := cs.CreateSession(ctx, fresh, acc.ID, "csrf", now.Add(24*time.Hour), "", ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := cs.PurgeExpired(ctx, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := cs.SessionByHash(ctx, fresh); err != nil {
+		t.Errorf("amaldagi sessiya o'chib ketdi: %v", err)
+	}
+}
+
 func TestIntegrationRolePrivileges(t *testing.T) {
 	d := itestDSNs(t)
 	cleanup(t, d.owner)
@@ -258,7 +318,7 @@ func TestIntegrationRolePrivileges(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// ── KONSOL: pul va huquq ustunlariga TEGA OLMAYDI ──
+	// â”€â”€ KONSOL: pul va huquq ustunlariga TEGA OLMAYDI â”€â”€
 	for name, sql := range map[string]string{
 		"konsol: obunani yoqish":             `UPDATE dev_accounts SET subscription = true`,
 		"konsol: ekotizimni yoqish":          `UPDATE dev_accounts SET is_ecosystem = true`,
@@ -287,7 +347,7 @@ func TestIntegrationRolePrivileges(t *testing.T) {
 		t.Errorf("konsol kalitni bekor qila olmadi: %v", err)
 	}
 
-	// ── HISOBLOVCHI (cmd/api): kalit yarata olmaydi, hisob/obunaga tegolmaydi ──
+	// â”€â”€ HISOBLOVCHI (cmd/api): kalit yarata olmaydi, hisob/obunaga tegolmaydi â”€â”€
 	for name, sql := range map[string]string{
 		"meter: kalit yaratish":                    `INSERT INTO api_keys (account_id, name, kind, prefix, key_hash, apis) SELECT id, 'x', 'server', 'omk_s_bbbbbbbb', decode('aa','hex'), ARRAY['geocode'] FROM dev_accounts`,
 		"meter: kalitni tiklash":                   `UPDATE api_keys SET status = 'active'`,
@@ -305,7 +365,7 @@ func TestIntegrationRolePrivileges(t *testing.T) {
 		t.Errorf("meter kalit xeshini o'qiy olmadi: %v", err)
 	}
 
-	// ── OMMAVIY ROLLAR: yangi jadvallarni UMUMAN ko'rmaydi (0002 dagi avtomatik SELECT olib tashlangan) ──
+	// â”€â”€ OMMAVIY ROLLAR: yangi jadvallarni UMUMAN ko'rmaydi (0002 dagi avtomatik SELECT olib tashlangan) â”€â”€
 	for _, role := range []struct{ name, dsn string }{{"app", d.app}, {"submit", d.submit}} {
 		for _, tbl := range []string{"dev_accounts", "dev_otps", "dev_sessions", "api_keys", "api_usage_daily",
 			"billing_invoices", "dev_subscription_requests", "dev_audit_log"} {
