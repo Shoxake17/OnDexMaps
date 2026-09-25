@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PublicNav } from "@/components/PublicNav";
 
 export const metadata = { title: "OnDex Console — Hujjatlar" };
 
@@ -11,12 +12,14 @@ function Code({ children }: { children: string }) {
 }
 
 function Endpoint({
+  id,
   method,
   path,
   desc,
   params,
   example,
 }: {
+  id: string;
   method: string;
   path: string;
   desc: string;
@@ -24,7 +27,7 @@ function Endpoint({
   example: string;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
+    <div id={id} className="scroll-mt-20 rounded-xl border border-border bg-card p-5">
       <div className="flex items-center gap-2 mb-2">
         <span className="rounded bg-emerald-500/10 text-emerald-600 px-2 py-0.5 text-xs font-mono font-bold">{method}</span>
         <code className="text-sm font-semibold">{path}</code>
@@ -48,18 +51,7 @@ function Endpoint({
 export default function DocsPage() {
   return (
     <div className="min-h-screen">
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto max-w-3xl flex items-center justify-between px-4 h-14">
-          <span className="font-extrabold tracking-tight">
-            <span className="text-brand">On</span>
-            <span className="text-brand-dark dark:text-white">Dex</span>{" "}
-            <span className="text-muted font-medium">Console</span>
-          </span>
-          <Link href="/dashboard" className="text-sm text-brand hover:underline">
-            Boshqaruv paneli →
-          </Link>
-        </div>
-      </header>
+      <PublicNav />
 
       <main className="mx-auto max-w-3xl px-4 py-10 space-y-10">
         <div>
@@ -111,6 +103,7 @@ export default function DocsPage() {
           <h2 className="text-xl font-semibold">3. Endpointlar</h2>
 
           <Endpoint
+            id="geocode"
             method="GET"
             path="/v2/geocode"
             desc="Nom bo'yicha joy qidirish (shahar, ko'cha, mahalla, ob'ekt)."
@@ -127,6 +120,7 @@ export default function DocsPage() {
 }`}
           />
           <Endpoint
+            id="reverse"
             method="GET"
             path="/v2/reverse"
             desc="Koordinata bo'yicha manzil."
@@ -136,6 +130,7 @@ export default function DocsPage() {
             example={`{ "status": "OK", "result": { "text": "Chust, Bobur ko'chasi" } }`}
           />
           <Endpoint
+            id="directions"
             method="GET"
             path="/v2/directions"
             desc="Ikki nuqta orasidagi haqiqiy yo'l (masofa, vaqt, chiziq)."
@@ -149,6 +144,7 @@ export default function DocsPage() {
 }`}
           />
           <Endpoint
+            id="places"
             method="GET"
             path="/v2/places"
             desc="To'rtburchak ichidagi tasdiqlangan ob'ektlar (GeoJSON)."
@@ -156,6 +152,7 @@ export default function DocsPage() {
             example={`{ "status": "OK", "result": { "type": "FeatureCollection", "features": [...] } }`}
           />
           <Endpoint
+            id="places-by-id"
             method="GET"
             path="/v2/places/{id}"
             desc="Bitta ob'ektning to'liq ma'lumoti."
@@ -197,7 +194,7 @@ export default function DocsPage() {
           </table>
         </section>
 
-        <section>
+        <section id="pricing" className="scroll-mt-20">
           <h2 className="text-xl font-semibold mb-3">5. Tarif rejalari</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
             {[

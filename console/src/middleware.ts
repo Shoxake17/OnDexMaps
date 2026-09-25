@@ -8,9 +8,18 @@ import { NextResponse, type NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
 
+  // ⚠️ FAQAT DEV: Next.js Fast Refresh/debug uchun `eval()` ishlatadi
+  // (React "eval() is not supported" xatosi — production'da BU YO'Q,
+  // React o'zi ham aytadi). Production build'da bu qator YO'Q bo'ladi —
+  // xavfsizlik faqat dev serverida yumshatiladi, jonli saytda emas.
+  const scriptSrc =
+    process.env.NODE_ENV === "production"
+      ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`
+      : `script-src 'self' 'unsafe-eval' 'nonce-${nonce}' 'strict-dynamic'`;
+
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    scriptSrc,
     "style-src 'self' 'unsafe-inline'",
     "connect-src 'self'",
     "img-src 'self' data:",
