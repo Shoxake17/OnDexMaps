@@ -47,17 +47,40 @@ function SidebarNav() {
               {s.items && sectionOpen && (
                 <ul className="mt-0.5 space-y-0.5 border-l border-border pl-3 ml-3">
                   {s.items.map((it) => {
-                    const active = it.href === pathname;
+                    const itBase = it.href.split("#")[0];
+                    const active = itBase === pathname && !it.items;
+                    // Uchinchi daraja faqat shu shox ichida bo'lganda ochiladi.
+                    const childOpen = Boolean(it.items && pathname.startsWith(itBase));
                     return (
                       <li key={it.href}>
                         <Link
                           href={it.href}
                           className={`block rounded-md px-3 py-1.5 ${
-                            active ? "bg-brand/10 font-medium text-brand" : "text-muted hover:text-foreground"
+                            active || (it.items && pathname === itBase)
+                              ? "bg-brand/10 font-medium text-brand"
+                              : "text-muted hover:text-foreground"
                           }`}
                         >
                           {it.label}
                         </Link>
+                        {it.items && childOpen && (
+                          <ul className="mt-0.5 space-y-0.5 border-l border-border pl-3 ml-3">
+                            {it.items.map((sub) => (
+                              <li key={sub.href}>
+                                <Link
+                                  href={sub.href}
+                                  className={`block rounded-md px-3 py-1.5 ${
+                                    sub.href === pathname
+                                      ? "bg-brand/10 font-medium text-brand"
+                                      : "text-muted hover:text-foreground"
+                                  }`}
+                                >
+                                  {sub.label}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </li>
                     );
                   })}

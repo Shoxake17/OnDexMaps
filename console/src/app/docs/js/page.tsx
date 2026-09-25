@@ -35,6 +35,11 @@ export default function JsApiPage() {
             title: "Tezkor start",
             desc: "5 qadamda ishlaydigan xarita: kalit, kutubxona, konteyner, ishga tushirish, qidiruv.",
           },
+          {
+            href: "/docs/js/connect",
+            title: "API'ni ulash",
+            desc: "CDN va npm orqali ulash, xarita parametrlari, TypeScript, React, Vue va CSP.",
+          },
         ]}
       />
 

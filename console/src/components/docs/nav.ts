@@ -3,6 +3,8 @@
 export interface DocsItem {
   href: string;
   label: string;
+  /** Ichki sahifalar (uchinchi daraja, masalan «Ulash» ostidagi framework sahifalari). */
+  items?: DocsItem[];
 }
 
 export interface DocsSection {
@@ -20,6 +22,17 @@ export const DOCS_NAV: DocsSection[] = [
     items: [
       { href: "/docs/js/general", label: "Umumiy ma'lumot" },
       { href: "/docs/js/quickstart", label: "Tezkor start" },
+      {
+        href: "/docs/js/connect",
+        label: "API'ni ulash",
+        items: [
+          { href: "/docs/js/connect", label: "JavaScript'da" },
+          { href: "/docs/js/connect/typescript", label: "TypeScript'da" },
+          { href: "/docs/js/connect/react", label: "React" },
+          { href: "/docs/js/connect/vue", label: "Vue" },
+          { href: "/docs/js/connect/csp", label: "CSP bilan ulash" },
+        ],
+      },
     ],
   },
   {
@@ -43,5 +56,10 @@ export const DOCS_ORDER: DocsItem[] = [
   { href: "/docs/js", label: "JavaScript API" },
   { href: "/docs/js/general", label: "Umumiy ma'lumot" },
   { href: "/docs/js/quickstart", label: "Tezkor start" },
+  { href: "/docs/js/connect", label: "API'ni ulash: JavaScript" },
+  { href: "/docs/js/connect/typescript", label: "API'ni ulash: TypeScript" },
+  { href: "/docs/js/connect/react", label: "API'ni ulash: React" },
+  { href: "/docs/js/connect/vue", label: "API'ni ulash: Vue" },
+  { href: "/docs/js/connect/csp", label: "API'ni ulash: CSP bilan" },
   { href: "/docs/api", label: "REST API" },
 ];

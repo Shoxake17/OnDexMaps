@@ -97,6 +97,56 @@ export function Code({ children, lang }: { children: string; lang?: string }) {
   );
 }
 
+/** Tabs — bir nechta fayl uchun tabli kod bloklari (`index.html | index.js | package.json`). */
+export function Tabs({ files }: { files: { name: string; code: string }[] }) {
+  const [active, setActive] = useState(0);
+  const current = files[active];
+  return (
+    <div className="my-4">
+      <div className="flex gap-1 border-b border-border">
+        {files.map((f, i) => (
+          <button
+            key={f.name}
+            type="button"
+            onClick={() => setActive(i)}
+            className={`-mb-px border-b-2 px-3 py-2 font-mono text-xs transition-colors ${
+              i === active
+                ? "border-brand font-semibold text-foreground"
+                : "border-transparent text-muted hover:text-foreground"
+            }`}
+          >
+            {f.name}
+          </button>
+        ))}
+      </div>
+      <Code>{current.code}</Code>
+    </div>
+  );
+}
+
+/** ParamTable — yuklash parametrlari jadvali (image/console/OnJavaScript1.png dagi kabi). */
+export function ParamTable({
+  rows,
+}: {
+  rows: { name: string; required?: boolean; children: React.ReactNode }[];
+}) {
+  return (
+    <div className="my-4 overflow-hidden rounded-lg border border-border">
+      {rows.map((r, i) => (
+        <div key={r.name} className={`grid grid-cols-1 gap-2 p-4 sm:grid-cols-[140px_1fr] ${i > 0 ? "border-t border-border" : ""}`}>
+          <div>
+            <code className="font-mono text-sm font-semibold text-brand">{r.name}</code>
+          </div>
+          <div className="text-sm text-muted">
+            <div className="mb-1 italic">{r.required ? "Majburiy parametr" : "Ixtiyoriy parametr"}</div>
+            {r.children}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** CardGrid — bo'lim sahifalaridagi kartalar to'ri (image/console/JavaScript.png dagi kabi). */
 export function CardGrid({ cards }: { cards: { href: string; title: string; desc: string }[] }) {
   return (
