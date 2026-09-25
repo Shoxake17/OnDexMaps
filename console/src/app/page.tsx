@@ -1,18 +1,11 @@
-"use client";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { api, setCsrf } from "@/lib/api";
+import { redirect } from "next/navigation";
 
+/**
+ * Bosh sahifa — HUJJATLAR (login EMAS).
+ *
+ * Dasturchi avval API bilan tanishib chiqishi kerak; kalit olish uchun kirish
+ * faqat keyingi qadam. Shuning uchun ildiz manzil `/docs` ga yo'naltiriladi.
+ */
 export default function RootPage() {
-  const router = useRouter();
-  useEffect(() => {
-    api
-      .me()
-      .then((m) => {
-        setCsrf(m.csrf);
-        router.replace("/dashboard");
-      })
-      .catch(() => router.replace("/login"));
-  }, [router]);
-  return null;
+  redirect("/docs");
 }

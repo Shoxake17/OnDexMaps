@@ -3,29 +3,29 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 /**
- * PublicNav — ochiq sahifalar (hujjatlar) uchun navbar.
+ * PublicNav â€” ochiq sahifalar (hujjatlar) uchun navbar.
  *
  * Tuzilma Yandex Xaritalar API sahifasidan (`image/Developer.png`,
  * `image/ProductsBlock.png`): Mahsulotlar/Dasturchilar/Tariflar/FAQ + mega-panel.
- * Mazmun — FAQAT bizda bor narsalar; ikkita nom (`MapKit SDK`, `Static API`)
- * hali YO'Q — ular "Tez orada" belgisi bilan, havolasiz, bosilmaydigan holatda
+ * Mazmun â€” FAQAT bizda bor narsalar; ikkita nom (`MapKit SDK`, `Static API`)
+ * hali YO'Q â€” ular "Tez orada" belgisi bilan, havolasiz, bosilmaydigan holatda
  * (soxta imkoniyat va'da qilinmaydi, lekin reja sifatida ko'rsatiladi).
  */
 
 type Menu = "products" | "developer" | null;
 
 const MAPS_ITEMS: { label: string; desc: string; href?: string }[] = [
-  { label: "JavaScript API", desc: "Saytingizga interaktiv xarita", href: "/docs" },
-  { label: "Tiles API", desc: "Xaritaning o'zi (tile qatlami)", href: "/docs" },
-  { label: "MapKit SDK", desc: "Mobil ilova uchun — tez orada" },
-  { label: "Static API", desc: "Statik xarita rasmi — tez orada" },
+  { label: "JavaScript API", desc: "Saytingizga interaktiv xarita", href: "/docs/js" },
+  { label: "Tiles API", desc: "Xaritaning o'zi (tile qatlami)", href: "/docs/js/general#endpoints" },
+  { label: "MapKit SDK", desc: "Mobil ilova uchun â€” tez orada" },
+  { label: "Static API", desc: "Statik xarita rasmi â€” tez orada" },
 ];
 
 const DOCS_LINKS = [
-  { href: "/docs#geocode", label: "Geocode API", desc: "Nom → koordinata" },
-  { href: "/docs#reverse", label: "Reverse Geocode", desc: "Koordinata → manzil" },
-  { href: "/docs#directions", label: "Directions API", desc: "A → B haqiqiy yo'l" },
-  { href: "/docs#places", label: "Places API", desc: "Ob'ekt ma'lumoti" },
+  { href: "/docs/api#geocode", label: "Geocode API", desc: "Nom â†’ koordinata" },
+  { href: "/docs/api#reverse", label: "Reverse Geocode", desc: "Koordinata â†’ manzil" },
+  { href: "/docs/api#directions", label: "Directions API", desc: "A â†’ B haqiqiy yo'l" },
+  { href: "/docs/api#places", label: "Places API", desc: "Ob'ekt ma'lumoti" },
 ];
 
 const CONSOLE_LINKS = [
@@ -102,10 +102,10 @@ export function PublicNav() {
         <nav className="hidden items-center gap-1 sm:flex">
           <NavButton label="Mahsulotlar" menu="products" current={menu} onToggle={setMenu} />
           <NavButton label="Dasturchilar" menu="developer" current={menu} onToggle={setMenu} />
-          <a href="/docs#pricing" onClick={() => setMenu(null)} className="rounded-md px-3 py-2 text-sm text-zinc-300 hover:text-white">
+          <a href="/docs/api#pricing" onClick={() => setMenu(null)} className="rounded-md px-3 py-2 text-sm text-zinc-300 hover:text-white">
             Tariflar
           </a>
-          <a href="/docs#faq" onClick={() => setMenu(null)} className="rounded-md px-3 py-2 text-sm text-zinc-300 hover:text-white">
+          <a href="/docs/api#faq" onClick={() => setMenu(null)} className="rounded-md px-3 py-2 text-sm text-zinc-300 hover:text-white">
             FAQ
           </a>
         </nav>
