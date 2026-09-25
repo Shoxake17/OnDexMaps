@@ -215,6 +215,23 @@ export default function DocsPage() {
             qo'lda tasdiqlash (boshqaruv panelidagi "Hisob-faktura" bo'limi).
           </p>
         </section>
+
+        <section id="faq" className="scroll-mt-20 space-y-4">
+          <h2 className="text-xl font-semibold">6. Ko'p so'raladigan savollar</h2>
+          {[
+            ["API kalitni qanday olaman?", "Email va bir martalik kod bilan kiring, so'ng \"API kalitlar\" bo'limida yarating. Kalit FAQAT bir marta ko'rsatiladi."],
+            ["Bepul va obuna reja farqi nimada?", "Bepul: 10 so'rov/s, oyiga 200 000. Obuna: 100 so'rov/s, oylik chegarasiz, oyiga qat'iy 50 000 so'm — ishlatilgan so'rov soniga bog'liq emas."],
+            ["API orqali xaritaga joy qo'sha olamanmi?", "Yo'q. /v2 faqat O'QISH uchun (geocode, reverse, directions, places). Yozish funksiyasi API'da umuman yo'q."],
+            ["Server va brauzer kaliti farqi?", "Server kaliti — faqat X-API-Key sarlavhasida, ixtiyoriy IP cheklovi bilan. Brauzer kaliti — ?key= orqali ham yuboriladi, lekin ruxsat etilgan domen(lar) MAJBURIY."],
+            ["Kalitim oshkor bo'lib qolsa nima qilaman?", "\"Almashtirish\"ni bosing — yangi kalit darhol ishlaydi, eskisi 24 soat davomida ham ishlaydi (uzilishsiz o'tish), so'ng avtomatik bekor bo'ladi."],
+            ["To'lovni qanday amalga oshiraman?", "Obuna yoqilgach har oy hisob-faktura chiqadi. To'lov qo'lda tasdiqlanadi — \"Hisob-faktura\" bo'limida ko'rsatma va holatni kuzatib borasiz."],
+          ].map(([q, a]) => (
+            <div key={q} className="rounded-xl border border-border bg-card p-5">
+              <div className="font-semibold mb-1">{q}</div>
+              <p className="text-sm text-muted">{a}</p>
+            </div>
+          ))}
+        </section>
       </main>
     </div>
   );

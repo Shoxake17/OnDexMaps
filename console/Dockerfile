@@ -30,10 +30,8 @@ RUN rm -rf \
       /usr/local/bin/corepack \
       /opt/yarn-* /usr/local/bin/yarn /usr/local/bin/yarnpkg
 
-# ⚠️ `web/Dockerfile`dan farqli: bu loyihada HALI `public/` papkasi yo'q
-# (statik rasm/favicon yo'q) — `COPY --from=builder .../public` shu sababli
-# YO'Q (bo'lmagan manbadan COPY buildni yiqitadi). `console/public/` paydo
-# bo'lsa shu qatorni qaytaring: `COPY --from=builder --chown=node:node /app/public ./public`
+# `console/public/logo.png` — navbardagi OnDexMap belgisi (2026-09-25 qo'shildi).
+COPY --from=builder --chown=node:node /app/public ./public
 COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 
