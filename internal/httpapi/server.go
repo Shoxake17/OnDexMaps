@@ -208,6 +208,23 @@ func cachedPublicAsset(p string) bool {
 		p == "/tiles/chust.pmtiles"
 }
 
+// publicCORSAsset — BOSHQA SAYTLARDAN ham yuklanishi kerak bo'lgan ommaviy
+// boyliklar.
+//
+// ┌─ NEGA `cachedPublicAsset` DAN ALOHIDA ─────────────────────────────┐
+// U ikki qarorni bitta funksiyada birlashtirgan edi: "keshlansinmi" va
+// "tashqi saytga berilsinmi". `style.json` uchun javoblar HAR XIL:
+// keshlanmaydi (`no-store` — manzillar sozlamadan keladi), lekin tashqi
+// sayt uni O'QIY OLISHI SHART — JavaScript API butunlay shunga tayanadi.
+//
+// Busiz hujjatlardagi tezkor start MIJOZDA ISHLAMAYDI: shrift va tile
+// (R2, `*`) keladi, uslub esa CORS'da bloklanadi va xarita oq qoladi.
+// Bu 2026-09-26 da junior yo'lini sinab ko'rganda aniqlangan.
+// └────────────────────────────────────────────────────────────────────┘
+func publicCORSAsset(p string) bool {
+	return cachedPublicAsset(p) || p == "/tiles/style.json"
+}
+
 // cors — ALLOWED_ORIGINS ro'yxati bo'yicha.
 //
 // Ro'yxat bo'sh bo'lsa hech qanday CORS sarlavhasi yuborilmaydi va
@@ -237,7 +254,7 @@ func (s *Server) cors(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		if cachedPublicAsset(r.URL.Path) {
+		if publicCORSAsset(r.URL.Path) {
 			h.Set("Access-Control-Allow-Origin", "*")
 			h.Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 		} else {
