@@ -16,6 +16,15 @@
 # chiqarib tashlanadi.
 *.md
 
+# ── Maket va namuna rasmlari ─────────────────────────────────────────
+# `image/` — dizayn maketlari va skrinshotlar (Yandex namunalari, navbar
+# maketlari, hujjatlar sahifa daraxti). Ular FAQAT ishlab chiqish paytida
+# qarash uchun: kod ulardan hech narsa yuklamaydi va `go:embed` ham
+# qilmaydi (tekshirildi 2026-09-26 — barcha havolalar izohlarda).
+# Xaritada ishlatiladigan yagona rasm `internal/mapui/ondex-pin.png`,
+# u o'z papkasida turadi va repoda qoladi.
+image/
+
 # ── Sirlar ───────────────────────────────────────────────────────────
 # `.env.example` ham repoga KIRITILMAYDI (kerak emas): `.env.*` uni qamrab oladi,
 # aniq yozib qo'yildi — lokal nusxasi tursa ham git ko'rmaydi.
