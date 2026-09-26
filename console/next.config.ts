@@ -13,6 +13,17 @@ const CONSOLE_API_INTERNAL_URL = (
   process.env.CONSOLE_API_INTERNAL_URL ?? "http://localhost:8093"
 ).replace(/\/$/, "");
 
+/**
+ * ONDEXMAP_API_URL — ommaviy xarita API'si (`cmd/api`). OpenAPI kontrakti
+ * SHU YERDAN olinadi va konsolning O'Z domenida (`/openapi.yaml`) beriladi.
+ *
+ * Nega proksi: kontraktni to'g'ridan-to'g'ri `maps.ondex.uz` dan yuklash
+ * konsolning qat'iy CSP'siga (`connect-src 'self'`) urилиб qolardi va
+ * yana bitta domen ruxsati talab qilinardi. Proksi bilan brauzer uchun
+ * hammasi bitta origin bo'lib qoladi.
+ */
+const ONDEXMAP_API_URL = (process.env.ONDEXMAP_API_URL ?? "https://maps.ondex.uz").replace(/\/$/, "");
+
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
@@ -22,6 +33,8 @@ const nextConfig: NextConfig = {
     return [
       { source: "/api/:path*", destination: `${CONSOLE_API_INTERNAL_URL}/api/:path*` },
       { source: "/healthz", destination: `${CONSOLE_API_INTERNAL_URL}/healthz` },
+      // OpenAPI kontrakti — `cmd/api` dan, lekin konsol domenida ko'rinadi.
+      { source: "/openapi.yaml", destination: `${ONDEXMAP_API_URL}/v2/openapi.yaml` },
     ];
   },
 

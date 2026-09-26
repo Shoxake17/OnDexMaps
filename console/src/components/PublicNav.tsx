@@ -3,12 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 /**
- * PublicNav â€” ochiq sahifalar (hujjatlar) uchun navbar.
+ * PublicNav — ochiq sahifalar (hujjatlar) uchun navbar.
  *
  * Tuzilma Yandex Xaritalar API sahifasidan (`image/Developer.png`,
  * `image/ProductsBlock.png`): Mahsulotlar/Dasturchilar/Tariflar/FAQ + mega-panel.
- * Mazmun â€” FAQAT bizda bor narsalar; ikkita nom (`MapKit SDK`, `Static API`)
- * hali YO'Q â€” ular "Tez orada" belgisi bilan, havolasiz, bosilmaydigan holatda
+ * Mazmun — FAQAT bizda bor narsalar; ikkita nom (`MapKit SDK`, `Static API`)
+ * hali YO'Q — ular "Tez orada" belgisi bilan, havolasiz, bosilmaydigan holatda
  * (soxta imkoniyat va'da qilinmaydi, lekin reja sifatida ko'rsatiladi).
  */
 
@@ -17,14 +17,14 @@ type Menu = "products" | "developer" | null;
 const MAPS_ITEMS: { label: string; desc: string; href?: string }[] = [
   { label: "JavaScript API", desc: "Saytingizga interaktiv xarita", href: "/docs/js" },
   { label: "Tiles API", desc: "Xaritaning o'zi (tile qatlami)", href: "/docs/js/general#endpoints" },
-  { label: "MapKit SDK", desc: "Mobil ilova uchun â€” tez orada" },
-  { label: "Static API", desc: "Statik xarita rasmi â€” tez orada" },
+  { label: "MapKit SDK", desc: "Mobil ilova uchun — tez orada" },
+  { label: "Static API", desc: "Statik xarita rasmi — tez orada" },
 ];
 
 const DOCS_LINKS = [
-  { href: "/docs/api#geocode", label: "Geocode API", desc: "Nom â†’ koordinata" },
-  { href: "/docs/api#reverse", label: "Reverse Geocode", desc: "Koordinata â†’ manzil" },
-  { href: "/docs/api#directions", label: "Directions API", desc: "A â†’ B haqiqiy yo'l" },
+  { href: "/docs/api#geocode", label: "Geocode API", desc: "Nom → koordinata" },
+  { href: "/docs/api#reverse", label: "Reverse Geocode", desc: "Koordinata → manzil" },
+  { href: "/docs/api#directions", label: "Directions API", desc: "A → B haqiqiy yo'l" },
   { href: "/docs/api#places", label: "Places API", desc: "Ob'ekt ma'lumoti" },
 ];
 

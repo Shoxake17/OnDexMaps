@@ -44,6 +44,7 @@ export const DOCS_NAV: DocsSection[] = [
       { href: "/docs/api#directions", label: "Directions" },
       { href: "/docs/api#places", label: "Places" },
       { href: "/docs/api#errors", label: "Xatolar" },
+      { href: "/docs/api/reference", label: "OpenAPI ma'lumotnoma" },
     ],
   },
   { label: "Tariflar", href: "/docs/api#pricing" },
@@ -62,4 +63,5 @@ export const DOCS_ORDER: DocsItem[] = [
   { href: "/docs/js/connect/vue", label: "API'ni ulash: Vue" },
   { href: "/docs/js/connect/csp", label: "API'ni ulash: CSP bilan" },
   { href: "/docs/api", label: "REST API" },
+  { href: "/docs/api/reference", label: "OpenAPI ma'lumotnoma" },
 ];

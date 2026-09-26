@@ -32,6 +32,11 @@ export default function DocsHome() {
             desc: "Geokodlash, teskari geokodlash, A → B marshrut va ob'ekt ma'lumoti — server yoki brauzerdan.",
           },
           {
+            href: "/docs/api/reference",
+            title: "OpenAPI ma'lumotnoma",
+            desc: "Rasmiy kontrakt: barcha parametrlar, javob shakllari va «Try it» bilan sinash.",
+          },
+          {
             href: "/docs/api#key",
             title: "API kalitlar",
             desc: "Server va brauzer kalitlari, domen/IP cheklovlari, xavfsiz almashtirish.",

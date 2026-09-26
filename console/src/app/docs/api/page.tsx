@@ -53,6 +53,16 @@ export default function DocsPage() {
     <div className="max-w-3xl space-y-10">
       <div>
         <h1 className="text-3xl font-bold mb-3">REST API</h1>
+        <p className="mb-3 rounded-lg border-l-4 border-brand/40 bg-brand/5 px-4 py-3 text-sm">
+          Aniq parametrlar, javob sxemalari va brauzerdan sinash uchun —{" "}
+          <Link href="/docs/api/reference" className="font-medium text-brand hover:underline">
+            OpenAPI ma&apos;lumotnomasi
+          </Link>
+          . Mashina o&apos;qiydigan kontrakt:{" "}
+          <Link href="/openapi.yaml" className="font-mono text-xs text-brand hover:underline">
+            /openapi.yaml
+          </Link>
+        </p>
         <p className="text-muted">
           OnDexMap REST API'si Google Maps Platform'ga o'xshab ishlaydi: geokodlash (nom → koordinata), teskari
           geokodlash (koordinata → manzil), A → B yo'l ko'rsatish va ob'ekt ma'lumoti. Boshqa hech qanday amal

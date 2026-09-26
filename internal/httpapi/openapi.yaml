@@ -1,0 +1,729 @@
+openapi: 3.1.0
+
+# ═══════════════════════════════════════════════════════════════════════
+# OnDexMap Developer API — rasmiy kontrakt.
+#
+# ⚠️ BU FAYL — YAGONA HAQIQAT MANBAI. Uni kod bilan sinxron ushlab turish
+# QO'LDA emas, TEST bilan ta'minlanadi: `internal/httpapi/openapi_test.go`
+# har bir yo'l, API nomi va xato kodi koddagi ro'yxat bilan mos kelishini
+# tekshiradi. Yangi endpoint qo'shsangiz test yiqiladi — bu ataylab.
+#
+# Fayl `cmd/api` binariga `go:embed` bilan kiritiladi va
+# `GET /v2/openapi.yaml` orqali beriladi (qo'shimcha bog'liqliksiz:
+# YAML server tomonda TAHLIL QILINMAYDI, xuddi shundayligicha uzatiladi).
+# ═══════════════════════════════════════════════════════════════════════
+
+info:
+  title: OnDexMap Developer API
+  version: "2.0.0"
+  summary: O'zbekiston uchun geokodlash, marshrut va joylar API'si.
+  description: |
+    OnDexMap — O'zbekiston uchun o'z xarita platformamiz. Ushbu API faqat
+    **o'qish** amallarini taqdim etadi: nom bo'yicha qidirish, koordinata
+    bo'yicha manzil, ikki nuqta orasidagi haqiqiy yo'l va ob'ekt ma'lumoti.
+
+    ## Yozish amallari yo'q
+
+    API orqali xaritaga joy qo'shish, o'zgartirish yoki o'chirish
+    **MUMKIN EMAS**. Bu ongli qaror: ma'lumot sifati moderatsiya orqali
+    ta'minlanadi.
+
+    ## Autentifikatsiya
+
+    Har bir so'rov API kalit talab qiladi. Kalitni
+    [console.ondex.uz](https://console.ondex.uz) da olasiz. Ikki turi bor:
+
+    - **Server kaliti** (`omk_s_…`) — faqat `X-API-Key` sarlavhasida
+      yuboriladi. URL'da yuborilsa rad etiladi (URL loglarga tushadi).
+      Ixtiyoriy IP/CIDR cheklovi qo'yiladi.
+    - **Brauzer kaliti** (`omk_b_…`) — `?key=` parametri orqali ham
+      yuborilishi mumkin. Ruxsat etilgan domenlar ro'yxati **majburiy**.
+
+    ## Chegaralar
+
+    | Reja | Tezlik | Oylik |
+    |---|---|---|
+    | Bepul | 10 so'rov/s | 200 000 |
+    | Obuna | 100 so'rov/s | cheklovsiz |
+
+    Chegaraga yetganda `429` qaytadi va `Retry-After` sarlavhasi
+    qancha kutish kerakligini aytadi.
+
+    ## Hududiy qamrov
+
+    - `/v2/geocode`, `/v2/places` — butun O'zbekiston
+    - `/v2/reverse`, `/v2/directions` — xizmat hududi (40.5–41.6° N,
+      70.5–72.0° E)
+  contact:
+    name: OnDex Console
+    url: https://console.ondex.uz/docs
+  license:
+    name: Proprietary
+    identifier: LicenseRef-OnDex-Proprietary
+
+externalDocs:
+  description: Qo'llanmalar, tezkor start va misollar
+  url: https://console.ondex.uz/docs
+
+servers:
+  - url: https://maps.ondex.uz
+    description: Production
+
+tags:
+  - name: Geokodlash
+    description: Nom ↔ koordinata o'zgartirish.
+  - name: Marshrut
+    description: Ikki nuqta orasidagi haqiqiy yo'l.
+  - name: Ob'ektlar
+    description: Xaritadagi tasdiqlangan ob'ektlar.
+  - name: Xizmat
+    description: Kontrakt va sog'liq.
+
+# Standart: ikkala kalit usuli ham qabul qilinadi. Server kaliti uchun
+# `?key=` ATAYLAB rad etiladi (kod darajasida) — bu OpenAPI'da
+# ifodalab bo'lmaydigan qoida, shuning uchun tavsifda aytilgan.
+security:
+  - ApiKeyHeader: []
+  - ApiKeyQuery: []
+
+paths:
+  /v2/geocode:
+    get:
+      tags: [Geokodlash]
+      operationId: geocode
+      summary: Nom bo'yicha joy qidirish
+      description: |
+        Shahar, qishloq, mahalla, ko'cha, bino va ob'ektlarni nomi bo'yicha
+        qidiradi. Kirill va lotin yozuvlari, shuningdek apostrof variantlari
+        bir xil natijaga olib keladi.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Qidiruv matni.
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 100
+          example: Chust bozori
+        - name: limit
+          in: query
+          description: Natijalar soni.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 25
+            default: 10
+        - name: lat
+          in: query
+          description: |
+            Xarita markazi (kenglik) — teng natijalardan yaqini oldin chiqadi.
+            `lng` bilan BIRGA berilishi shart.
+          schema: { $ref: "#/components/schemas/UzLatitude" }
+        - name: lng
+          in: query
+          description: Xarita markazi (uzunlik). `lat` bilan birga.
+          schema: { $ref: "#/components/schemas/UzLongitude" }
+      responses:
+        "200":
+          description: Natijalar (bo'sh bo'lishi ham mumkin).
+          headers:
+            X-Plan: { $ref: "#/components/headers/XPlan" }
+            X-Quota-Limit: { $ref: "#/components/headers/XQuotaLimit" }
+            X-Quota-Used: { $ref: "#/components/headers/XQuotaUsed" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GeocodeResponse" }
+              examples:
+                topildi:
+                  summary: Natija topildi
+                  value:
+                    status: OK
+                    results:
+                      - id: g862071
+                        type: town
+                        name: Chust
+                        label: Shaharcha
+                        lat: 41.004181
+                        lng: 71.234093
+                        bbox: [71.194371, 40.969621, 71.270663, 41.030055]
+                        score: 122
+                bosh:
+                  summary: Hech narsa topilmadi
+                  value:
+                    status: ZERO_RESULTS
+                    results: []
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+        "502": { $ref: "#/components/responses/UpstreamError" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v2/reverse:
+    get:
+      tags: [Geokodlash]
+      operationId: reverseGeocode
+      summary: Koordinata bo'yicha manzil
+      description: |
+        Berilgan nuqta uchun mahalla va eng yaqin ko'chani qaytaradi.
+        **Faqat xizmat hududi ichida** ishlaydi.
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          description: Kenglik (xizmat hududi ichida).
+          schema: { $ref: "#/components/schemas/ServiceLatitude" }
+          example: 41.0004
+        - name: lng
+          in: query
+          required: true
+          description: Uzunlik (xizmat hududi ichida).
+          schema: { $ref: "#/components/schemas/ServiceLongitude" }
+          example: 71.2394
+      responses:
+        "200":
+          description: Manzil topildi yoki bu nuqta uchun ma'lumot yo'q.
+          headers:
+            X-Plan: { $ref: "#/components/headers/XPlan" }
+            X-Quota-Limit: { $ref: "#/components/headers/XQuotaLimit" }
+            X-Quota-Used: { $ref: "#/components/headers/XQuotaUsed" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReverseResponse" }
+              examples:
+                topildi:
+                  value:
+                    status: OK
+                    result:
+                      text: "Chust, Bobur ko'chasi"
+                      mahalla: { id: m-1, name: "Bobur MFY" }
+                      street: { id: s-9, name: "Bobur ko'chasi" }
+                      street_distance_m: 24
+                bosh:
+                  value:
+                    status: ZERO_RESULTS
+                    result: null
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+        "502": { $ref: "#/components/responses/UpstreamError" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v2/directions:
+    get:
+      tags: [Marshrut]
+      operationId: directions
+      summary: A → B marshrut
+      description: |
+        Ikki nuqta orasidagi haqiqiy yo'l bo'ylab marshrut: masofa, taxminiy
+        vaqt va GeoJSON chizig'i. **Faqat xizmat hududi ichida.**
+      parameters:
+        - name: origin
+          in: query
+          required: true
+          description: Boshlanish nuqtasi, `lat,lng` ko'rinishida.
+          schema: { $ref: "#/components/schemas/LatLngPair" }
+          example: "41.0004,71.2394"
+        - name: destination
+          in: query
+          required: true
+          description: Tugash nuqtasi, `lat,lng` ko'rinishida.
+          schema: { $ref: "#/components/schemas/LatLngPair" }
+          example: "41.0096,71.2325"
+      responses:
+        "200":
+          description: Marshrut topildi yoki yo'l yo'q.
+          headers:
+            X-Plan: { $ref: "#/components/headers/XPlan" }
+            X-Quota-Limit: { $ref: "#/components/headers/XQuotaLimit" }
+            X-Quota-Used: { $ref: "#/components/headers/XQuotaUsed" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DirectionsResponse" }
+              examples:
+                topildi:
+                  value:
+                    status: OK
+                    routes:
+                      - distance_m: 1240
+                        duration_s: 180
+                        geometry:
+                          type: LineString
+                          coordinates: [[71.2394, 41.0004], [71.2325, 41.0096]]
+                yolYoq:
+                  summary: Bu ikki nuqta orasida yo'l topilmadi
+                  value:
+                    status: ZERO_RESULTS
+                    routes: []
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+        "502": { $ref: "#/components/responses/UpstreamError" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v2/places:
+    get:
+      tags: [Ob'ektlar]
+      operationId: listPlaces
+      summary: To'rtburchak ichidagi ob'ektlar
+      description: |
+        Ko'rsatilgan to'rtburchak ichidagi tasdiqlangan ob'ektlarni GeoJSON
+        `FeatureCollection` sifatida qaytaradi. Bir so'rovda ko'pi bilan
+        500 ta ob'ekt.
+      parameters:
+        - name: bbox
+          in: query
+          required: true
+          description: |
+            `g'arb,janub,sharq,shimol` (uzunlik, kenglik, uzunlik, kenglik).
+            Tomonlari 1.5 gradusdan oshmasligi kerak.
+          schema:
+            type: string
+            pattern: '^-?\d+(\.\d+)?(,-?\d+(\.\d+)?){3}$'
+          example: "71.20,40.98,71.28,41.03"
+      responses:
+        "200":
+          description: GeoJSON to'plami.
+          headers:
+            X-Plan: { $ref: "#/components/headers/XPlan" }
+            X-Quota-Limit: { $ref: "#/components/headers/XQuotaLimit" }
+            X-Quota-Used: { $ref: "#/components/headers/XQuotaUsed" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlacesResponse" }
+              examples:
+                namuna:
+                  value:
+                    status: OK
+                    result:
+                      type: FeatureCollection
+                      features:
+                        - type: Feature
+                          id: 7b1f2c33-0000-4000-8000-00000000abcd
+                          geometry: { type: Point, coordinates: [71.2394, 41.0004] }
+                          properties:
+                            id: 7b1f2c33-0000-4000-8000-00000000abcd
+                            kind: shop
+                            name: "Chust bozori"
+                            category: bozor
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+        "502": { $ref: "#/components/responses/UpstreamError" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v2/places/{id}:
+    get:
+      tags: [Ob'ektlar]
+      operationId: getPlace
+      summary: Bitta ob'ekt ma'lumoti
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Ob'ekt identifikatori (UUID).
+          schema:
+            type: string
+            format: uuid
+          example: 7b1f2c33-0000-4000-8000-00000000abcd
+      responses:
+        "200":
+          description: Ob'ekt topildi.
+          headers:
+            X-Plan: { $ref: "#/components/headers/XPlan" }
+            X-Quota-Limit: { $ref: "#/components/headers/XQuotaLimit" }
+            X-Quota-Used: { $ref: "#/components/headers/XQuotaUsed" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlaceResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+        "502": { $ref: "#/components/responses/UpstreamError" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v2/openapi.yaml:
+    get:
+      tags: [Xizmat]
+      operationId: getOpenApiSpec
+      summary: Ushbu kontraktning o'zi
+      description: |
+        Mashina o'qiy oladigan OpenAPI hujjati. Kalit TALAB QILINMAYDI —
+        kontrakt ochiq, uni kalit olishdan oldin ham ko'rish mumkin.
+      security: []
+      responses:
+        "200":
+          description: OpenAPI hujjati (YAML).
+          content:
+            application/yaml:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    ApiKeyHeader:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: |
+        Kalitni sarlavhada yuborish. **Server kalitlari uchun yagona
+        ruxsat etilgan usul.**
+    ApiKeyQuery:
+      type: apiKey
+      in: query
+      name: key
+      description: |
+        Kalitni URL parametrida yuborish. **Faqat brauzer kalitlari uchun.**
+        Server kaliti shu tarzda yuborilsa `403 key_restricted` qaytadi:
+        URL loglarga, brauzer tarixiga va `Referer` ga tushadi.
+
+  headers:
+    XPlan:
+      description: Hisobning joriy tarifi.
+      schema:
+        type: string
+        enum: [free, paid, ecosystem]
+    XQuotaLimit:
+      description: Oylik so'rov chegarasi (faqat chegarali rejalarda).
+      schema: { type: integer }
+    XQuotaUsed:
+      description: Shu oyda ishlatilgan so'rovlar soni.
+      schema: { type: integer }
+    RetryAfter:
+      description: Necha soniyadan keyin qayta urinish mumkinligi.
+      schema: { type: integer }
+
+  schemas:
+    UzLatitude:
+      type: number
+      format: double
+      minimum: 37.0
+      maximum: 45.8
+      description: Kenglik — O'zbekiston chegarasida.
+    UzLongitude:
+      type: number
+      format: double
+      minimum: 55.5
+      maximum: 73.5
+      description: Uzunlik — O'zbekiston chegarasida.
+    ServiceLatitude:
+      type: number
+      format: double
+      minimum: 40.5
+      maximum: 41.6
+      description: Kenglik — xizmat hududida.
+    ServiceLongitude:
+      type: number
+      format: double
+      minimum: 70.5
+      maximum: 72.0
+      description: Uzunlik — xizmat hududida.
+    LatLngPair:
+      type: string
+      pattern: '^-?\d+(\.\d+)?,-?\d+(\.\d+)?$'
+      description: "`lat,lng` — vergul bilan, probelsiz."
+
+    Status:
+      type: string
+      enum: [OK, ZERO_RESULTS]
+      description: Natija holati.
+
+    Match:
+      type: object
+      required: [id, type, name, score]
+      properties:
+        id: { type: string }
+        type:
+          type: string
+          description: |
+            Ob'ekt turi: `region`, `district`, `city`, `town`, `village`,
+            `hamlet`, `suburb`, `locality`, `street`, `water`, `poi`,
+            `building`, `address`, `mahalla`, `qishloq`, `daha`.
+        name: { type: string }
+        kind:
+          type: string
+          description: Aholi punkti turi (mahalla jadvalidan kelgan natijalarda).
+        label:
+          type: string
+          description: O'zbekcha tur nomi ("Ko'cha", "Maktab").
+        near:
+          type: string
+          description: Eng yaqin aholi punkti.
+        lat: { type: number, format: double }
+        lng: { type: number, format: double }
+        bbox:
+          type: array
+          items: { type: number, format: double }
+          minItems: 4
+          maxItems: 4
+          description: "[g'arb, janub, sharq, shimol]"
+        score:
+          type: number
+          description: Moslik bahosi — ro'yxat shu bo'yicha saralangan.
+        matched_via: { type: string }
+
+    GeocodeResponse:
+      type: object
+      required: [status, results]
+      properties:
+        status: { $ref: "#/components/schemas/Status" }
+        results:
+          type: array
+          items: { $ref: "#/components/schemas/Match" }
+
+    Named:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+
+    Place:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          description: Tayyor manzil matni.
+        mahalla: { $ref: "#/components/schemas/Named" }
+        street: { $ref: "#/components/schemas/Named" }
+        street_distance_m:
+          type: integer
+          description: Ko'chagacha masofa (metr).
+
+    ReverseResponse:
+      type: object
+      required: [status, result]
+      properties:
+        status: { $ref: "#/components/schemas/Status" }
+        result:
+          oneOf:
+            - { $ref: "#/components/schemas/Place" }
+            - { type: "null" }
+
+    LineString:
+      type: object
+      required: [type, coordinates]
+      properties:
+        type: { type: string, const: LineString }
+        coordinates:
+          type: array
+          description: "[lng, lat] juftliklari."
+          items:
+            type: array
+            items: { type: number, format: double }
+            minItems: 2
+            maxItems: 2
+
+    Route:
+      type: object
+      required: [distance_m, duration_s, geometry]
+      properties:
+        distance_m: { type: number, description: Masofa (metr). }
+        duration_s: { type: number, description: Taxminiy vaqt (soniya). }
+        geometry: { $ref: "#/components/schemas/LineString" }
+
+    DirectionsResponse:
+      type: object
+      required: [status, routes]
+      properties:
+        status: { $ref: "#/components/schemas/Status" }
+        routes:
+          type: array
+          items: { $ref: "#/components/schemas/Route" }
+
+    PlacesResponse:
+      type: object
+      required: [status, result]
+      properties:
+        status: { type: string, const: OK }
+        result:
+          type: object
+          required: [type, features]
+          description: GeoJSON FeatureCollection.
+          properties:
+            type: { type: string, const: FeatureCollection }
+            features:
+              type: array
+              items:
+                type: object
+                properties:
+                  type: { type: string, const: Feature }
+                  id: { type: string }
+                  geometry: { type: object }
+                  properties:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      kind: { type: string }
+                      name: { type: string }
+                      category: { type: string }
+
+    PlaceDetail:
+      type: object
+      required: [id, kind, kind_label, lat, lng, photos, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, description: Ob'ekt turi (kod). }
+        kind_label: { type: string, description: Turning o'zbekcha nomi. }
+        name: { type: string }
+        category: { type: string }
+        description: { type: string }
+        phone: { type: string }
+        hours: { type: string }
+        street: { type: string }
+        house: { type: string }
+        site: { type: string, format: uri }
+        social: { type: string, format: uri }
+        lat: { type: number, format: double }
+        lng: { type: number, format: double }
+        photos: { type: integer, description: Rasmlar soni. }
+        geometry:
+          type: object
+          description: GeoJSON (Point yoki LineString).
+        length_m:
+          type: number
+          description: Chiziq uzunligi (metr); nuqta uchun yo'q.
+        created_at: { type: string, format: date-time }
+
+    PlaceResponse:
+      type: object
+      required: [status, result]
+      properties:
+        status: { type: string, const: OK }
+        result: { $ref: "#/components/schemas/PlaceDetail" }
+
+    Error:
+      type: object
+      required: [status, error]
+      properties:
+        status:
+          type: string
+          enum: [INVALID_REQUEST, NOT_FOUND, REQUEST_DENIED, OVER_QUERY_LIMIT, UNKNOWN_ERROR]
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum:
+                - missing_key
+                - invalid_key
+                - key_restricted
+                - account_suspended
+                - api_not_allowed
+                - rate_limited
+                - quota_exceeded
+                - auth_blocked
+                - service_unavailable
+                - invalid_request
+                - not_found
+                - upstream_error
+            message:
+              type: string
+              description: O'zbek tilida, foydalanuvchiga ko'rsatish uchun yaroqli.
+
+  responses:
+    InvalidRequest:
+      description: So'rov parametrlari noto'g'ri.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            status: INVALID_REQUEST
+            error:
+              code: invalid_request
+              message: "q 2–100 belgi bo'lishi kerak"
+
+    Unauthorized:
+      description: Kalit yo'q yoki yaroqsiz.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            kalitYoq:
+              value:
+                status: REQUEST_DENIED
+                error:
+                  code: missing_key
+                  message: "API kalit yuborilmagan (X-API-Key sarlavhasi yoki ?key=)"
+            yaroqsiz:
+              value:
+                status: REQUEST_DENIED
+                error: { code: invalid_key, message: "API kalit yaroqsiz" }
+
+    Forbidden:
+      description: |
+        Kalit bor, lekin bu so'rovga ruxsat yo'q: domen/IP mos kelmadi,
+        API kalitda yoqilmagan yoki hisob to'xtatilgan.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            domen:
+              value:
+                status: REQUEST_DENIED
+                error:
+                  code: key_restricted
+                  message: "bu domen (Origin) kalit uchun ruxsat etilmagan"
+            yoqilmagan:
+              value:
+                status: REQUEST_DENIED
+                error:
+                  code: api_not_allowed
+                  message: "bu kalit uchun `reverse` API'si yoqilmagan"
+
+    NotFound:
+      description: So'ralgan ob'ekt topilmadi.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            status: NOT_FOUND
+            error: { code: not_found, message: "ob'ekt topilmadi" }
+
+    TooManyRequests:
+      description: |
+        Tezlik chegarasi yoki oylik chegara oshdi. `Retry-After` sarlavhasi
+        qancha kutish kerakligini aytadi.
+      headers:
+        Retry-After: { $ref: "#/components/headers/RetryAfter" }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          examples:
+            tezlik:
+              value:
+                status: OVER_QUERY_LIMIT
+                error:
+                  code: rate_limited
+                  message: "so'rovlar tezligi chegarasi oshdi (10 so'rov/s)"
+            oylik:
+              value:
+                status: OVER_QUERY_LIMIT
+                error:
+                  code: quota_exceeded
+                  message: "bepul oylik chegara (200000 so'rov) tugadi. Obuna (50 000 so'm/oy) chegarasiz"
+
+    UpstreamError:
+      description: Ichki manba javob bermadi (baza yoki marshrutlash xizmati).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            status: UNKNOWN_ERROR
+            error: { code: upstream_error, message: "so'rov bajarilmadi" }
+
+    Unavailable:
+      description: Xizmat vaqtincha mavjud emas.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            status: UNKNOWN_ERROR
+            error: { code: service_unavailable, message: "xizmat vaqtincha mavjud emas" }

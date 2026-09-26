@@ -1,6 +1,8 @@
 package httpapi
 
 import (
+	"bytes"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -9,6 +11,7 @@ import (
 	"net/netip"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"ondexmap/internal/devplatform"
@@ -44,6 +47,15 @@ func (s *Server) WithPlatform(p *devplatform.Platform) *Server {
 	return s
 }
 
+// openAPISpec — rasmiy kontrakt (`api/openapi.yaml`).
+//
+// ⚠️ Fayl SERVER TOMONDA TAHLIL QILINMAYDI — baytlari shundayligicha uzatiladi.
+// Shu sabab YAML kutubxonasi KERAK EMAS: `go.mod` dagi "bog'liqliklar ataylab kam"
+// qoidasi buzilmaydi. Kontraktning kod bilan mosligini `openapi_test.go` tekshiradi.
+//
+//go:embed openapi.yaml
+var openAPISpec []byte
+
 func (s *Server) registerV2Routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v2/geocode", s.v2(devplatform.APIGeocode, s.v2Geocode))
 	mux.HandleFunc("GET /v2/reverse", s.v2(devplatform.APIReverse, s.v2Reverse))
@@ -51,12 +63,28 @@ func (s *Server) registerV2Routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v2/places", s.v2(devplatform.APIPlaces, s.v2Places))
 	mux.HandleFunc("GET /v2/places/{id}", s.v2(devplatform.APIPlaces, s.v2Place))
 
+	// Kontrakt — ATAYLAB kalitsiz va hisoblanmaydi: dasturchi kalit olishdan
+	// OLDIN API nima qila olishini ko'ra olishi kerak. Sir emas.
+	mux.HandleFunc("GET /v2/openapi.yaml", func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("Content-Type", "application/yaml; charset=utf-8")
+		h.Set("Cache-Control", "public, max-age=300")
+		// Hujjat generatorlari (Scalar, Redoc, Swagger UI) boshqa domendan
+		// yuklaydi — kontrakt ochiq bo'lgani uchun bu xavfsiz.
+		h.Set("Access-Control-Allow-Origin", "*")
+		http.ServeContent(w, r, "openapi.yaml", specModTime, bytes.NewReader(openAPISpec))
+	})
+
 	// Qolgani — allowlist tashqarisi. Kalit talab qilinmaydi: javob hamma uchun bir xil.
 	mux.HandleFunc("/v2/", func(w http.ResponseWriter, r *http.Request) {
 		v2Fail(w, http.StatusForbidden, devplatform.CodeAPINotAllowed,
 			"bu endpoint dasturchi API'sida mavjud emas (faqat geocode, reverse, directions, places — GET)")
 	})
 }
+
+// specModTime — `If-Modified-Since` uchun. Jarayon ishga tushgan vaqt:
+// spec binar ichida, ya'ni har deploy'da yangi jarayon = yangi vaqt.
+var specModTime = time.Now()
 
 // statusRecorder — hisoblash uchun yakuniy holat kodini ushlaydi.
 type statusRecorder struct {
