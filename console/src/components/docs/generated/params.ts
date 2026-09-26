@@ -29,6 +29,8 @@ export const SPEC_PARAMS: Record<string, SpecParam[]> = {
     { name: "lat", required: false, desc: "Xarita markazi (kenglik) — teng natijalardan yaqini oldin chiqadi. `lng` bilan BIRGA berilishi shart.", constraints: "37.0–45.8", example: "" },
     { name: "lng", required: false, desc: "Xarita markazi (uzunlik). `lat` bilan birga.", constraints: "55.5–73.5", example: "" },
   ],
+  "mahallas": [
+  ],
   "places": [
     { name: "bbox", required: true, desc: "`g'arb,janub,sharq,shimol` (uzunlik, kenglik, uzunlik, kenglik). Tomonlari 1.5 gradusdan oshmasligi kerak.", constraints: "shakl: ^-?\\d+(\\.\\d+)?(,-?\\d+(\\.\\d+)?){3}$", example: "71.20,40.98,71.28,41.03" },
   ],

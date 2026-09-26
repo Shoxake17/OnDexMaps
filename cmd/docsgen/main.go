@@ -51,6 +51,7 @@ var endpoints = []struct{ path, page string }{
 	{"/v2/directions", "directions"},
 	{"/v2/places", "places"},
 	{"/v2/places/{id}", "places-by-id"},
+	{"/v2/mahallas", "mahallas"},
 }
 
 type param struct {

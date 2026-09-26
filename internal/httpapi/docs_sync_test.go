@@ -32,6 +32,9 @@ import (
 // docsDir — hujjat sahifalari (Go paketidan nisbiy yo'l).
 const docsDir = "../../console/src/app/docs/api"
 
+// reSchemaStart — `components: schemas:` ichidagi keyingi sxema sarlavhasi.
+var reSchemaStart = regexp.MustCompile(`(?m)^    [A-Za-z][A-Za-z0-9]*:$`)
+
 // schemaProps — `components: schemas:` ichidagi BITTA sxemaning bevosita
 // xossalari. Sxema 4 probel bilan, `properties:` 6 probel, xossalar esa
 // 8 probel bilan yoziladi.
@@ -45,7 +48,7 @@ func schemaProps(t *testing.T, spec, schema string) []string {
 	body := spec[start+1:]
 
 	// Keyingi sxemagacha (yana 4 probel + nom + ':') kesamiz.
-	if end := regexp.MustCompile(`(?m)^    [A-Za-z][A-Za-z0-9]*:$`).FindStringIndex(body[1:]); end != nil {
+	if end := reSchemaStart.FindStringIndex(body[1:]); end != nil {
 		body = body[:end[0]+1]
 	}
 
@@ -66,25 +69,25 @@ func schemaProps(t *testing.T, spec, schema string) []string {
 	return out
 }
 
-// featureProps — `PlacesResponse` ichidagi GeoJSON Feature'ning
+// featureProps — GeoJSON javob sxemasi ichidagi Feature'ning
 // `properties` bloki. U chuqur joylashgan, shuning uchun alohida olinadi.
-func featureProps(t *testing.T, spec string) []string {
+func featureProps(t *testing.T, spec, schema string) []string {
 	t.Helper()
 
-	at := strings.Index(spec, "\n    PlacesResponse:\n")
+	at := strings.Index(spec, "\n    "+schema+":\n")
 	if at < 0 {
-		t.Fatal("kontraktda PlacesResponse yo'q")
+		t.Fatalf("kontraktda %q yo'q", schema)
 	}
-	body := spec[at:]
-	if end := strings.Index(body[1:], "\n    PlaceDetail:"); end >= 0 {
-		body = body[:end+1]
+	body := spec[at+1:]
+	if loc := reSchemaStart.FindStringIndex(body[1:]); loc != nil {
+		body = body[:loc[0]+1]
 	}
 
 	// Feature ichidagi ikkinchi `properties:` — 18 probel bilan.
 	inner := regexp.MustCompile(`(?m)^                  properties:\n                    type: object\n                    properties:\n`)
 	loc := inner.FindStringIndex(body)
 	if loc == nil {
-		t.Fatal("PlacesResponse ichida Feature `properties` bloki topilmadi")
+		t.Fatalf("%s ichida Feature `properties` bloki topilmadi", schema)
 	}
 
 	var out []string
@@ -93,7 +96,7 @@ func featureProps(t *testing.T, spec string) []string {
 		out = append(out, m[1])
 	}
 	if len(out) == 0 {
-		t.Fatal("Feature `properties` bo'sh chiqdi")
+		t.Fatalf("%s: Feature `properties` bo'sh chiqdi", schema)
 	}
 	sort.Strings(out)
 	return out
@@ -206,12 +209,17 @@ func TestDocPagesMatchSpecFields(t *testing.T) {
 		{
 			page: "places",
 			expect: append([]string{"status", "result", "features[].geometry", "features[].properties.id"},
-				prefixed("features[].properties.", featureProps(t, spec))...),
+				prefixed("features[].properties.", featureProps(t, spec, "PlacesResponse"))...),
 		},
 		{
 			page: "places-by-id",
 			expect: append([]string{"status"},
 				prefixed("result.", schemaProps(t, spec, "PlaceDetail"))...),
+		},
+		{
+			page: "mahallas",
+			expect: append([]string{"status", "result", "features[].geometry"},
+				prefixed("features[].properties.", featureProps(t, spec, "MahallasResponse"))...),
 		},
 	}
 
@@ -247,12 +255,14 @@ func TestDocResponseExamplesUseRealFields(t *testing.T) {
 			legal[p] = true
 		}
 	}
-	for _, p := range featureProps(t, spec) {
-		legal[p] = true
+	for _, s := range []string{"PlacesResponse", "MahallasResponse"} {
+		for _, p := range featureProps(t, spec, s) {
+			legal[p] = true
+		}
 	}
 
 	key := regexp.MustCompile(`"([a-z_]+)":`)
-	for _, page := range []string{"geocode", "reverse", "directions", "places", "places-by-id"} {
+	for _, page := range []string{"geocode", "reverse", "directions", "places", "places-by-id", "mahallas"} {
 		t.Run(page, func(t *testing.T) {
 			src := readFile(t, docsDir+"/"+page+"/page.tsx")
 			at := strings.Index(src, "\n        response: `")

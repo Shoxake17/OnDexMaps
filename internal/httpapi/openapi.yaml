@@ -310,6 +310,50 @@ paths:
         "502": { $ref: "#/components/responses/UpstreamError" }
         "503": { $ref: "#/components/responses/Unavailable" }
 
+  /v2/mahallas:
+    get:
+      tags: [Ob'ektlar]
+      operationId: listMahallas
+      summary: Mahalla chegaralari
+      description: |
+        Mahalla, qishloq va daha chegaralarini GeoJSON `FeatureCollection`
+        sifatida qaytaradi. To'plam BUTUNLIGICHA keladi — u kichik va
+        kamdan-kam o'zgaradi, shuning uchun uni bir marta olib xaritada
+        qatlam sifatida ushlab turish kerak. Javob bir soat keshlanadi.
+
+        Chegarasi hali chizilmagan mahallalar javobga tushmaydi.
+      responses:
+        "200":
+          description: GeoJSON to'plami.
+          headers:
+            X-Plan: { $ref: "#/components/headers/XPlan" }
+            X-Quota-Limit: { $ref: "#/components/headers/XQuotaLimit" }
+            X-Quota-Used: { $ref: "#/components/headers/XQuotaUsed" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MahallasResponse" }
+              examples:
+                namuna:
+                  value:
+                    status: OK
+                    result:
+                      type: FeatureCollection
+                      features:
+                        - type: Feature
+                          geometry:
+                            type: Polygon
+                            coordinates: [[[71.23, 40.99], [71.24, 40.99], [71.24, 41.00], [71.23, 40.99]]]
+                          properties:
+                            id: 8062195a-51cb-409c-96ad-1f0ab855f184
+                            name: Serob
+                            kind: mahalla
+                            center: { type: Point, coordinates: [71.235, 40.995] }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+        "502": { $ref: "#/components/responses/UpstreamError" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
   /v2/places/{id}:
     get:
       tags: [Ob'ektlar]
@@ -556,6 +600,41 @@ components:
                       kind: { type: string }
                       name: { type: string }
                       category: { type: string }
+
+    MahallasResponse:
+      type: object
+      required: [status, result]
+      properties:
+        status: { type: string, const: OK }
+        result:
+          type: object
+          required: [type, features]
+          description: GeoJSON FeatureCollection.
+          properties:
+            type: { type: string, const: FeatureCollection }
+            features:
+              type: array
+              items:
+                type: object
+                properties:
+                  type: { type: string, const: Feature }
+                  geometry:
+                    type: object
+                    description: Polygon yoki MultiPolygon — chegara.
+                  properties:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      name: { type: string }
+                      kind:
+                        type: string
+                        description: "`mahalla`, `qishloq` yoki `daha`."
+                      center:
+                        type: object
+                        description: |
+                          Nom QAYERGA qo'yilishi (GeoJSON Point). Usiz xarita
+                          kutubxonasi nomni poligonning har bo'lagiga chizadi va
+                          yaqinlashtirganda bitta nom takrorlanib ketadi.
 
     PlaceDetail:
       type: object
