@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { C, Code, H2, P, PageHead, PrevNext, Table, Tabs } from "./parts";
 import { BookIcon, KeyIcon, ServerIcon } from "./icons";
+import { SPEC_PARAMS } from "./generated/params";
 
 /**
  * EndpointPage — REST API'ning bitta endpoint sahifasi.
@@ -10,12 +11,6 @@ import { BookIcon, KeyIcon, ServerIcon } from "./icons";
  * sahifalar faqat MA'LUMOT beradi, ko'rinish esa hamma joyda bir xil bo'ladi.
  */
 
-export interface EndpointParam {
-  name: string;
-  required?: boolean;
-  desc: React.ReactNode;
-}
-
 export interface EndpointSpec {
   /** `PrevNext` uchun sahifa yo'li. */
   href: string;
@@ -23,7 +18,11 @@ export interface EndpointSpec {
   method: "GET";
   path: string;
   desc: string;
-  params: EndpointParam[];
+  /**
+   * `SPEC_PARAMS` dagi kalit — parametr jadvali kontraktdan olinadi,
+   * sahifada qo'lda yozilmaydi (`cmd/docsgen`).
+   */
+  page: keyof typeof SPEC_PARAMS;
   /** So'rov misollari — `Tabs` bo'lib chiqadi. */
   requests: { name: string; code: string; lang?: string }[];
   response: string;
@@ -35,6 +34,17 @@ export interface EndpointSpec {
 }
 
 const METHOD_CLASS = "rounded bg-emerald-500/10 px-2 py-0.5 font-mono text-xs font-bold text-emerald-600";
+
+/**
+ * ticks — kontrakt tavsiflaridagi `matn` bo'laklarini kod ko'rinishiga
+ * o'tkazadi. `openapi.yaml` da tavsiflar Markdown bilan yoziladi, bu yerda
+ * esa shundayligicha chiqsa teskari tirnoqlar ko'rinib qolardi.
+ */
+function ticks(text: string): React.ReactNode {
+  const parts = text.split("`");
+  if (parts.length === 1) return text;
+  return parts.map((p, i) => (i % 2 === 1 ? <C key={i}>{p}</C> : p));
+}
 
 export function EndpointPage({ spec }: { spec: EndpointSpec }) {
   return (
@@ -57,13 +67,43 @@ export function EndpointPage({ spec }: { spec: EndpointSpec }) {
       <H2 id="parametrlar">Parametrlar</H2>
       <Table
         head={["Parametr", "Holati", "Tavsif"]}
-        rows={spec.params.map((p) => [
-          <code key={p.name} className="whitespace-nowrap font-mono text-brand">
-            {p.name}
-          </code>,
-          p.required ? "majburiy" : "ixtiyoriy",
-          p.desc,
-        ])}
+        rows={[
+          ...(SPEC_PARAMS[spec.page] ?? []).map((p) => [
+            <code key={p.name} className="whitespace-nowrap font-mono text-brand">
+              {p.name}
+            </code>,
+            p.required ? "majburiy" : "ixtiyoriy",
+            <div key={`${p.name}-d`}>
+              {ticks(p.desc)}
+              {(p.constraints || p.example) && (
+                <div className="mt-1 text-xs">
+                  {p.constraints && <span className="text-muted">{p.constraints}</span>}
+                  {p.constraints && p.example && <span className="text-border"> · </span>}
+                  {p.example && (
+                    <span className="text-muted">
+                      misol: <C>{p.example}</C>
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>,
+          ]),
+          // `key` — yo'l parametri emas, xavfsizlik sxemasi; shuning uchun
+          // kontraktning `parameters` ro'yxatida yo'q va barcha endpointlar
+          // uchun bir xil.
+          [
+            <code key="key" className="whitespace-nowrap font-mono text-brand">
+              key
+            </code>,
+            "ixtiyoriy",
+            <div key="key-d">
+              Brauzer kaliti. Server kaliti faqat <C>X-API-Key</C> sarlavhasida yuboriladi —{" "}
+              <Link href="/docs/security/keys" className="font-medium text-brand hover:underline">
+                API kalitlar
+              </Link>
+            </div>,
+          ],
+        ]}
       />
 
       <H2 id="sorov">So&apos;rov</H2>

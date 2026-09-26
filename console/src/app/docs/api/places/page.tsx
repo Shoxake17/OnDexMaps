@@ -1,4 +1,4 @@
-import { C, Callout, Code, P } from "@/components/docs/parts";
+import { A, C, Callout, Code, P } from "@/components/docs/parts";
 import { EndpointPage } from "@/components/docs/endpoint";
 
 export const metadata = {
@@ -15,19 +15,7 @@ export default function PlacesPage() {
         method: "GET",
         path: "/v2/places",
         desc: "Berilgan to'rtburchak ichidagi tasdiqlangan ob'ektlarni GeoJSON FeatureCollection ko'rinishida qaytaradi. Qamrov — butun O'zbekiston.",
-        params: [
-          {
-            name: "bbox",
-            required: true,
-            desc: (
-              <>
-                To&apos;rtburchak: <C>g&apos;arb,janub,sharq,shimol</C> (ya&apos;ni{" "}
-                <C>minLng,minLat,maxLng,maxLat</C>)
-              </>
-            ),
-          },
-          { name: "key", desc: <>Brauzer kaliti (server kaliti faqat sarlavhada)</> },
-        ],
+        page: "places",
         requests: [
           {
             name: "curl",
@@ -74,21 +62,23 @@ map.on("moveend", async () => {
           },
         ],
         response: `{
-  "status": "OK",
   "result": {
     "type": "FeatureCollection",
     "features": [
       {
+        "id": "a70e710c-d609-4865-9db4-d589ba33eb11",
         "type": "Feature",
-        "geometry": { "type": "Point", "coordinates": [71.2394, 41.0004] },
+        "geometry": { "type": "Point", "coordinates": [71.231142, 40.991814] },
         "properties": {
-          "id": "p_01HR...",
-          "name": "Chust bozori",
-          "kind": "market"
+          "id": "a70e710c-d609-4865-9db4-d589ba33eb11",
+          "kind": "organization",
+          "name": "OnDexCompany",
+          "category": "Idora / Ofis"
         }
       }
     ]
-  }
+  },
+  "status": "OK"
 }`,
         fields: [
           ["status", <>«OK» yoki «ZERO_RESULTS»</>],
@@ -100,14 +90,21 @@ map.on("moveend", async () => {
             </>,
           ],
           ["features[].geometry", <>Nuqta; koordinata <C>[lng, lat]</C> tartibida</>],
-          ["features[].properties.id", <>Ob&apos;ekt identifikatori</>],
+          [
+            "features[].properties.id",
+            <>
+              Ob&apos;ektning UUID si — <A href="/docs/api/places-by-id">/v2/places/{"{id}"}</A> ga
+              o&apos;zgartirmasdan beriladi
+            </>,
+          ],
           ["features[].properties.name", <>Ob&apos;ektning nomi</>],
           [
             "features[].properties.kind",
             <>
-              Sinfi: <C>market</C>, <C>pharmacy</C>, <C>school</C> va boshqalar
+              Sinfi: <C>organization</C>, <C>shop</C>, <C>pharmacy</C> va boshqalar
             </>,
           ],
+          ["features[].properties.category", <>Aniqroq toifa («Idora / Ofis»); bo&apos;lmasligi mumkin</>],
         ],
         notes: (
           <>

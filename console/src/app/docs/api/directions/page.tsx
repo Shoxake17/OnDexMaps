@@ -15,27 +15,7 @@ export default function DirectionsPage() {
         method: "GET",
         path: "/v2/directions",
         desc: "Ikki nuqta orasidagi haqiqiy yo'l bo'ylab marshrut: masofa (metr), davomiylik (sekund) va chiziq geometriyasi. Xizmat hududi: 40.5–41.6° shimol, 70.5–72.0° sharq.",
-        params: [
-          {
-            name: "origin",
-            required: true,
-            desc: (
-              <>
-                Boshlanish nuqtasi, <C>lat,lng</C> ko&apos;rinishida
-              </>
-            ),
-          },
-          {
-            name: "destination",
-            required: true,
-            desc: (
-              <>
-                Tugash nuqtasi, <C>lat,lng</C> ko&apos;rinishida
-              </>
-            ),
-          },
-          { name: "key", desc: <>Brauzer kaliti (server kaliti faqat sarlavhada)</> },
-        ],
+        page: "directions",
         requests: [
           {
             name: "curl",
@@ -88,26 +68,37 @@ console.log(
           },
         ],
         response: `{
-  "status": "OK",
   "routes": [
     {
-      "distance_m": 1240,
-      "duration_s": 180,
+      "distance_m": 1048.7,
+      "duration_s": 166.7,
       "geometry": {
         "type": "LineString",
         "coordinates": [
-          [71.2394, 41.0004],
-          [71.2421, 41.0032],
-          [71.2450, 41.0061]
+          [71.238906, 41.000529],
+          [71.240333, 41.001125],
+          [71.243978, 41.003489]
         ]
       }
     }
-  ]
+  ],
+  "status": "OK"
 }`,
         fields: [
           ["status", <>«OK» yoki «ZERO_RESULTS»</>],
-          ["routes[].distance_m", <>Marshrut uzunligi, metrda</>],
-          ["routes[].duration_s", <>Taxminiy vaqt, sekundda (tirbandlik hisobga olinmaydi)</>],
+          [
+            "routes[].distance_m",
+            <>
+              Marshrut uzunligi, metrda. <strong className="text-foreground">Kasrli son</strong> —
+              ko&apos;rsatishdan oldin yaxlitlang
+            </>,
+          ],
+          [
+            "routes[].duration_s",
+            <>
+              Taxminiy vaqt, sekundda; kasrli. Tirbandlik hisobga olinmaydi
+            </>,
+          ],
           [
             "routes[].geometry",
             <>

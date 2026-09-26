@@ -107,6 +107,50 @@ export default function UsageDocsPage() {
         <A href="/docs/billing/plans">obuna</A>.
       </P>
 
+      <H2 id="sarlavhalar">Dastur ichidan kuzatish</H2>
+      <P>
+        Panelga kirmasdan ham holatni bilish mumkin: har bir javob uni sarlavhalarda qaytaradi va
+        ular brauzerdan ham o&apos;qiladi.
+      </P>
+      <Table
+        head={["Sarlavha", "Ma'nosi", "Misol"]}
+        rows={[
+          [
+            <code key="1" className="font-mono text-brand">
+              X-Plan
+            </code>,
+            "Joriy tarif rejasi",
+            <C key="v">free</C>,
+          ],
+          [
+            <code key="2" className="font-mono text-brand">
+              X-Quota-Limit
+            </code>,
+            "Oylik chegara (obunada bo'lmaydi)",
+            <C key="v">200000</C>,
+          ],
+          [
+            <code key="3" className="font-mono text-brand">
+              X-Quota-Used
+            </code>,
+            "Shu oyda ishlatilgan so'rovlar",
+            <C key="v">16</C>,
+          ],
+        ]}
+      />
+      <Code lang="js">{`const res = await fetch(url);
+
+const limit = Number(res.headers.get("X-Quota-Limit"));
+const used  = Number(res.headers.get("X-Quota-Used"));
+
+if (Number.isFinite(limit) && used / limit > 0.9) {
+  ogohlantir("Oylik chegaraning 90% i ishlatildi");
+}`}</Code>
+      <P>
+        To&apos;liq ro&apos;yxat va <C>Retry-After</C> — <A href="/docs/api/errors">Errors</A>{" "}
+        sahifasida.
+      </P>
+
       <H2 id="kamaytirish">So&apos;rovlar sonini kamaytirish</H2>
       <UL>
         <li>

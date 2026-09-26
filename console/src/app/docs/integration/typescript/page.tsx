@@ -54,17 +54,25 @@ export function createMap(
           },
           {
             name: "types.ts",
-            code: `/** REST API javoblarining tiplari — faqat ishlatiladigan maydonlar. */
+            code: `/** REST API javoblarining tiplari — haqiqiy javoblarga mos. */
 
-export type Status = "OK" | "ZERO_RESULTS" | "INVALID_REQUEST" | "REQUEST_DENIED";
+export type Status =
+  | "OK" | "ZERO_RESULTS" | "INVALID_REQUEST" | "REQUEST_DENIED" | "NOT_FOUND";
 
 export interface GeocodeMatch {
+  /** "p" + UUID (type === "place") yoki "g" + son (geografik nom). */
   id: string;
   type: string;
   name: string;
+  /** Tur nomi — "Bozor", "Ko'cha". Manzil EMAS. */
   label?: string;
+  /** Eng yaqin aholi punkti — "qayerda" degan savolga javob. */
+  near?: string;
   lat?: number;
   lng?: number;
+  /** [g'arb, janub, sharq, shimol] */
+  bbox?: [number, number, number, number];
+  score: number;
 }
 
 export interface GeocodeResponse {
@@ -72,9 +80,22 @@ export interface GeocodeResponse {
   results: GeocodeMatch[];
 }
 
+export interface Named {
+  id: string;
+  name: string;
+}
+
+/** Diqqat: reverse javobida lat/lng YO'Q. */
+export interface ReverseResult {
+  text: string;
+  mahalla?: Named;
+  street?: Named;
+  street_distance_m?: number;
+}
+
 export interface ReverseResponse {
   status: Status;
-  result?: { text: string; lat: number; lng: number };
+  result?: ReverseResult;
 }
 
 export interface Route {

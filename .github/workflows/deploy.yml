@@ -119,6 +119,13 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+      # Hujjat sahifalarining parametr jadvallari `openapi.yaml` dan
+      # generatsiya qilinadi (`cmd/docsgen`). Kontrakt o'zgarib, natija
+      # qayta yaratilmasa — sahifa jimgina eskirardi; shu qadam to'xtatadi.
+      # Javob MAYDONLARI esa `docs_sync_test.go` bilan qulflangan.
+      - name: Hujjat parametrlari kontrakt bilan mosmi
+        run: go run ./cmd/docsgen -check
+
       # ┌─ MIGRATSIYA — TESTLARDAN OLDIN ────────────────────────────────┐
       # Integratsiya testlari haqiqiy jadval/funksiyalarni kutadi
       # (`ondex_normalize`, `place_submissions`...). `cmd/migrate` shu

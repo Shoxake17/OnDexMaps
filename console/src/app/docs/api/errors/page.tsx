@@ -114,10 +114,16 @@ export default function ErrorsPage() {
               404
             </code>,
             <code key="b" className="font-mono text-brand">
-              —
+              not_found
             </code>,
-            "So'ralgan ob'ekt yo'q yoki tasdiqlanmagan",
-            "Identifikatorni tekshiring",
+            <>
+              So&apos;ralgan ob&apos;ekt yo&apos;q, tasdiqlanmagan yoki id noto&apos;g&apos;ri
+              shaklda. <C>status</C> qiymati — <C>NOT_FOUND</C>
+            </>,
+            <>
+              Identifikator shaklini tekshiring —{" "}
+              <A href="/docs/api/places-by-id">Place by ID</A>
+            </>,
           ],
           [
             <code key="a" className="font-mono">
@@ -216,6 +222,61 @@ ishlat(data.results);`}</Code>
   return soraw(url, urinish + 1);
 }`}</Code>
 
+      <H2 id="sarlavhalar">Javob sarlavhalari</H2>
+      <P>
+        Har bir muvaffaqiyatli javob joriy holatni sarlavhalarda qaytaradi. Ular CORS orqali
+        ochilgan, ya&apos;ni brauzerdan ham o&apos;qiladi:
+      </P>
+      <Table
+        head={["Sarlavha", "Ma'nosi", "Misol"]}
+        rows={[
+          [
+            <code key="1" className="font-mono text-brand">
+              X-Plan
+            </code>,
+            "Joriy tarif rejasi",
+            <C key="v">free</C>,
+          ],
+          [
+            <code key="2" className="font-mono text-brand">
+              X-Quota-Limit
+            </code>,
+            "Oylik chegara (obunada bo'lmaydi)",
+            <C key="v">200000</C>,
+          ],
+          [
+            <code key="3" className="font-mono text-brand">
+              X-Quota-Used
+            </code>,
+            "Shu oyda ishlatilgan so'rovlar soni",
+            <C key="v">16</C>,
+          ],
+          [
+            <code key="4" className="font-mono text-brand">
+              Retry-After
+            </code>,
+            <>
+              Faqat <C>429</C> da: necha sekund kutish kerak
+            </>,
+            <C key="v">2</C>,
+          ],
+        ]}
+      />
+      <Code lang="js">{`const res = await fetch(url);
+
+const qolgan = Number(res.headers.get("X-Quota-Limit"))
+             - Number(res.headers.get("X-Quota-Used"));
+
+if (Number.isFinite(qolgan) && qolgan < 1000) {
+  console.warn("oylik chegara tugayapti:", qolgan);
+}`}</Code>
+      <Callout kind="note">
+        <p>
+          Brauzerdan o&apos;qish uchun qo&apos;shimcha sozlama shart emas — server bu sarlavhalarni{" "}
+          <C>Access-Control-Expose-Headers</C> ro&apos;yxatiga o&apos;zi qo&apos;shadi.
+        </p>
+      </Callout>
+
       <H2 id="tez-uchraydigan">Tez uchraydigan sabablar</H2>
       <Table
         head={["Belgisi", "Aslida nima bo'lgan"]}
@@ -249,6 +310,21 @@ ishlat(data.results);`}</Code>
               <C>400 INVALID_REQUEST</C> places&apos;da
             </>,
             "bbox tartibi teskari: to'g'risi g'arb,janub,sharq,shimol",
+          ],
+          [
+            <>
+              <C>404 not_found</C>, lekin id geocode&apos;dan olingan
+            </>,
+            <>
+              Geocode id&apos;si boshqa shaklda: <C>place</C> uchun boshidagi «p» olib tashlanadi,
+              <C>g…</C> uchun esa tafsilot yo&apos;q
+            </>,
+          ],
+          [
+            <>
+              Reverse javobida <C>lat</C>/<C>lng</C> yo&apos;q
+            </>,
+            "Shunday bo'lishi kerak — endpoint faqat manzil qaytaradi, koordinatani siz bergansiz",
           ],
         ]}
       />

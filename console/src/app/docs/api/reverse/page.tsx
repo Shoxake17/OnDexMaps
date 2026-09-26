@@ -15,11 +15,7 @@ export default function ReversePage() {
         method: "GET",
         path: "/v2/reverse",
         desc: "Koordinata bo'yicha eng yaqin manzilni qaytaradi. Xizmat hududi: 40.5–41.6° shimol, 70.5–72.0° sharq.",
-        params: [
-          { name: "lat", required: true, desc: <>Kenglik, 40.5–41.6 oralig&apos;ida</> },
-          { name: "lng", required: true, desc: <>Uzunlik, 70.5–72.0 oralig&apos;ida</> },
-          { name: "key", desc: <>Brauzer kaliti (server kaliti faqat sarlavhada)</> },
-        ],
+        page: "reverse",
         requests: [
           {
             name: "curl",
@@ -37,13 +33,18 @@ export default function ReversePage() {
   url.searchParams.set("key", "omk_b_...");
 
   const data = await (await fetch(url)).json();
-  return data.status === "OK" ? data.result.text : null;
+  if (data.status !== "OK") return null;
+
+  // text doim bor; mahalla va street bo'lmasligi mumkin
+  return data.result.text;
 }`,
           },
           {
             name: "xarita bilan",
             lang: "js",
-            code: `// Foydalanuvchi xaritaga bosgan nuqtaning manzilini ko'rsatish
+            code: `// Foydalanuvchi xaritaga bosgan nuqtaning manzilini ko'rsatish.
+// DIQQAT: popup koordinatasi javobdan emas, BOSILGAN nuqtadan olinadi —
+// javobda lat/lng yo'q.
 map.on("click", async (e) => {
   const { lat, lng } = e.lngLat;
   const text = await manzil(lat, lng);
@@ -57,20 +58,40 @@ map.on("click", async (e) => {
           },
         ],
         response: `{
-  "status": "OK",
   "result": {
     "text": "Chust, Bobur ko'chasi",
-    "lat": 41.0004,
-    "lng": 71.2394
-  }
+    "mahalla": { "id": "8062195a-51cb-409c-96ad-1f0ab855f184", "name": "Serob" },
+    "street": { "id": "s-9", "name": "Bobur ko'chasi" },
+    "street_distance_m": 24
+  },
+  "status": "OK"
 }`,
         fields: [
           ["status", <>«OK» yoki «ZERO_RESULTS»</>],
-          ["result.text", <>Inson o&apos;qiy oladigan manzil satri</>],
-          ["result.lat, lng", <>Topilgan ob&apos;ektning koordinatasi (so&apos;ralganidan farq qilishi mumkin)</>],
+          ["result.text", <>Tayyor manzil matni — ko&apos;rsatish uchun shu maydon olinadi</>],
+          ["result.mahalla", <>Nuqta joylashgan mahalla: <C>id</C> va <C>name</C></>],
+          [
+            "result.street",
+            <>
+              Eng yaqin ko&apos;cha: <C>id</C> va <C>name</C>. Ko&apos;cha topilmasa bo&apos;lmaydi
+            </>,
+          ],
+          ["result.street_distance_m", <>Shu ko&apos;chagacha masofa, metrda</>],
         ],
         notes: (
           <>
+            <Callout kind="warn">
+              <p>
+                Javobda <C>lat</C>/<C>lng</C> <strong className="text-foreground">yo&apos;q</strong>.
+                Endpoint siz bergan koordinatani qaytarmaydi — u faqat o&apos;sha nuqtaning manzilini
+                aytadi. Markerni qo&apos;yish uchun o&apos;zingiz yuborgan koordinatadan foydalaning.
+              </p>
+            </Callout>
+            <P>
+              Ba&apos;zi maydonlar bo&apos;lmasligi mumkin: nuqta ko&apos;chadan uzoqda bo&apos;lsa{" "}
+              <C>street</C> va <C>street_distance_m</C> kelmaydi, mahalla chegarasidan tashqarida
+              bo&apos;lsa <C>mahalla</C> kelmaydi. Faqat <C>text</C> doim bo&apos;ladi.
+            </P>
             <P>
               Manzil topilmasa <C>status</C> qiymati <C>ZERO_RESULTS</C> bo&apos;ladi va <C>result</C>{" "}
               bo&apos;lmaydi — javobni o&apos;qishdan oldin doim <C>status</C> ni tekshiring.
