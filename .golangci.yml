@@ -89,7 +89,12 @@ linters:
       # admin o'z kompyuterida ishga tushiradigan CLI vositalar: fayl
       # yo'li va buyruq argumentlari OPERATORdan keladi, tarmoq
       # foydalanuvchisidan emas.
-      - path: cmd/(tilesupload|osmimport|geoimport|admin|migrate)/
+      #
+      # `cmd/docsgen` — shu turkumda: u repo ichidagi QAT'IY yo'llarni
+      # (`internal/httpapi/openapi.yaml`, `console/.../params.ts`) o'qiydi
+      # va yozadi; yo'llar kodda konstanta, tashqaridan kelmaydi. Faqat
+      # dasturchi va CI ishga tushiradi.
+      - path: cmd/(tilesupload|osmimport|geoimport|admin|migrate|docsgen)/
         linters:
           - gosec
         text: 'G(204|304)'

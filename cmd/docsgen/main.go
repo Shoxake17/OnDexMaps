@@ -91,10 +91,13 @@ func main() {
 		return
 	}
 
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+	// Ruxsatlar imkon qadar tor: fayl faqat dasturchining o'zi uchun
+	// yaratiladi va repoga commit qilinadi (git baribir faqat bajarilish
+	// bitini saqlaydi, shuning uchun 0600 hech narsani buzmaydi).
+	if err := os.MkdirAll(filepath.Dir(dst), 0o750); err != nil {
 		fatal(err)
 	}
-	if err := os.WriteFile(dst, []byte(out), 0o644); err != nil {
+	if err := os.WriteFile(dst, []byte(out), 0o600); err != nil {
 		fatal(err)
 	}
 	fmt.Printf("docsgen: %s yozildi\n", outPath)
