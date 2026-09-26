@@ -64,10 +64,9 @@ export default function DocsPage() {
           </Link>
         </p>
         <p className="text-muted">
-          OnDexMap REST API'si Google Maps Platform'ga o'xshab ishlaydi: geokodlash (nom → koordinata), teskari
-          geokodlash (koordinata → manzil), A → B yo'l ko'rsatish va ob'ekt ma'lumoti. Boshqa hech qanday amal
-          (ob'ekt qo'shish, o'chirish, moderatsiya) API orqali MAVJUD EMAS — bu faqat OnDexMap jamoasi tomonidan
-          boshqariladi.
+          REST API to'rtta amalni taqdim etadi: geokodlash (nom → koordinata), teskari geokodlash
+          (koordinata → manzil), ikki nuqta orasidagi marshrut va ob'ekt ma'lumoti. Barcha so'rovlar
+          faqat o'qish uchun.
         </p>
       </div>
 
@@ -88,20 +87,21 @@ export default function DocsPage() {
             </li>
             <li>
               <strong className="text-foreground">Brauzer kaliti</strong> — sahifangizdan to'g'ridan-to'g'ri
-              chaqirish uchun. Ruxsat etilgan domen(lar) MAJBURIY (Google Maps'dagi "HTTP referrers" kabi); shu
-              domenlardan tashqarida ishlamaydi.
+              chaqirish uchun. Ruxsat etilgan domenlar ro'yxati majburiy; kalit shu domenlardan tashqarida
+              ishlamaydi.
             </li>
           </ul>
           <p className="text-sm text-muted mt-3">
-            Kalit sir bir marta ko'rsatiladi — uni saqlab qo'ying. Yo'qotsangiz "Almashtirish" bilan yangi kalit
-            oling (eskisi 24 soat davomida ham ishlaydi — uzilishsiz o'tish uchun).
+            Kalit yaratilgan paytda bir marta ko'rsatiladi va saqlab qo'yiladi. Uni almashtirish kerak bo'lsa
+            "Almashtirish" amalidan foydalaning: yangi kalit darhol ishlaydi, eskisi 24 soat davomida amal
+            qiladi.
           </p>
         </section>
 
         <section>
           <h2 className="text-xl font-semibold mb-3">2. So'rov yuborish</h2>
           <Code>{`curl -H "X-API-Key: omk_s_..." \\
-  "https://console.ondex.uz/v2/geocode?q=Chust"`}</Code>
+  "https://maps.ondex.uz/v2/geocode?q=Chust"`}</Code>
           <p className="text-sm text-muted mt-2">
             Brauzer kaliti bilan (sahifangizdan): <code>?key=omk_b_...</code> parametri orqali ham yuborish mumkin.
           </p>
@@ -227,10 +227,10 @@ export default function DocsPage() {
         <section id="faq" className="scroll-mt-20 space-y-4">
           <h2 className="text-xl font-semibold">6. Ko'p so'raladigan savollar</h2>
           {[
-            ["API kalitni qanday olaman?", "Email va bir martalik kod bilan kiring, so'ng \"API kalitlar\" bo'limida yarating. Kalit FAQAT bir marta ko'rsatiladi."],
+            ["API kalitni qanday olaman?", "Email va bir martalik kod bilan kiring, so'ng \"API kalitlar\" bo'limida yarating. Kalit bir marta ko'rsatiladi."],
             ["Bepul va obuna reja farqi nimada?", "Bepul: 10 so'rov/s, oyiga 200 000. Obuna: 100 so'rov/s, oylik chegarasiz, oyiga qat'iy 50 000 so'm — ishlatilgan so'rov soniga bog'liq emas."],
-            ["API orqali xaritaga joy qo'sha olamanmi?", "Yo'q. /v2 faqat O'QISH uchun (geocode, reverse, directions, places). Yozish funksiyasi API'da umuman yo'q."],
-            ["Server va brauzer kaliti farqi?", "Server kaliti — faqat X-API-Key sarlavhasida, ixtiyoriy IP cheklovi bilan. Brauzer kaliti — ?key= orqali ham yuboriladi, lekin ruxsat etilgan domen(lar) MAJBURIY."],
+            ["API orqali xaritaga joy qo'sha olamanmi?", "Yo'q. API o'qish amallarini taqdim etadi: geocode, reverse, directions va places."],
+            ["Server va brauzer kaliti farqi?", "Server kaliti — faqat X-API-Key sarlavhasida, ixtiyoriy IP cheklovi bilan. Brauzer kaliti — ?key= orqali ham yuboriladi, lekin ruxsat etilgan domenlar ro'yxati majburiy."],
             ["Kalitim oshkor bo'lib qolsa nima qilaman?", "\"Almashtirish\"ni bosing — yangi kalit darhol ishlaydi, eskisi 24 soat davomida ham ishlaydi (uzilishsiz o'tish), so'ng avtomatik bekor bo'ladi."],
             ["To'lovni qanday amalga oshiraman?", "Obuna yoqilgach har oy hisob-faktura chiqadi. To'lov qo'lda tasdiqlanadi — \"Hisob-faktura\" bo'limida ko'rsatma va holatni kuzatib borasiz."],
           ].map(([q, a]) => (

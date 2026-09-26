@@ -18,26 +18,20 @@ info:
   version: "2.0.0"
   summary: O'zbekiston uchun geokodlash, marshrut va joylar API'si.
   description: |
-    OnDexMap — O'zbekiston uchun o'z xarita platformamiz. Ushbu API faqat
-    **o'qish** amallarini taqdim etadi: nom bo'yicha qidirish, koordinata
-    bo'yicha manzil, ikki nuqta orasidagi haqiqiy yo'l va ob'ekt ma'lumoti.
-
-    ## Yozish amallari yo'q
-
-    API orqali xaritaga joy qo'shish, o'zgartirish yoki o'chirish
-    **MUMKIN EMAS**. Bu ongli qaror: ma'lumot sifati moderatsiya orqali
-    ta'minlanadi.
+    OnDexMap — O'zbekiston bo'yicha xarita platformasi. API o'qish
+    amallarini taqdim etadi: nom bo'yicha qidirish, koordinata bo'yicha
+    manzil, ikki nuqta orasidagi marshrut va ob'ekt ma'lumoti.
 
     ## Autentifikatsiya
 
-    Har bir so'rov API kalit talab qiladi. Kalitni
-    [console.ondex.uz](https://console.ondex.uz) da olasiz. Ikki turi bor:
+    Har bir so'rov API kalit talab qiladi. Kalit
+    [console.ondex.uz](https://console.ondex.uz) da yaratiladi. Ikki turi bor:
 
     - **Server kaliti** (`omk_s_…`) — faqat `X-API-Key` sarlavhasida
-      yuboriladi. URL'da yuborilsa rad etiladi (URL loglarga tushadi).
-      Ixtiyoriy IP/CIDR cheklovi qo'yiladi.
+      yuboriladi, URL parametri sifatida qabul qilinmaydi. Ixtiyoriy
+      IP/CIDR cheklovi qo'llab-quvvatlanadi.
     - **Brauzer kaliti** (`omk_b_…`) — `?key=` parametri orqali ham
-      yuborilishi mumkin. Ruxsat etilgan domenlar ro'yxati **majburiy**.
+      yuborilishi mumkin. Ruxsat etilgan domenlar ro'yxati majburiy.
 
     ## Chegaralar
 
@@ -351,10 +345,10 @@ paths:
     get:
       tags: [Xizmat]
       operationId: getOpenApiSpec
-      summary: Ushbu kontraktning o'zi
+      summary: OpenAPI hujjati
       description: |
-        Mashina o'qiy oladigan OpenAPI hujjati. Kalit TALAB QILINMAYDI —
-        kontrakt ochiq, uni kalit olishdan oldin ham ko'rish mumkin.
+        Mashina o'qiy oladigan API kontrakti. Kalit talab qilinmaydi.
+        Kod generatorlari va API vositalari uchun ishlatiladi.
       security: []
       responses:
         "200":
@@ -378,9 +372,8 @@ components:
       in: query
       name: key
       description: |
-        Kalitni URL parametrida yuborish. **Faqat brauzer kalitlari uchun.**
-        Server kaliti shu tarzda yuborilsa `403 key_restricted` qaytadi:
-        URL loglarga, brauzer tarixiga va `Referer` ga tushadi.
+        Kalitni URL parametrida yuborish. Faqat brauzer kalitlari uchun —
+        server kaliti shu tarzda yuborilsa `403 key_restricted` qaytadi.
 
   headers:
     XPlan:

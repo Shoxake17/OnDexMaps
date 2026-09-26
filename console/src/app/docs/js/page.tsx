@@ -16,9 +16,8 @@ export default function JsApiPage() {
 
       <Callout kind="note">
         <p>
-          OnDexMap JS API — ochiq <A href="https://maplibre.org/">MapLibre GL JS</A> kutubxonasi ustida
-          ishlaydi. Ya'ni siz standart, hujjatlashtirilgan kutubxona bilan ishlaysiz, xarita manbasi
-          (<C>style.json</C>, tile, shrift) esa bizniki. Alohida yopiq SDK o'rnatish shart emas.
+          Xarita <A href="https://maplibre.org/">MapLibre GL JS</A> kutubxonasi orqali chiziladi, xarita
+          ma'lumoti va uslub (<C>style.json</C>, tile, shriftlar) OnDexMap serverlaridan olinadi.
         </p>
       </Callout>
 

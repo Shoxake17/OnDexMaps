@@ -12,7 +12,7 @@ export default function ConnectJsPage() {
 
       <Callout kind="note">
         <p>
-          Xaritaning o&apos;zini ko&apos;rsatish uchun API kalit KERAK EMAS. Kalit faqat{" "}
+          Xaritaning o&apos;zini ko&apos;rsatish uchun API kalit talab qilinmaydi. Kalit faqat{" "}
           <A href="/docs/api">REST API</A> chaqiruvlariga kerak (qidiruv, marshrut, ob&apos;ektlar) — uni{" "}
           <A href="/keys">API kalitlar</A> bo&apos;limida olasiz.
         </p>
@@ -43,7 +43,7 @@ export default function ConnectJsPage() {
           },
           {
             name: "index.js",
-            code: `// Protokolni xarita YARATISHDAN OLDIN ro'yxatdan o'tkazish shart
+            code: `// Protokol xarita yaratilishidan oldin ro'yxatdan o'tkaziladi
 maplibregl.addProtocol("pmtiles", new pmtiles.Protocol().tile);
 
 const map = new maplibregl.Map({
@@ -98,9 +98,9 @@ export function createMap(container) {
       />
       <Callout kind="warn">
         <p>
-          Versiyalarni <C>^</C> siz, qat&apos;iy yozing. <C>maplibre-gl</C> v6 WebGL2&apos;ni majburiy
-          talab qiladi va qo&apos;llab-quvvatlamaydigan qurilmada xarita <em>jimgina oq</em> bo&apos;lib
-          qoladi — konsolda xato ham chiqmaydi.
+          Versiyalar <C>^</C> belgisisiz, qat&apos;iy ko&apos;rsatiladi. <C>maplibre-gl</C> 6-versiyasi
+          WebGL2&apos;ni majburiy talab qiladi va uni qo&apos;llab-quvvatlamaydigan qurilmada xarita
+          xato xabarisiz oq qoladi.
         </p>
       </Callout>
 
@@ -148,8 +148,8 @@ export function createMap(container) {
             children: (
               <>
                 Xaritani ma&apos;lum hudud bilan cheklaydi. O&apos;zbekiston uchun:{" "}
-                <C>[[55.5, 37.0], [73.5, 45.8]]</C> — tashqarida tile yo&apos;q, xarita oq
-                ko&apos;rinardi.
+                <C>[[55.5, 37.0], [73.5, 45.8]]</C>. Bu hududdan tashqarida xarita ma&apos;lumoti
+                mavjud emas.
               </>
             ),
           },
@@ -159,9 +159,9 @@ export function createMap(container) {
       <H2 id="features">Ulash xususiyatlari</H2>
       <ol className="mb-3 list-decimal space-y-3 pl-5 text-sm text-muted">
         <li>
-          <strong className="text-foreground">Protokol tartibi muhim.</strong> <C>addProtocol</C> xarita
-          yaratishdan OLDIN chaqirilishi shart — aks holda uslubdagi <C>pmtiles://</C> manbalari
-          yuklanmaydi va xarita bo&apos;sh qoladi.
+          <strong className="text-foreground">Protokol tartibi.</strong> <C>addProtocol</C> xarita
+          yaratilishidan oldin chaqiriladi; aks holda uslubdagi <C>pmtiles://</C> manbalari yuklanmaydi
+          va xarita bo&apos;sh qoladi.
         </li>
         <li>
           <strong className="text-foreground">Uslub tashqi manbalarga murojaat qiladi.</strong> Tile
@@ -175,8 +175,8 @@ export function createMap(container) {
           faqat klientda yuklang (<A href="/docs/js/connect/react">React</A> sahifasiga qarang).
         </li>
         <li>
-          <strong className="text-foreground">CSS unutilmasin.</strong> <C>maplibre-gl.css</C> ulanmasa
-          boshqaruv tugmalari va markerlar joyida turmaydi.
+          <strong className="text-foreground">Uslub fayli.</strong> <C>maplibre-gl.css</C> ulanmasa
+          boshqaruv tugmalari va markerlar to&apos;g&apos;ri joylashmaydi.
         </li>
       </ol>
 

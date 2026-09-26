@@ -42,7 +42,7 @@ export default function QuickstartPage() {
   <script src="https://unpkg.com/pmtiles@3.2.1/dist/pmtiles.js"></script>
 </head>`}</Code>
       <P>
-        Versiyalarni ATAYLAB qat'iy yozing. Sabab —{" "}
+        Versiyalar qat'iy ko'rsatiladi. Batafsil —{" "}
         <A href="/docs/js/general#versions">Umumiy ma'lumot → Versiyalar</A>.
       </P>
 
@@ -75,9 +75,8 @@ export default function QuickstartPage() {
 </script>`}</Code>
       <Callout kind="note">
         <p>
-          Koordinata tartibi MapLibre'da <C>[lng, lat]</C> — ya'ni avval uzunlik, keyin kenglik. Bizning
-          REST API esa <C>lat</C> va <C>lng</C> ni alohida maydon sifatida qaytaradi, shuning uchun
-          markerga berayotganda tartibni almashtirishni unutmang.
+          MapLibre koordinatani <C>[lng, lat]</C> tartibida qabul qiladi — avval uzunlik, keyin kenglik.
+          REST API javoblarida esa <C>lat</C> va <C>lng</C> alohida maydonlar.
         </p>
       </Callout>
 

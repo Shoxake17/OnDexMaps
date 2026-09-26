@@ -17,8 +17,8 @@ type Menu = "products" | "developer" | null;
 const MAPS_ITEMS: { label: string; desc: string; href?: string }[] = [
   { label: "JavaScript API", desc: "Saytingizga interaktiv xarita", href: "/docs/js" },
   { label: "Tiles API", desc: "Xaritaning o'zi (tile qatlami)", href: "/docs/js/general#endpoints" },
-  { label: "MapKit SDK", desc: "Mobil ilova uchun — tez orada" },
-  { label: "Static API", desc: "Statik xarita rasmi — tez orada" },
+  { label: "MapKit SDK", desc: "Mobil ilovalar uchun" },
+  { label: "Static API", desc: "Statik xarita tasviri" },
 ];
 
 const DOCS_LINKS = [

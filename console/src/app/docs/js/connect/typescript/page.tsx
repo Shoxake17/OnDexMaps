@@ -12,7 +12,7 @@ export default function ConnectTsPage() {
 
       <Callout kind="note">
         <p>
-          Alohida <C>@types/...</C> paket o&apos;rnatish SHART EMAS: <C>maplibre-gl</C> va <C>pmtiles</C>{" "}
+          Alohida <C>@types/...</C> paket o&apos;rnatish talab qilinmaydi: <C>maplibre-gl</C> va <C>pmtiles</C>{" "}
           tiplarni o&apos;z ichida olib keladi.
         </p>
       </Callout>

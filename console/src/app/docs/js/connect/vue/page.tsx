@@ -83,9 +83,9 @@ import OnDexMap from "./OnDexMap.vue";
 
       <Callout kind="warn">
         <p>
-          Xaritani oddiy <C>ref()</C> ga solmang — Vue uni chuqur reaktiv proksiga o&apos;raydi va
-          MapLibre&apos;ning ichki obyektlari buziladi (xarita sekinlashadi yoki xato beradi).{" "}
-          <C>shallowRef()</C> ishlating.
+          Xarita obyekti uchun <C>shallowRef()</C> ishlatiladi. Oddiy <C>ref()</C> uni chuqur reaktiv
+          proksiga o&apos;raydi, bu esa kutubxonaning ichki holatiga ta&apos;sir qiladi va xatolarga
+          olib keladi.
         </p>
       </Callout>
 

@@ -81,9 +81,8 @@ export default function ConnectCspPage() {
 
       <Callout kind="warn">
         <p>
-          <C>worker-src</C> ni <C>script-src</C> qamrab olmaydi. Ko&apos;p saytlarda aynan shu direktiva
-          unutiladi va xarita hech qanday xato xabarisiz bo&apos;sh qoladi — brauzer konsolidagi yagona
-          belgi <C>Refused to create a worker</C> qatori bo&apos;ladi.
+          <C>worker-src</C> direktivasini <C>script-src</C> qamrab olmaydi. U ko&apos;rsatilmasa xarita
+          bo&apos;sh qoladi va brauzer konsolida <C>Refused to create a worker</C> xabari chiqadi.
         </p>
       </Callout>
 
@@ -101,9 +100,9 @@ connect-src 'self' https://maps.ondex.uz https://tiles.ondex.uz;`}</Code>
 
       <H2 id="https">HTTPS va aralash tarkib</H2>
       <P>
-        Sayt <C>https://</C> da bo&apos;lsa, barcha xarita manbalari ham <C>https://</C> bo&apos;lishi
-        SHART. Bitta <C>http://</C> manzil ham brauzer tomonidan &quot;aralash tarkib&quot; sifatida
-        bloklanadi va natija xuddi CSP xatosidek ko&apos;rinadi — oq xarita, tushunarsiz sabab.
+        Sayt <C>https://</C> orqali ochilsa, barcha xarita manbalari ham <C>https://</C> bo&apos;lishi
+        kerak. <C>http://</C> manzillar &quot;aralash tarkib&quot; sifatida bloklanadi va xarita
+        ko&apos;rinmay qoladi.
       </P>
 
       <H3 id="debug">Nosozlikni topish</H3>
@@ -117,8 +116,7 @@ connect-src 'self' https://maps.ondex.uz https://tiles.ondex.uz;`}</Code>
           etadi, buzilishlar esa konsolda ko&apos;rinadi.
         </li>
         <li>
-          Xarita oq bo&apos;lsa, birinchi navbatda <C>worker-src</C> va <C>connect-src</C> ni tekshiring —
-          amaliyotda xatolarning aksariyati shu ikkitasida.
+          Xarita oq bo&apos;lsa, avval <C>worker-src</C> va <C>connect-src</C> direktivalarini tekshiring.
         </li>
       </UL>
 

@@ -11,10 +11,7 @@ export default function GeneralPage() {
       <h1 className="mb-6 text-3xl font-bold">Umumiy ma'lumot</h1>
 
       <H2 id="architecture">Nimadan iborat</H2>
-      <P>
-        OnDexMap JavaScript API alohida yopiq kutubxona EMAS. U uchta qismdan iborat va uchalasi ham ochiq
-        standartlarga tayanadi:
-      </P>
+      <P>JavaScript API uch qismdan tashkil topgan:</P>
       <UL>
         <li>
           <strong className="text-foreground">MapLibre GL JS</strong> — xaritani chizadigan ochiq kutubxona
@@ -25,14 +22,14 @@ export default function GeneralPage() {
           formati. Brauzer faqat kerakli baytlarni <C>Range</C> so'rovi bilan oladi.
         </li>
         <li>
-          <strong className="text-foreground">OnDexMap uslubi va ma'lumoti</strong> — <C>style.json</C>,
-          shriftlar va O'zbekiston tile'lari bizning serverlarimizdan.
+          <strong className="text-foreground">OnDexMap xarita ma'lumoti</strong> — <C>style.json</C>,
+          shriftlar va O'zbekiston bo'yicha vektor tile'lar.
         </li>
       </UL>
       <Callout kind="note">
         <p>
-          Shu sababli sizga maxsus SDK o'rnatish shart emas: MapLibre hujjatlaridagi har qanday misol
-          OnDexMap bilan ham ishlaydi — faqat <C>style</C> manzilini biznikiga almashtirasiz.
+          Maxsus SDK o'rnatish talab qilinmaydi. MapLibre GL JS hujjatlaridagi misollar OnDexMap bilan
+          ham ishlaydi — <C>style</C> parametrida OnDexMap uslub manzili ko'rsatiladi.
         </p>
       </Callout>
 
@@ -49,10 +46,9 @@ REST API:        https://maps.ondex.uz/v2/...`}</Code>
       <H2 id="versions">Versiyalar</H2>
       <Callout kind="warn">
         <p>
-          <strong className="text-foreground">MapLibre GL JS 4.7.x</strong> ishlating.{" "}
-          <strong className="text-foreground">v6 ga ko'tarmang</strong> — u WebGL2'ni majburiy talab qiladi
-          va qo'llab-quvvatlamaydigan qurilmalarda xarita <em>jimgina oq</em> bo'lib qoladi: konsolda xato
-          ham chiqmaydi. Bu bizda haqiqiy sinovda aniqlangan.
+          Qo'llab-quvvatlanadigan versiya — <strong className="text-foreground">MapLibre GL JS 4.7.x</strong>.
+          6-versiya WebGL2'ni majburiy talab qiladi va uni qo'llab-quvvatlamaydigan qurilmalarda xarita
+          xato xabarisiz oq qoladi.
         </p>
       </Callout>
       <Code>{`maplibre-gl  4.7.1
@@ -64,23 +60,20 @@ pmtiles      3.2.1`}</Code>
         chaqiruvlari uchun kerak — qidiruv, manzil aniqlash, marshrut va ob'ektlar.
       </P>
       <P>
-        Brauzerdan chaqirayotgan bo'lsangiz <strong className="text-foreground">brauzer kaliti</strong>{" "}
-        yarating va ruxsat etilgan domenlarni ko'rsating — kalit faqat o'sha domenlardan ishlaydi. Server
-        kalitini sahifa kodiga HECH QACHON joylashtirmang: u ochiq ko'rinadi va IP cheklovidan boshqa
-        himoyasi yo'q.
+        Brauzerdan chaqirilganda <strong className="text-foreground">brauzer kaliti</strong> ishlatiladi:
+        yaratishda ruxsat etilgan domenlar ko'rsatiladi va kalit faqat o'sha domenlardan qabul qilinadi.
+        Server kaliti sahifa kodiga joylashtirilmaydi — u ochiq ko'rinadi.
       </P>
 
-      <H2 id="limits">Hududiy cheklovlar</H2>
-      <P>Funksiyalarning qamrovi bir xil emas:</P>
+      <H2 id="limits">Hududiy qamrov</H2>
       <UL>
         <li>
-          <C>/v2/geocode</C> va <C>/v2/places</C> — butun O'zbekiston bo'yicha.
+          <C>/v2/geocode</C>, <C>/v2/places</C> va xarita tile'lari — butun O'zbekiston.
         </li>
         <li>
-          <C>/v2/reverse</C> va <C>/v2/directions</C> — hozircha xizmat hududi: 40.5–41.6° shimol,
-          70.5–72.0° sharq (Chust va atrofi). Tashqaridagi koordinata <C>INVALID_REQUEST</C> qaytaradi.
+          <C>/v2/reverse</C> va <C>/v2/directions</C> — 40.5–41.6° shimol, 70.5–72.0° sharq.
+          Bu hududdan tashqaridagi koordinata <C>INVALID_REQUEST</C> qaytaradi.
         </li>
-        <li>Xarita tile'lari (ko'rinish) — butun O'zbekiston.</li>
       </UL>
 
       <H3 id="objects">Obyektlar ierarxiyasi</H3>

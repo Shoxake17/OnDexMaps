@@ -10,15 +10,14 @@ export default function DocsHome() {
     <div className="max-w-3xl">
       <h1 className="mb-4 text-3xl font-bold">OnDexMap API</h1>
       <p className="mb-2 text-muted">
-        OnDexMap — O'zbekiston uchun o'z xarita platformamiz: xarita ma'lumoti, geokodlash, marshrut va
-        ob'ektlar bazasi. Hammasi o'z serverlarimizda ishlaydi.
+        OnDexMap — O'zbekiston bo'yicha xarita platformasi: xarita ma'lumoti, geokodlash, marshrutlash va
+        ob'ektlar bazasi.
       </p>
       <p className="text-muted">
-        Quyidagi bo'limlar bilan tanishib chiqing — kalit olish uchun ro'yxatdan o'tish talab qilinadi, lekin
-        hujjatlar hammaga ochiq.
+        Hujjatlar ochiq. API kalit olish uchun boshqaruv panelida ro'yxatdan o'tiladi.
       </p>
 
-      <H2 id="products">Nimalar bor</H2>
+      <H2 id="products">Imkoniyatlar</H2>
       <CardGrid
         cards={[
           {
@@ -61,8 +60,8 @@ export default function DocsHome() {
 
       <H2 id="start">Qayerdan boshlash</H2>
       <P>
-        Saytingizda xarita ko'rsatmoqchi bo'lsangiz — «JavaScript API → Tezkor start». Faqat ma'lumot kerak
-        bo'lsa (manzil qidirish, marshrut hisoblash) — «REST API».
+        Saytda xarita ko'rsatish uchun — «JavaScript API → Tezkor start». Faqat ma'lumot kerak bo'lsa
+        (manzil qidirish, marshrut hisoblash) — «REST API».
       </P>
 
       <PrevNext current="/docs" />

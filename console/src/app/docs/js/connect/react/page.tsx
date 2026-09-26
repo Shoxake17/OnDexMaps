@@ -73,9 +73,9 @@ export default function App() {
 
       <Callout kind="warn">
         <p>
-          React <C>StrictMode</C> (dev rejimda) effektlarni IKKI MARTA ishga tushiradi. Yuqoridagi{" "}
-          <C>if (map.current) return</C> va tozalash funksiyasi bo&apos;lmasa, ikkita xarita yaratiladi va
-          biri &quot;osilib&quot; qoladi: xotira sarfi ortadi, tile so&apos;rovlari ikki barobar bo&apos;ladi.
+          React <C>StrictMode</C> ishlab chiqish rejimida effektlarni ikki marta ishga tushiradi.
+          Yuqoridagi <C>if (map.current) return</C> tekshiruvi va tozalash funksiyasi ikkinchi nusxa
+          yaratilishining oldini oladi.
         </p>
       </Callout>
 

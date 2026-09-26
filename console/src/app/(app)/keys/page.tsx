@@ -223,7 +223,7 @@ function CreateKeyModal({ onClose, onCreated }: { onClose: () => void; onCreated
           <p className="mt-1 text-xs text-muted">
             {kind === "server"
               ? "Faqat X-API-Key sarlavhasida yuboriladi; ixtiyoriy ravishda IP manzillarga cheklanadi."
-              : "Sahifa manzilidan (?key=) ham yuboriladi; ruxsat etilgan domen(lar) MAJBURIY."}
+              : "Sahifa manzilidan (?key=) ham yuboriladi; ruxsat etilgan domenlar majburiy."}
           </p>
         </div>
         <div>
