@@ -18,7 +18,7 @@ const CONSOLE_API_INTERNAL_URL = (
  * SHU YERDAN olinadi va konsolning O'Z domenida (`/openapi.yaml`) beriladi.
  *
  * Nega proksi: kontraktni to'g'ridan-to'g'ri `maps.ondex.uz` dan yuklash
- * konsolning qat'iy CSP'siga (`connect-src 'self'`) urилиб qolardi va
+ * konsolning qat'iy CSP'siga (`connect-src 'self'`) urilib qolardi va
  * yana bitta domen ruxsati talab qilinardi. Proksi bilan brauzer uchun
  * hammasi bitta origin bo'lib qoladi.
  */
