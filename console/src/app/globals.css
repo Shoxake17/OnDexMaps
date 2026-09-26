@@ -9,6 +9,9 @@
   --brand: #f97316;
   --brand-dark: #27272a;
   --danger: #dc2626;
+  /* Hujjatlar bo'limi: to'q navbar va kod bloklari (image/ondexmapsdocs.png). */
+  --nav: #101828;
+  --code: #0f172a;
 }
 
 @theme inline {
@@ -19,6 +22,8 @@
   --color-muted: var(--muted);
   --color-brand: var(--brand);
   --color-danger: var(--danger);
+  --color-nav: var(--nav);
+  --color-code: var(--code);
 }
 
 @media (prefers-color-scheme: dark) {

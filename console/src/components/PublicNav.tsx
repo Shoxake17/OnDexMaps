@@ -1,199 +1,187 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { DOCS_INDEX } from "./docs/nav";
+import { SearchIcon, GlobeIcon } from "./docs/icons";
 
 /**
- * PublicNav — ochiq sahifalar (hujjatlar) uchun navbar.
+ * PublicNav — ochiq sahifalar (hujjatlar) uchun yuqori panel.
  *
- * Tuzilma Yandex Xaritalar API sahifasidan (`image/Developer.png`,
- * `image/ProductsBlock.png`): Mahsulotlar/Dasturchilar/Tariflar/FAQ + mega-panel.
- * Mazmun — FAQAT bizda bor narsalar; ikkita nom (`MapKit SDK`, `Static API`)
- * hali YO'Q — ular "Tez orada" belgisi bilan, havolasiz, bosilmaydigan holatda
- * (soxta imkoniyat va'da qilinmaydi, lekin reja sifatida ko'rsatiladi).
+ * Tuzilma `image/ondexmapsdocs.png` dagi kabi: chapda belgi va nom, o'rtada
+ * bo'limlar, o'ngda qidiruv (⌘K), til va «Kirish».
+ *
+ * Qidiruv HAQIQIY ishlaydi: indeks `docs/nav.ts` dagi menyudan yig'iladi, ya'ni
+ * yangi sahifa qo'shilganda qidiruvga ham o'zi tushadi.
  */
 
-type Menu = "products" | "developer" | null;
-
-const MAPS_ITEMS: { label: string; desc: string; href?: string }[] = [
-  { label: "JavaScript API", desc: "Saytingizga interaktiv xarita", href: "/docs/js" },
-  { label: "Tiles API", desc: "Xaritaning o'zi (tile qatlami)", href: "/docs/js/general#endpoints" },
-  { label: "MapKit SDK", desc: "Mobil ilovalar uchun" },
-  { label: "Static API", desc: "Statik xarita tasviri" },
+const LINKS = [
+  { href: "/docs", label: "Docs" },
+  { href: "/docs/api", label: "API" },
+  { href: "/dashboard", label: "Console" },
+  { href: "/docs/billing/plans", label: "Pricing" },
+  { href: "/docs/faq", label: "FAQ" },
 ];
 
-const DOCS_LINKS = [
-  { href: "/docs/api#geocode", label: "Geocode API", desc: "Nom → koordinata" },
-  { href: "/docs/api#reverse", label: "Reverse Geocode", desc: "Koordinata → manzil" },
-  { href: "/docs/api#directions", label: "Directions API", desc: "A → B haqiqiy yo'l" },
-  { href: "/docs/api#places", label: "Places API", desc: "Ob'ekt ma'lumoti" },
-];
-
-const CONSOLE_LINKS = [
-  { href: "/dashboard", label: "Boshqaruv paneli" },
-  { href: "/keys", label: "API kalitlar" },
-  { href: "/usage", label: "Foydalanish statistikasi" },
-  { href: "/billing", label: "Hisob-faktura" },
-];
-
-function ChevronIcon({ open }: { open: boolean }) {
-  return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      className={`transition-transform ${open ? "rotate-180" : ""}`}
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  );
+/**
+ * Faol band — BITTA joyda aniqlanadi va faqat bittasi yonadi.
+ * Tartib muhim: `/docs` hammasiga mos kelgani uchun u oxirida turadi.
+ */
+function activeLink(pathname: string): string | null {
+  if (pathname.startsWith("/docs/api")) return "/docs/api";
+  if (pathname.startsWith("/docs/billing")) return "/docs/billing/plans";
+  if (pathname.startsWith("/docs/faq")) return "/docs/faq";
+  if (["/dashboard", "/keys", "/usage", "/billing"].some((p) => pathname.startsWith(p))) return "/dashboard";
+  if (pathname === "/docs" || pathname.startsWith("/docs/")) return "/docs";
+  return null;
 }
 
-function NavButton({ label, menu, current, onToggle }: { label: string; menu: Menu; current: Menu; onToggle: (m: Menu) => void }) {
-  const open = current === menu;
+function Search() {
+  const router = useRouter();
+  const input = useRef<HTMLInputElement>(null);
+  const box = useRef<HTMLDivElement>(null);
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const results = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    if (needle.length < 2) return [];
+    const seen = new Set<string>();
+    return DOCS_INDEX.filter((d) => {
+      if (seen.has(d.href) || !d.label.toLowerCase().includes(needle)) return false;
+      seen.add(d.href);
+      return true;
+    }).slice(0, 8);
+  }, [q]);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        input.current?.focus();
+        setOpen(true);
+      }
+      if (e.key === "Escape") {
+        setOpen(false);
+        input.current?.blur();
+      }
+    }
+    function onDown(e: MouseEvent) {
+      if (box.current && !box.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onDown);
+    };
+  }, []);
+
+  function go(href: string) {
+    setOpen(false);
+    setQ("");
+    input.current?.blur();
+    router.push(href);
+  }
+
   return (
-    <button
-      type="button"
-      onClick={() => onToggle(open ? null : menu)}
-      aria-expanded={open}
-      className={`flex items-center gap-1 rounded-md px-3 py-2 text-sm transition-colors ${
-        open ? "bg-zinc-800 text-white" : "text-zinc-300 hover:text-white"
-      }`}
-    >
-      {label}
-      <ChevronIcon open={open} />
-    </button>
+    <div ref={box} className="relative hidden md:block">
+      <div className="flex w-64 items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 focus-within:border-white/35">
+        <span className="text-slate-400">
+          <SearchIcon size={15} />
+        </span>
+        <input
+          ref={input}
+          value={q}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && results[0]) go(results[0].href);
+          }}
+          placeholder="Hujjatlardan qidirish…"
+          aria-label="Hujjatlardan qidirish"
+          className="min-w-0 flex-1 bg-transparent text-[13px] text-white placeholder:text-slate-500 focus:outline-none"
+        />
+        <kbd className="rounded border border-white/15 px-1.5 py-0.5 font-mono text-[10px] text-slate-400">⌘K</kbd>
+      </div>
+
+      {open && q.trim().length >= 2 && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+          {results.length === 0 ? (
+            <div className="px-4 py-3 text-[13px] text-muted">Natija topilmadi</div>
+          ) : (
+            <ul>
+              {results.map((r) => (
+                <li key={r.href}>
+                  <button
+                    type="button"
+                    onClick={() => go(r.href)}
+                    className="flex w-full items-baseline justify-between gap-3 px-4 py-2.5 text-left hover:bg-border/50"
+                  >
+                    <span className="text-[13px] font-medium">{r.label}</span>
+                    <span className="shrink-0 text-[11px] text-muted">{r.section}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
 export function PublicNav() {
-  const [menu, setMenu] = useState<Menu>(null);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setMenu(null);
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setMenu(null);
-    }
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, []);
+  const pathname = usePathname();
+  const active = activeLink(pathname);
 
   return (
-    <div ref={ref} className="sticky top-0 z-40 bg-zinc-950 text-zinc-100">
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4">
-        <Link href="/docs" className="flex shrink-0 items-center gap-2" onClick={() => setMenu(null)}>
+    <header className="sticky top-0 z-40 bg-nav text-slate-100">
+      <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-6 px-4 xl:px-6">
+        <Link href="/docs" className="flex shrink-0 items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element -- kichik statik belgi, Image optimizatsiyasi ortiqcha */}
-          <img src="/logo.png" alt="" width={30} height={30} className="shrink-0" />
-          <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[11px] font-bold tracking-wide text-zinc-300">API</span>
-          <span className="text-lg font-extrabold tracking-tight">
-            <span className="text-brand">On</span>Dex <span className="font-normal text-zinc-400">Maps</span>
-          </span>
+          <img src="/logo.png" alt="" width={26} height={26} className="shrink-0" />
+          <span className="text-[19px] font-bold tracking-tight">OnDexMap</span>
         </Link>
 
         <nav className="hidden items-center gap-1 sm:flex">
-          <NavButton label="Mahsulotlar" menu="products" current={menu} onToggle={setMenu} />
-          <NavButton label="Dasturchilar" menu="developer" current={menu} onToggle={setMenu} />
-          <a href="/docs/api#pricing" onClick={() => setMenu(null)} className="rounded-md px-3 py-2 text-sm text-zinc-300 hover:text-white">
-            Tariflar
-          </a>
-          <a href="/docs/api#faq" onClick={() => setMenu(null)} className="rounded-md px-3 py-2 text-sm text-zinc-300 hover:text-white">
-            FAQ
-          </a>
+          {LINKS.map((l) => {
+            const on = l.href === active;
+            return (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={`relative rounded-md px-3 py-2 text-sm transition-colors ${
+                  on ? "font-semibold text-white" : "text-slate-300 hover:text-white"
+                }`}
+              >
+                {l.label}
+                {on && <span className="absolute inset-x-3 -bottom-[9px] h-0.5 rounded-full bg-brand" />}
+              </Link>
+            );
+          })}
         </nav>
 
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-3">
+          <Search />
+          <span
+            className="hidden items-center gap-1.5 text-[13px] text-slate-300 lg:flex"
+            title="Hujjatlar o'zbek tilida"
+          >
+            <GlobeIcon size={15} />
+            UZ
+          </span>
           <Link
             href="/login"
-            className="rounded-full bg-white px-5 py-2 text-sm font-bold text-black transition hover:bg-zinc-200"
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
           >
             Kirish
           </Link>
         </div>
       </div>
-
-      {menu === "products" && (
-        <div className="absolute inset-x-0 top-full border-t border-zinc-800 bg-zinc-950 shadow-2xl">
-          <div className="mx-auto max-w-6xl px-4 py-8">
-            <div className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">Xaritalar</div>
-            <div className="grid grid-cols-1 gap-x-8 gap-y-1 sm:grid-cols-2">
-              {MAPS_ITEMS.map((it) =>
-                it.href ? (
-                  <a
-                    key={it.label}
-                    href={it.href}
-                    onClick={() => setMenu(null)}
-                    className="-mx-2 block rounded-md px-2 py-2.5 hover:bg-zinc-800"
-                  >
-                    <div className="text-sm text-zinc-100">{it.label}</div>
-                    <div className="text-xs text-zinc-500">{it.desc}</div>
-                  </a>
-                ) : (
-                  <div key={it.label} className="-mx-2 flex items-start gap-2 rounded-md px-2 py-2.5 opacity-60">
-                    <div>
-                      <div className="flex items-center gap-2 text-sm text-zinc-300">
-                        {it.label}
-                        <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400">
-                          Tez orada
-                        </span>
-                      </div>
-                      <div className="text-xs text-zinc-500">{it.desc}</div>
-                    </div>
-                  </div>
-                ),
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {menu === "developer" && (
-        <div className="absolute inset-x-0 top-full border-t border-zinc-800 bg-zinc-950 shadow-2xl">
-          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 py-8 sm:grid-cols-2">
-            <div>
-              <div className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">Hujjatlar</div>
-              <ul className="space-y-1">
-                {DOCS_LINKS.map((d) => (
-                  <li key={d.href}>
-                    <a
-                      href={d.href}
-                      onClick={() => setMenu(null)}
-                      className="-mx-2 block rounded-md px-2 py-2 hover:bg-zinc-800"
-                    >
-                      <div className="text-sm text-zinc-100">{d.label}</div>
-                      <div className="text-xs text-zinc-500">{d.desc}</div>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <div className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">Konsol</div>
-              <ul className="space-y-1">
-                {CONSOLE_LINKS.map((c) => (
-                  <li key={c.href}>
-                    <Link
-                      href={c.href}
-                      onClick={() => setMenu(null)}
-                      className="-mx-2 block rounded-md px-2 py-2 text-sm text-zinc-100 hover:bg-zinc-800"
-                    >
-                      {c.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    </header>
   );
 }

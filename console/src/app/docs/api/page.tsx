@@ -1,246 +1,153 @@
-import Link from "next/link";
-import { PrevNext } from "@/components/docs/parts";
+import { A, C, Callout, CardGrid, Code, H2, P, PageHead, PrevNext, Table } from "@/components/docs/parts";
+import { BookIcon, KeyIcon, ServerIcon, PinIcon, LayersIcon, HelpIcon, CodeIcon } from "@/components/docs/icons";
 
-export const metadata = { title: "REST API — OnDex Console" };
+export const metadata = {
+  title: "REST API — OnDexMap",
+  description:
+    "OnDexMap REST API: geocode, reverse geocode, directions va places. Autentifikatsiya, javob shakli va xatolar.",
+};
 
-function Code({ children }: { children: string }) {
+export default function RestApiPage() {
   return (
-    <pre className="rounded-lg bg-brand-dark text-slate-100 p-4 text-sm overflow-x-auto">
-      <code>{children}</code>
-    </pre>
-  );
-}
+    <div className="max-w-none">
+      <PageHead
+        title="REST API"
+        desc="To'rtta amal: geokodlash (nom → koordinata), teskari geokodlash (koordinata → manzil), ikki nuqta orasidagi marshrut va ob'ekt ma'lumoti. Barcha so'rovlar faqat o'qish uchun."
+        pills={[
+          { href: "/docs/api/reference", label: "API Reference", icon: <BookIcon size={15} /> },
+          { href: "/keys", label: "API kalit olish", icon: <KeyIcon size={15} /> },
+          { href: "/openapi.yaml", label: "openapi.yaml", icon: <ServerIcon size={15} /> },
+        ]}
+      />
 
-function Endpoint({
-  id,
-  method,
-  path,
-  desc,
-  params,
-  example,
-}: {
-  id: string;
-  method: string;
-  path: string;
-  desc: string;
-  params: [string, string][];
-  example: string;
-}) {
-  return (
-    <div id={id} className="scroll-mt-20 rounded-xl border border-border bg-card p-5">
-      <div className="flex items-center gap-2 mb-2">
-        <span className="rounded bg-emerald-500/10 text-emerald-600 px-2 py-0.5 text-xs font-mono font-bold">{method}</span>
-        <code className="text-sm font-semibold">{path}</code>
-      </div>
-      <p className="text-sm text-muted mb-3">{desc}</p>
-      <table className="w-full text-sm mb-3">
-        <tbody>
-          {params.map(([name, d]) => (
-            <tr key={name} className="border-b border-border/60 last:border-0">
-              <td className="py-1 pr-3 font-mono text-brand whitespace-nowrap">{name}</td>
-              <td className="py-1 text-muted">{d}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <Code>{example}</Code>
-    </div>
-  );
-}
+      <H2 id="endpointlar">Endpointlar</H2>
+      <CardGrid
+        cards={[
+          {
+            href: "/docs/api/geocode",
+            title: "Geocode",
+            desc: "Nom bo'yicha joy qidirish: shahar, ko'cha, mahalla, ob'ekt.",
+            icon: <PinIcon size={20} />,
+          },
+          {
+            href: "/docs/api/reverse",
+            title: "Reverse Geocode",
+            desc: "Koordinata bo'yicha manzil aniqlash.",
+            icon: <PinIcon size={20} />,
+          },
+          {
+            href: "/docs/api/directions",
+            title: "Directions",
+            desc: "Ikki nuqta orasidagi haqiqiy yo'l: masofa, vaqt, chiziq.",
+            icon: <CodeIcon size={20} />,
+          },
+          {
+            href: "/docs/api/places",
+            title: "Places",
+            desc: "To'rtburchak ichidagi tasdiqlangan ob'ektlar (GeoJSON).",
+            icon: <LayersIcon size={20} />,
+          },
+          {
+            href: "/docs/api/places-by-id",
+            title: "Place by ID",
+            desc: "Bitta ob'ektning to'liq ma'lumoti.",
+            icon: <LayersIcon size={20} />,
+          },
+          {
+            href: "/docs/api/errors",
+            title: "Errors",
+            desc: "Xato kodlari, sabablari va qayta urinish qoidalari.",
+            icon: <HelpIcon size={20} />,
+          },
+        ]}
+      />
 
-export default function DocsPage() {
-  return (
-    <div className="max-w-3xl space-y-10">
-      <div>
-        <h1 className="text-3xl font-bold mb-3">REST API</h1>
-        <p className="mb-3 rounded-lg border-l-4 border-brand/40 bg-brand/5 px-4 py-3 text-sm">
-          Aniq parametrlar, javob sxemalari va brauzerdan sinash uchun —{" "}
-          <Link href="/docs/api/reference" className="font-medium text-brand hover:underline">
-            OpenAPI ma&apos;lumotnomasi
-          </Link>
-          . Mashina o&apos;qiydigan kontrakt:{" "}
-          <Link href="/openapi.yaml" className="font-mono text-xs text-brand hover:underline">
-            /openapi.yaml
-          </Link>
-        </p>
-        <p className="text-muted">
-          REST API to'rtta amalni taqdim etadi: geokodlash (nom → koordinata), teskari geokodlash
-          (koordinata → manzil), ikki nuqta orasidagi marshrut va ob'ekt ma'lumoti. Barcha so'rovlar
-          faqat o'qish uchun.
-        </p>
-      </div>
+      <H2 id="asosiy-manzil">Asosiy manzil</H2>
+      <Code lang="terminal">{`https://maps.ondex.uz/v2`}</Code>
+      <P>
+        Barcha endpointlar <C>GET</C> usulini qabul qiladi. Ro&apos;yxatda yo&apos;q yo&apos;l yoki boshqa
+        usul <C>api_not_allowed</C> bilan rad etiladi.
+      </P>
 
-      <>
-        <section id="key" className="scroll-mt-24">
-          <h2 className="text-xl font-semibold mb-3">1. API kalit</h2>
-          <p className="text-sm text-muted mb-3">
-            <Link href="/keys" className="text-brand hover:underline">
-              Boshqaruv panelida
-            </Link>{" "}
-            ikki turdagi kalit yaratishingiz mumkin:
-          </p>
-          <ul className="text-sm space-y-2 list-disc pl-5 text-muted">
-            <li>
-              <strong className="text-foreground">Server kaliti</strong> — o'z serveringizdan chaqirish uchun.
-              Faqat <code>X-API-Key</code> sarlavhasida yuboriladi (URL'da hech qachon emas). Ixtiyoriy ravishda IP
-              manzillarga cheklanadi.
-            </li>
-            <li>
-              <strong className="text-foreground">Brauzer kaliti</strong> — sahifangizdan to'g'ridan-to'g'ri
-              chaqirish uchun. Ruxsat etilgan domenlar ro'yxati majburiy; kalit shu domenlardan tashqarida
-              ishlamaydi.
-            </li>
-          </ul>
-          <p className="text-sm text-muted mt-3">
-            Kalit yaratilgan paytda bir marta ko'rsatiladi va saqlab qo'yiladi. Uni almashtirish kerak bo'lsa
-            "Almashtirish" amalidan foydalaning: yangi kalit darhol ishlaydi, eskisi 24 soat davomida amal
-            qiladi.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-xl font-semibold mb-3">2. So'rov yuborish</h2>
-          <Code>{`curl -H "X-API-Key: omk_s_..." \\
+      <H2 id="autentifikatsiya">Autentifikatsiya</H2>
+      <P>Kalit har bir so&apos;rovda yuboriladi. Server tomonidan:</P>
+      <Code lang="terminal">{`curl -H "X-API-Key: omk_s_..." \\
   "https://maps.ondex.uz/v2/geocode?q=Chust"`}</Code>
-          <p className="text-sm text-muted mt-2">
-            Brauzer kaliti bilan (sahifangizdan): <code>?key=omk_b_...</code> parametri orqali ham yuborish mumkin.
-          </p>
-        </section>
+      <P>Brauzerdan (sahifangizdan):</P>
+      <Code lang="js">{`const res = await fetch(
+  "https://maps.ondex.uz/v2/geocode?q=Chust&key=omk_b_...",
+);
+const data = await res.json();`}</Code>
+      <Table
+        head={["", "Server kaliti", "Brauzer kaliti"]}
+        rows={[
+          [
+            <strong key="a" className="text-foreground">
+              Prefiks
+            </strong>,
+            <C key="b">omk_s_</C>,
+            <C key="c">omk_b_</C>,
+          ],
+          [
+            <strong key="a" className="text-foreground">
+              Yuborish
+            </strong>,
+            <>
+              faqat <C>X-API-Key</C> sarlavhasi
+            </>,
+            <>
+              <C>X-API-Key</C> yoki <C>?key=</C>
+            </>,
+          ],
+          [
+            <strong key="a" className="text-foreground">
+              Cheklov
+            </strong>,
+            "IP ro'yxati (ixtiyoriy)",
+            "domen ro'yxati (majburiy)",
+          ],
+        ]}
+      />
+      <Callout kind="warn">
+        <p>
+          Server kaliti hech qachon sahifa kodiga joylashtirilmaydi — u brauzerda ochiq
+          ko&apos;rinadi. Batafsil — <A href="/docs/security/keys">API kalitlar</A>.
+        </p>
+      </Callout>
 
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold">3. Endpointlar</h2>
+      <H2 id="javob-shakli">Javob shakli</H2>
+      <P>
+        Barcha javoblarda <C>status</C> maydoni bo&apos;ladi. Natija <C>results</C> (ro&apos;yxat),{" "}
+        <C>result</C> (bitta obyekt) yoki <C>routes</C> maydonida keladi:
+      </P>
+      <Code lang="json">{`{ "status": "OK", "results": [ … ] }      // geocode
+{ "status": "OK", "result": { … } }      // reverse, places, places/{id}
+{ "status": "OK", "routes": [ … ] }      // directions
+{ "status": "ZERO_RESULTS" }             // topilmadi — xato EMAS`}</Code>
+      <P>
+        Xato javoblari va qayta urinish qoidalari — <A href="/docs/api/errors">Errors</A> sahifasida.
+      </P>
 
-          <Endpoint
-            id="geocode"
-            method="GET"
-            path="/v2/geocode"
-            desc="Nom bo'yicha joy qidirish (shahar, ko'cha, mahalla, ob'ekt)."
-            params={[
-              ["q", "qidiruv matni (2–100 belgi)"],
-              ["limit", "natijalar soni, 1–25 (standart 10)"],
-              ["lat, lng", "ixtiyoriy: xarita markazi — yaqin natija oldin chiqadi"],
-            ]}
-            example={`{
-  "status": "OK",
-  "results": [
-    { "id": "...", "type": "poi", "name": "Chust bozori", "lat": 41.0, "lng": 71.24 }
-  ]
-}`}
-          />
-          <Endpoint
-            id="reverse"
-            method="GET"
-            path="/v2/reverse"
-            desc="Koordinata bo'yicha manzil."
-            params={[
-              ["lat, lng", "koordinata (xizmat hududi ichida)"],
-            ]}
-            example={`{ "status": "OK", "result": { "text": "Chust, Bobur ko'chasi" } }`}
-          />
-          <Endpoint
-            id="directions"
-            method="GET"
-            path="/v2/directions"
-            desc="Ikki nuqta orasidagi haqiqiy yo'l (masofa, vaqt, chiziq)."
-            params={[
-              ["origin", "`lat,lng`"],
-              ["destination", "`lat,lng`"],
-            ]}
-            example={`{
-  "status": "OK",
-  "routes": [{ "distance_m": 1240, "duration_s": 180, "geometry": { "type": "LineString", "coordinates": [...] } }]
-}`}
-          />
-          <Endpoint
-            id="places"
-            method="GET"
-            path="/v2/places"
-            desc="To'rtburchak ichidagi tasdiqlangan ob'ektlar (GeoJSON)."
-            params={[["bbox", "g'arb,janub,sharq,shimol"]]}
-            example={`{ "status": "OK", "result": { "type": "FeatureCollection", "features": [...] } }`}
-          />
-          <Endpoint
-            id="places-by-id"
-            method="GET"
-            path="/v2/places/{id}"
-            desc="Bitta ob'ektning to'liq ma'lumoti."
-            params={[["id", "ob'ekt identifikatori"]]}
-            example={`{ "status": "OK", "result": { "id": "...", "name": "...", "lat": 41.0, "lng": 71.24 } }`}
-          />
-        </section>
+      <H2 id="limitlar">Limitlar</H2>
+      <Table
+        head={["Reja", "Tezlik", "Oylik chegara"]}
+        rows={[
+          ["Bepul", "10 so'rov/sekund", "200 000 so'rov"],
+          ["Obuna", "100 so'rov/sekund", "chegara yo'q"],
+          ["OnDex ekotizimi", "500 so'rov/sekund", "chegara yo'q"],
+        ]}
+      />
+      <P>
+        Joriy holat <A href="/usage">Foydalanish</A> bo&apos;limida; rejalar —{" "}
+        <A href="/docs/billing/plans">Tariflar</A>.
+      </P>
 
-        <section id="errors" className="scroll-mt-24">
-          <h2 className="text-xl font-semibold mb-3">4. Xatolar</h2>
-          <p className="text-sm text-muted mb-3">
-            Har bir xato javob <code>status</code> va <code>error.code</code> bilan keladi:
-          </p>
-          <Code>{`{ "status": "REQUEST_DENIED", "error": { "code": "quota_exceeded", "message": "..." } }`}</Code>
-          <table className="w-full text-sm mt-3">
-            <thead>
-              <tr className="text-left text-muted border-b border-border">
-                <th className="pb-2 font-medium">Holat</th>
-                <th className="pb-2 font-medium">Kod</th>
-                <th className="pb-2 font-medium">Sabab</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                ["401", "missing_key / invalid_key", "kalit yo'q yoki noto'g'ri"],
-                ["403", "key_restricted", "domen/IP ro'yxatiga mos kelmadi"],
-                ["403", "api_not_allowed", "bu funksiya kalitda yoqilmagan yoki umuman mavjud emas"],
-                ["429", "rate_limited", "tezlik chegarasi (Retry-After sarlavhasiga qarang)"],
-                ["429", "quota_exceeded", "oylik bepul chegara tugadi — obuna oling"],
-                ["503", "service_unavailable", "vaqtincha; qayta urinib ko'ring"],
-              ].map(([s, c, d]) => (
-                <tr key={c} className="border-b border-border/60 last:border-0">
-                  <td className="py-1.5 font-mono">{s}</td>
-                  <td className="py-1.5 font-mono text-brand">{c}</td>
-                  <td className="py-1.5 text-muted">{d}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-
-        <section id="pricing" className="scroll-mt-20">
-          <h2 className="text-xl font-semibold mb-3">5. Tarif rejalari</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-            {[
-              ["Bepul", "10 so'rov/s", "200 000 so'rov/oy", "0 so'm"],
-              ["Obuna", "100 so'rov/s", "Chegarasiz", "50 000 so'm/oy"],
-              ["OnDex ekotizimi", "500 so'rov/s", "Chegarasiz", "0 so'm"],
-            ].map(([name, rps, cap, price]) => (
-              <div key={name} className="rounded-xl border border-border bg-card p-4">
-                <div className="font-semibold">{name}</div>
-                <div className="text-muted mt-1">{rps}</div>
-                <div className="text-muted">{cap}</div>
-                <div className="mt-2 font-bold">{price}</div>
-              </div>
-            ))}
-          </div>
-          <p className="text-xs text-muted mt-3">
-            Obuna narxi ishlatilgan so'rov soniga bog'liq emas — oyiga qat'iy 50 000 so'm. To'lov: hisob-faktura +
-            qo'lda tasdiqlash (boshqaruv panelidagi "Hisob-faktura" bo'limi).
-          </p>
-        </section>
-
-        <section id="faq" className="scroll-mt-20 space-y-4">
-          <h2 className="text-xl font-semibold">6. Ko'p so'raladigan savollar</h2>
-          {[
-            ["API kalitni qanday olaman?", "Email va bir martalik kod bilan kiring, so'ng \"API kalitlar\" bo'limida yarating. Kalit bir marta ko'rsatiladi."],
-            ["Bepul va obuna reja farqi nimada?", "Bepul: 10 so'rov/s, oyiga 200 000. Obuna: 100 so'rov/s, oylik chegarasiz, oyiga qat'iy 50 000 so'm — ishlatilgan so'rov soniga bog'liq emas."],
-            ["API orqali xaritaga joy qo'sha olamanmi?", "Yo'q. API o'qish amallarini taqdim etadi: geocode, reverse, directions va places."],
-            ["Server va brauzer kaliti farqi?", "Server kaliti — faqat X-API-Key sarlavhasida, ixtiyoriy IP cheklovi bilan. Brauzer kaliti — ?key= orqali ham yuboriladi, lekin ruxsat etilgan domenlar ro'yxati majburiy."],
-            ["Kalitim oshkor bo'lib qolsa nima qilaman?", "\"Almashtirish\"ni bosing — yangi kalit darhol ishlaydi, eskisi 24 soat davomida ham ishlaydi (uzilishsiz o'tish), so'ng avtomatik bekor bo'ladi."],
-            ["To'lovni qanday amalga oshiraman?", "Obuna yoqilgach har oy hisob-faktura chiqadi. To'lov qo'lda tasdiqlanadi — \"Hisob-faktura\" bo'limida ko'rsatma va holatni kuzatib borasiz."],
-          ].map(([q, a]) => (
-            <div key={q} className="rounded-xl border border-border bg-card p-5">
-              <div className="font-semibold mb-1">{q}</div>
-              <p className="text-sm text-muted">{a}</p>
-            </div>
-          ))}
-        </section>
-      </>
+      <H2 id="kontrakt">Rasmiy kontrakt</H2>
+      <P>
+        Barcha parametrlar, javob sxemalari va brauzerdan sinash —{" "}
+        <A href="/docs/api/reference">API Reference</A>. Mashina o&apos;qiydigan OpenAPI 3.1 fayli:{" "}
+        <A href="/openapi.yaml">openapi.yaml</A> — undan mijoz kodini generatsiya qilish mumkin.
+      </P>
 
       <PrevNext current="/docs/api" />
     </div>

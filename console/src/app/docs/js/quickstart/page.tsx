@@ -1,67 +1,85 @@
-import { A, C, Callout, Code, H2, H3, P, PrevNext, UL } from "@/components/docs/parts";
+import {
+  A,
+  C,
+  Callout,
+  Code,
+  H2,
+  H3,
+  P,
+  PageHead,
+  Panel,
+  PrevNext,
+  Split,
+  Success,
+  Terminal,
+  UL,
+} from "@/components/docs/parts";
+import { MapSketch } from "@/components/docs/art";
+import { BoltIcon, KeyIcon, PlugIcon } from "@/components/docs/icons";
 
 export const metadata = {
-  title: "Tezkor start — JavaScript API — OnDexMap",
-  description: "5 qadamda saytingizga ishlaydigan OnDexMap xaritasini joylashtiring.",
+  title: "Quick Start — OnDexMap",
+  description: "Besh qadamda saytingizga ishlaydigan OnDexMap xaritasini joylashtiring.",
 };
 
 export default function QuickstartPage() {
   return (
-    <div className="max-w-3xl">
-      <h1 className="mb-6 text-3xl font-bold">Tezkor start</h1>
+    <div className="max-w-none">
+      <PageHead
+        title="Quick Start"
+        desc="Besh qadam: kutubxonani ulash, konteyner yaratish, xaritani ishga tushirish va qidiruvni bog'lash. Natijada ishlaydigan bitta HTML fayl bo'ladi."
+        pills={[
+          { href: "#qadam-1", label: "Boshlash", icon: <BoltIcon size={15} /> },
+          { href: "/keys", label: "API kalit olish", icon: <KeyIcon size={15} /> },
+          { href: "/docs/integration", label: "Integratsiya", icon: <PlugIcon size={15} /> },
+        ]}
+      />
 
-      <Callout kind="tip">
-        <p>
-          Boshlashdan oldin <A href="/docs/api#pricing">tariflar</A> bilan tanishib chiqing. Xaritani
-          ko'rsatish bepul; REST API chaqiruvlari kalit va limitga bog'liq.
-        </p>
-      </Callout>
-
-      <H2 id="step1">1-qadam. API kalit oling</H2>
+      <H2 id="qadam-1">1. API kalit oling</H2>
       <P>
-        Faqat xarita ko'rsatmoqchi bo'lsangiz bu qadamni o'tkazib yuboring. Qidiruv, marshrut yoki
-        ob'ektlar kerak bo'lsa — <A href="/keys">API kalitlar</A> bo'limida{" "}
+        Faqat xarita ko&apos;rsatmoqchi bo&apos;lsangiz bu qadam shart emas. Qidiruv, marshrut yoki
+        ob&apos;ektlar kerak bo&apos;lsa — <A href="/keys">API kalitlar</A> bo&apos;limida{" "}
         <strong className="text-foreground">brauzer</strong> turidagi kalit yarating va sayt domeningizni
-        ko'rsating.
+        ko&apos;rsating.
       </P>
       <Callout kind="note">
         <p>
-          Brauzer kaliti faqat siz ko'rsatgan domenlardan ishlaydi (<C>https://sayt.uz</C>,{" "}
+          Brauzer kaliti faqat siz ko&apos;rsatgan domenlardan ishlaydi (<C>https://sayt.uz</C>,{" "}
           <C>https://*.sayt.uz</C>). Lokal ishlab chiqish uchun <C>http://localhost:3000</C> ni ham
-          qo'shing — aks holda brauzeringizdan kelgan so'rov <C>key_restricted</C> bilan rad etiladi.
+          qo&apos;shing — aks holda so&apos;rov <C>key_restricted</C> bilan rad etiladi.
         </p>
       </Callout>
 
-      <H2 id="step2">2-qadam. Kutubxonalarni ulang</H2>
+      <H2 id="qadam-2">2. Kutubxonalarni ulang</H2>
       <P>
-        Sahifaning <C>&lt;head&gt;</C> qismiga MapLibre GL JS va PMTiles kutubxonalarini qo'shing:
+        Sahifaning <C>&lt;head&gt;</C> qismiga MapLibre GL JS va PMTiles kutubxonalarini qo&apos;shing:
       </P>
       <Code lang="html">{`<head>
   <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script src="https://unpkg.com/pmtiles@3.2.1/dist/pmtiles.js"></script>
 </head>`}</Code>
-      <P>
-        Versiyalar qat'iy ko'rsatiladi. Batafsil —{" "}
-        <A href="/docs/js/general#versions">Umumiy ma'lumot → Versiyalar</A>.
-      </P>
+      <P>Bundler ishlatayotgan bo&apos;lsangiz, o&apos;rniga paketlarni o&apos;rnating:</P>
+      <Terminal>{`npm install maplibre-gl@4.7.1 pmtiles@3.2.1`}</Terminal>
 
-      <H2 id="step3">3-qadam. Konteyner yarating</H2>
+      <H2 id="qadam-3">3. Konteyner yarating</H2>
       <P>
-        Xarita joylashadigan blok element qo'shing. Unga <strong className="text-foreground">nolga teng
-        bo'lmagan</strong> o'lcham bering — xarita konteynerni to'liq to'ldiradi.
+        Xarita joylashadigan blok element qo&apos;shing. Unga{" "}
+        <strong className="text-foreground">nolga teng bo&apos;lmagan</strong> o&apos;lcham bering — xarita
+        konteynerni to&apos;liq to&apos;ldiradi.
       </P>
       <Code lang="html">{`<body>
-  <div id="map" style="width: 600px; height: 400px"></div>
+  <div id="map" style="width: 100%; height: 400px"></div>
 </body>`}</Code>
 
-      <H2 id="step4">4-qadam. Xaritani ishga tushiring</H2>
+      <H2 id="qadam-4">4. Xaritani ishga tushiring</H2>
       <P>
-        Avval <C>pmtiles</C> protokolini ro'yxatdan o'tkazing (uslubdagi <C>pmtiles://</C> manzillari shu
-        orqali o'qiladi), so'ng xaritani yarating:
+        Avval <C>pmtiles</C> protokolini ro&apos;yxatdan o&apos;tkazing (uslubdagi <C>pmtiles://</C>{" "}
+        manzillari shu orqali o&apos;qiladi), so&apos;ng xaritani yarating:
       </P>
-      <Code lang="js">{`<script>
-  // PMTiles protokoli — usiz uslubdagi tile manbalari yuklanmaydi
+      <Split>
+        <Code lang="js">{`<script>
+  // PMTiles protokoli — usiz tile manbalari yuklanmaydi
   maplibregl.addProtocol("pmtiles", new pmtiles.Protocol().tile);
 
   const map = new maplibregl.Map({
@@ -73,6 +91,17 @@ export default function QuickstartPage() {
 
   map.addControl(new maplibregl.NavigationControl(), "top-right");
 </script>`}</Code>
+        <div>
+          <Panel label="Natija">
+            <div className="h-[200px] overflow-hidden rounded-lg border border-border">
+              <MapSketch />
+            </div>
+          </Panel>
+          <Success title="Xarita ishlayapti">
+            Endi marker qo&apos;shish, hodisalarni tinglash va qidiruvni ulash mumkin.
+          </Success>
+        </div>
+      </Split>
       <Callout kind="note">
         <p>
           MapLibre koordinatani <C>[lng, lat]</C> tartibida qabul qiladi — avval uzunlik, keyin kenglik.
@@ -80,7 +109,7 @@ export default function QuickstartPage() {
         </p>
       </Callout>
 
-      <H2 id="step5">5-qadam (ixtiyoriy). Qidiruvni ulang</H2>
+      <H2 id="qadam-5">5. Qidiruvni ulang</H2>
       <P>
         Brauzer kaliti bilan <C>/v2/geocode</C> ga murojaat qilib, topilgan joyni xaritada belgilang:
       </P>
@@ -106,16 +135,16 @@ async function qidir(matn) {
 
 qidir("Chust bozori");`}</Code>
       <P>
-        Javob shakli va boshqa endpointlar — <A href="/docs/api#geocode">REST API</A> bo'limida.
+        Javob shakli va boshqa endpointlar — <A href="/docs/api/geocode">Geocode</A> sahifasida.
       </P>
 
-      <H2 id="full">To'liq misol</H2>
-      <P>Quyidagi faylni brauzerda ochsangiz, ishlaydigan xaritani ko'rasiz:</P>
+      <H2 id="toliq-misol">To&apos;liq misol</H2>
+      <P>Quyidagi faylni brauzerda ochsangiz, ishlaydigan xaritani ko&apos;rasiz:</P>
       <Code lang="html">{`<!DOCTYPE html>
 <html lang="uz">
 <head>
   <meta charset="utf-8" />
-  <title>OnDexMap — tezkor start</title>
+  <title>OnDexMap — Quick Start</title>
   <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script src="https://unpkg.com/pmtiles@3.2.1/dist/pmtiles.js"></script>
@@ -142,17 +171,22 @@ qidir("Chust bozori");`}</Code>
 </body>
 </html>`}</Code>
 
-      <H3 id="local">Lokal ishlab chiqish</H3>
+      <H3 id="lokal">Lokal ishlab chiqish</H3>
       <UL>
         <li>
           Faylni <C>file://</C> orqali emas, HTTP server orqali oching (<C>npx serve</C> yoki{" "}
-          <C>python -m http.server</C>) — aks holda brauzer xavfsizlik siyosati tufayli ba'zi so'rovlarni
-          bloklaydi.
+          <C>python -m http.server</C>).
         </li>
         <li>
-          Kalitning domen ro'yxatiga <C>http://localhost:3000</C> (yoki ishlatayotgan portingizni) qo'shing.
+          Kalitning domen ro&apos;yxatiga <C>http://localhost:3000</C> yoki ishlatayotgan portingizni
+          qo&apos;shing.
         </li>
       </UL>
+
+      <P>
+        Ramkalar bilan ishlash (React, Vue, TypeScript, Next.js) —{" "}
+        <A href="/docs/integration">Integratsiya</A> bo&apos;limida.
+      </P>
 
       <PrevNext current="/docs/js/quickstart" />
     </div>
