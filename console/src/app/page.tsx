@@ -55,7 +55,7 @@ const IMKONIYATLAR = [
   {
     nom: "Geokodlash",
     tavsif:
-      "Nom bo'yicha qidirish va koordinatadan manzil aniqlash. Butun O'zbekiston bo'yicha 339 000 dan ortiq nom.",
+      "Nom bo'yicha qidirish — butun O'zbekiston bo'yicha 339 000 dan ortiq nom. Koordinatadan manzil aniqlash hozircha faqat Namangan viloyati atrofida.",
     havola: "/docs/api/geocode",
   },
   {
@@ -80,9 +80,14 @@ const QAMROV = [
     holat: "toliq" as const,
   },
   {
-    nima: "Geokodlash / teskari geokodlash",
+    nima: "Geokodlash (nom bo'yicha qidirish)",
     qamrov: "Butun O'zbekiston — 339 000 dan ortiq nom",
     holat: "toliq" as const,
+  },
+  {
+    nima: "Teskari geokodlash (koordinatadan manzil)",
+    qamrov: "Faqat 40.5–41.6° sh., 70.5–72.0° sh. — Namangan viloyati atrofi",
+    holat: "qisman" as const,
   },
   {
     nima: "Marshrut",
