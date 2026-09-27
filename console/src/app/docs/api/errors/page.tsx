@@ -176,7 +176,7 @@ if (!res.ok) {
 }
 
 if (data.status === "ZERO_RESULTS") {
-  ko'rsat("Hech narsa topilmadi");
+  korsat("Hech narsa topilmadi");
   return;
 }
 

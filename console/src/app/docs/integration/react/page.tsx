@@ -47,8 +47,15 @@ export default function OnDexMap({ center = [69.2401, 41.2995], zoom = 12 }) {
       style: "https://maps.ondex.uz/tiles/style.json",
       center,
       zoom,
+      attributionControl: false,   // o'rniga pastdagisi qo'shiladi
     });
     map.current.addControl(new maplibregl.NavigationControl(), "top-right");
+    // \`compact: false\` SHART: usiz MapLibre 640px dan tor xaritada
+    // yorliqni yig'adi va surilganda OnDexMap krediti yo'qoladi.
+    map.current.addControl(
+      new maplibregl.AttributionControl({ compact: false }),
+      "bottom-right",
+    );
 
     return () => {
       map.current?.remove();

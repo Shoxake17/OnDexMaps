@@ -51,8 +51,15 @@ onMounted(() => {
     style: "https://maps.ondex.uz/tiles/style.json",
     center: props.center,
     zoom: props.zoom,
+    attributionControl: false,   // o'rniga pastdagisi qo'shiladi
   });
   map.value.addControl(new maplibregl.NavigationControl(), "top-right");
+  // \`compact: false\` SHART: usiz MapLibre 640px dan tor xaritada
+  // yorliqni yig'adi va surilganda OnDexMap krediti yo'qoladi.
+  map.value.addControl(
+    new maplibregl.AttributionControl({ compact: false }),
+    "bottom-right",
+  );
 });
 
 onBeforeUnmount(() => {

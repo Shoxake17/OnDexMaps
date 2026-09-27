@@ -275,7 +275,7 @@ map.addControl(
         <C>text-font</C> uslubdagi shriftlardan biri bo&apos;lishi SHART. OnDexMap uslubida ikkitasi
         bor:
       </P>
-      <Code lang="js">{`"text-font": ["Noto Sans Regular"]
+      <Code lang="json">{`"text-font": ["Noto Sans Regular"]
 "text-font": ["Noto Sans Bold"]`}</Code>
       <Callout kind="warn">
         <p>
@@ -385,8 +385,15 @@ map.addLayer({ id: "mening-fonim", type: "fill", source: "…", paint: { … } }
   });
 });
 
-// Keyinchalik ma'lumotni almashtirish
-map.getSource("topilganlar").setData(yangiGeoJSON);`}</Code>
+// Ma'lumotni keyin almashtirish. ⚠️ Bu qatorni yuqori darajada
+// (skript tanasida) YOZMANG: manba faqat \`load\` dan KEYIN mavjud
+// bo'ladi va undan oldin \`getSource\` \`undefined\` qaytarib,
+// "Cannot read properties of undefined" xatosini beradi.
+function natijalarniKorsat(yangiGeoJSON) {
+  const manba = map.getSource("topilganlar");
+  if (!manba) return;           // xarita hali yuklanmagan
+  manba.setData(yangiGeoJSON);
+}`}</Code>
 
       <H3 id="obyektlar-hodisalar">Hodisalar</H3>
       <Code lang="js">{`map.on("click", (e) => {

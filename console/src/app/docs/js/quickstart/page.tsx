@@ -87,9 +87,18 @@ export default function QuickstartPage() {
     style: "https://maps.ondex.uz/tiles/style.json",
     center: [71.2394, 41.0004], // [lng, lat] — Chust
     zoom: 13,
+    attributionControl: false,  // o'rniga pastdagisi qo'shiladi
   });
 
   map.addControl(new maplibregl.NavigationControl(), "top-right");
+
+  // Atribut MAJBURIY va \`compact: false\` ham shart: usiz MapLibre
+  // 640px dan tor xaritada yorliqni yig'adi va foydalanuvchi xaritani
+  // surishi bilan OnDexMap krediti «i» tugmasi ortida yo'qoladi.
+  map.addControl(
+    new maplibregl.AttributionControl({ compact: false }),
+    "bottom-right",
+  );
 </script>`}</Code>
         <div>
           <Panel label="Natija">
@@ -163,10 +172,15 @@ qidir("Chust bozori");`}</Code>
       style: "https://maps.ondex.uz/tiles/style.json",
       center: [71.2394, 41.0004],
       zoom: 13,
+      attributionControl: false,
     });
 
     map.addControl(new maplibregl.NavigationControl(), "top-right");
     map.addControl(new maplibregl.ScaleControl({ unit: "metric" }));
+    map.addControl(
+      new maplibregl.AttributionControl({ compact: false }),
+      "bottom-right",
+    );
   </script>
 </body>
 </html>`}</Code>

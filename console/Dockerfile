@@ -14,6 +14,13 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# Hujjatlardagi kod namunalari oddiy satr — TypeScript ham, ESLint ham
+# ularni ko'rmaydi va ular jimgina buzilishi mumkin. Shu skript ularni
+# parser bilan o'qiydi; sintaksis xatosi bo'lsa image QURILMAYDI.
+# (Sabab: `ko'rsat(...)` dagi apostrof yaroqsiz JS bergan edi.)
+RUN node scripts/check-snippets.mjs
+
 RUN npm run build
 
 # ---------- Ishlash bosqichi ----------

@@ -92,13 +92,24 @@ maplibregl.addProtocol("pmtiles", new Protocol().tile);
 export const ONDEX_STYLE = "https://maps.ondex.uz/tiles/style.json";
 
 export function createMap(container, options = {}) {
-  return new maplibregl.Map({
+  const map = new maplibregl.Map({
     container,
     style: ONDEX_STYLE,
     center: [69.2401, 41.2995],
     zoom: 12,
+    attributionControl: false,   // o'rniga pastdagisi qo'shiladi
     ...options,
   });
+
+  // \`compact: false\` SHART: usiz MapLibre 640px dan tor xaritada
+  // yorliqni yig'adi va foydalanuvchi xaritani surishi bilan OnDexMap
+  // krediti «i» tugmasi ortida yo'qoladi.
+  map.addControl(
+    new maplibregl.AttributionControl({ compact: false }),
+    "bottom-right",
+  );
+
+  return map;
 }`,
           },
           {
