@@ -3,8 +3,51 @@ package httpapi
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 )
+
+// TestStyleKeepsAttribution — xarita ma'lumotining ATRIBUTI o'chib
+// ketmasligi.
+//
+// Tile'lar OpenStreetMap'dan, bino konturlari Microsoft Global ML
+// Building Footprints'dan olinadi. Ikkalasi ham ODbL: atribut
+// KO'RSATILISHI SHART. MapLibre uni manbalardagi `attribution`
+// maydonidan yig'adi va `AttributionControl` orqali chizadi.
+//
+// Uslubni tahrirlayotganda bu maydon bexosdan o'chib ketishi oson —
+// natija esa litsenziya buzilishi bo'ladi. Shuning uchun test bor.
+func TestStyleKeepsAttribution(t *testing.T) {
+	cfg := baseCfg()
+	cfg.TilesURL = "https://example.test/tiles.pmtiles"
+	cfg.BuildingsURL = "https://example.test/buildings.pmtiles"
+	s := New(cfg, nil)
+
+	var style struct {
+		Sources map[string]struct {
+			Attribution string `json:"attribution"`
+		} `json:"sources"`
+	}
+	if err := json.Unmarshal(s.buildStyle(), &style); err != nil {
+		t.Fatalf("uslub o'qilmadi: %v", err)
+	}
+
+	want := map[string]string{
+		"ondex":           "OpenStreetMap",
+		"ondex-buildings": "Microsoft",
+	}
+	for src, must := range want {
+		got, ok := style.Sources[src]
+		if !ok {
+			t.Errorf("uslubda %q manbasi yo'q", src)
+			continue
+		}
+		if !strings.Contains(got.Attribution, must) {
+			t.Errorf("%q manbasining atributida %q yo'q (ODbL talabi): %q",
+				src, must, got.Attribution)
+		}
+	}
+}
 
 // Xarita uslubi buzilsa, MapLibre uni BUTUNLAY rad etadi va xarita
 // umuman chizilmaydi — oq ekran qoladi. Brauzer konsolidan tashqari

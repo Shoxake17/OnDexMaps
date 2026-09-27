@@ -83,20 +83,27 @@ export default function SecurityPage() {
 
       <H2 id="limitlar">So&apos;rov limitlari</H2>
       <Table
-        head={["Reja", "Tezlik", "Oylik chegara", "Chegara tugaganda"]}
+        head={["Reja", "Tezlik", "Bir zumda (burst)", "Oylik chegara"]}
         rows={[
-          [
-            "Bepul",
-            "10 so'rov/sekund",
-            "200 000 so'rov",
-            <>
-              <C>429 quota_exceeded</C>
-            </>,
-          ],
-          ["Obuna", "100 so'rov/sekund", "chegara yo'q", "—"],
-          ["OnDex ekotizimi", "500 so'rov/sekund", "chegara yo'q", "—"],
+          ["Bepul", "10 so'rov/sekund", "20", "200 000 so'rov"],
+          ["Obuna", "100 so'rov/sekund", "200", "chegara yo'q"],
+          ["OnDex ekotizimi", "500 so'rov/sekund", "1000", "chegara yo'q"],
         ]}
       />
+      <P>
+        Tezlik <strong className="text-foreground">token bucket</strong> bilan o&apos;lchanadi.
+        «Burst» — bir zumda yuborish mumkin bo&apos;lgan eng ko&apos;p so&apos;rov: idish shuncha
+        token sig&apos;diradi va sekundiga «tezlik» qadar to&apos;ladi. Ya&apos;ni bepul rejada 20
+        ta so&apos;rovni birdan yuborish mumkin, lekin keyin o&apos;rtacha 10/s dan oshib
+        bo&apos;lmaydi.
+      </P>
+      <Callout kind="note">
+        <p>
+          Sahifa ochilganda parallel 30 ta so&apos;rov yuborilsa, bepul rejada bir qismi{" "}
+          <C>429 rate_limited</C> oladi — chegara oshmagan bo&apos;lsa ham. So&apos;rovlarni
+          ketma-ket yuboring yoki <C>Retry-After</C> ga rioya qiling.
+        </p>
+      </Callout>
       <Callout kind="note">
         <p>
           Xarita tile&apos;lari, uslub va shriftlar limitga kirmaydi — ular kalitsiz va bepul. Chegara

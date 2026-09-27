@@ -1,4 +1,4 @@
-import { A, C, Callout, H2, P, PageHead, PrevNext, Table, UL } from "@/components/docs/parts";
+import { A, C, H2, P, PageHead, PrevNext, Table, UL } from "@/components/docs/parts";
 import { CardIcon, ChartIcon, HelpIcon } from "@/components/docs/icons";
 
 export const metadata = {
@@ -78,17 +78,26 @@ export default function InvoicesPage() {
 
       <H2 id="muddat">Muddati o&apos;tgan to&apos;lov</H2>
       <P>
-        To&apos;lov muddati o&apos;tib ketsa, boshqaruv panelida ogohlantirish chiqadi. Kalitlar darhol
-        bloklanmaydi — xizmat ishlashda davom etadi, lekin qarz uzoq vaqt to&apos;lanmasa hisob bepul
-        reja chegarasiga qaytariladi.
+        To&apos;lov muddati o&apos;tib ketsa, boshqaruv panelida ogohlantirish chiqadi. Kalitlar
+        darhol bloklanmaydi — xizmat ishlashda davom etadi.
       </P>
-      <Callout kind="note">
-        <p>
-          Bepul reja chegarasiga qaytarilganda kalitlar ishlaydi, faqat tezlik va oylik chegara bepul
-          reja darajasiga tushadi: 10 so&apos;rov/sekund va oyiga 200 000 so&apos;rov.
-        </p>
-      </Callout>
-
+      <Table
+        head={["Vaqt", "Nima bo'ladi"]}
+        rows={[
+          ["Muddat o'tgan kun", "Panelda ogohlantirish; limitlar o'zgarmaydi"],
+          [
+            <>
+              <strong className="text-foreground">7 kundan keyin</strong>
+            </>,
+            "Hisob bepul reja chegarasiga tushadi: 10 so'rov/s, oyiga 200 000",
+          ],
+          ["To'lov kelgach", "Obuna limitlari DARHOL tiklanadi"],
+        ]}
+      />
+      <P>
+        Hisob hech qachon bloklanmaydi va kalitlar bekor qilinmaydi — faqat tezlik va oylik chegara
+        pasayadi.
+      </P>
       <H2 id="bekor">Obunani to&apos;xtatish</H2>
       <P>
         Obunani to&apos;xtatish uchun <A href="/billing">Hisob-faktura</A> bo&apos;limida murojaat

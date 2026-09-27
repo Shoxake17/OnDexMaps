@@ -94,6 +94,134 @@ REST API:   https://maps.ondex.uz/v2/...`}</Code>
         qo&apos;lda yozish shart emas.
       </P>
 
+      <H2 id="atribut">Atribut — majburiy</H2>
+      <P>
+        Xarita ma&apos;lumoti OpenStreetMap&apos;dan, bino konturlari Microsoft Global ML Building
+        Footprints&apos;dan olingan. Ikkalasi ham{" "}
+        <A href="https://opendatacommons.org/licenses/odbl/">ODbL</A> litsenziyasi ostida va{" "}
+        <strong className="text-foreground">atribut ko&apos;rsatilishini talab qiladi</strong>.
+      </P>
+      <P>
+        Uslub faylida atribut allaqachon yozilgan — kutubxona uni o&apos;zi chiqaradi. Hech narsa
+        qilish shart emas:
+      </P>
+      <Code lang="js">{`// Standart holat: atribut pastki o'ng burchakda chiqadi.
+const map = new maplibregl.Map({
+  container: "map",
+  style: "https://maps.ondex.uz/tiles/style.json",
+});`}</Code>
+      <Callout kind="warn">
+        <p>
+          <C>attributionControl: false</C> yozsangiz atribut yo&apos;qoladi va litsenziya shartini
+          buzasiz. Ko&apos;rinishini o&apos;zgartirish kerak bo&apos;lsa —{" "}
+          <A href="#brend">pastdagi bo&apos;limga</A> qarang: yorliqni olib tashlash emas, uni
+          o&apos;z joyingizga ko&apos;chirish kerak.
+        </p>
+      </Callout>
+
+      <H3 id="brend">O&apos;z brendingiz bilan</H3>
+      <P>
+        Standart yorliqni yig&apos;ilgan (compact) holatga keltirib, yoniga o&apos;z nomingizni
+        qo&apos;yishingiz mumkin. Atribut matni saqlanib qoladi:
+      </P>
+      <Code lang="js">{`const map = new maplibregl.Map({
+  container: "map",
+  style: "https://maps.ondex.uz/tiles/style.json",
+  attributionControl: false,   // standart yorliq o'chiriladi
+});
+
+// ...va o'rniga o'zimiznikini qo'shamiz. Uslubdagi atribut MATNI
+// baribir chiqadi — faqat ko'rinishi va joyi o'zgaradi.
+map.addControl(
+  new maplibregl.AttributionControl({
+    compact: true,
+    customAttribution: "© Mening Kompaniyam",
+  }),
+  "bottom-left",
+);`}</Code>
+      <Callout kind="note">
+        <p>
+          <C>AttributionControl</C> uslubdagi <C>attribution</C> maydonlarini{" "}
+          <C>customAttribution</C> bilan BIRGA ko&apos;rsatadi. Ya&apos;ni o&apos;z brendingizni
+          qo&apos;shish OpenStreetMap kreditini o&apos;chirmaydi.
+        </p>
+      </Callout>
+
+      <H2 id="masshtab">Nima qaysi masshtabda ko&apos;rinadi</H2>
+      <P>
+        Uslubdagi yozuv va chiziq qatlamlari masshtabga bog&apos;langan — bu xaritani tartibli
+        saqlaydi. Agar «yozuvlar yo&apos;q» bo&apos;lib tuyulsa, birinchi navbatda masshtabni
+        tekshiring:
+      </P>
+      <Table
+        head={["Nima", "Qaysi masshtabdan", "Qatlam"]}
+        rows={[
+          [
+            "Viloyat va tuman chegaralari",
+            "hamma masshtabda",
+            <C key="1">boundary</C>,
+          ],
+          ["Shahar, qishloq, mahalla nomlari", "z6+", <C key="2">place-label</C>],
+          ["Yirik ob'ektlar", "z12+", <C key="3">poi-tier1</C>],
+          ["Binolar", "z13+", <C key="4">ms-building-flat</C>],
+          ["Ko'cha nomlari", "z14+", <C key="5">road-label</C>],
+          ["O'rta ob'ektlar", "z14+ / z15+", <>
+            <C>poi-tier2</C>, <C>poi-tier3</C>
+          </>],
+          ["3D binolar", "z15+", <C key="6">ms-building-3d</C>],
+          ["Uy raqamlari", "z16+", <C key="7">housenumber</C>],
+          ["Mayda ob'ektlar", "z16.5+", <C key="8">poi-tier4</C>],
+        ]}
+      />
+      <Callout kind="tip">
+        <p>
+          Demo yoki skrinshot uchun <strong className="text-foreground">z14–z16</strong> oraliq eng
+          to&apos;liq ko&apos;rinishni beradi. z13 da xarita deyarli bo&apos;sh tuyuladi: binolar
+          endi paydo bo&apos;ladi, ko&apos;cha nomlari esa hali yo&apos;q.
+        </p>
+      </Callout>
+
+      <H2 id="ozqatlam">O&apos;z qatlamingizni qo&apos;shish</H2>
+      <P>
+        Xaritaga o&apos;z ma&apos;lumotingizni qo&apos;shganda yozuv chiqishi uchun{" "}
+        <C>text-font</C> uslubdagi shriftlardan biri bo&apos;lishi SHART. OnDexMap uslubida ikkitasi
+        bor:
+      </P>
+      <Code lang="js">{`"text-font": ["Noto Sans Regular"]
+"text-font": ["Noto Sans Bold"]`}</Code>
+      <Callout kind="warn">
+        <p>
+          Boshqa nom yozilsa (masalan <C>Open Sans Regular</C>) gliflar 404 qaytaradi va{" "}
+          <strong className="text-foreground">yozuv umuman chizilmaydi</strong> — qatlam esa xatosiz
+          qo&apos;shilaveradi, shuning uchun sabab darhol ko&apos;rinmaydi.
+        </p>
+      </Callout>
+      <Code lang="js">{`map.addSource("mening-nuqtalarim", { type: "geojson", data: fc });
+
+map.addLayer({
+  id: "mening-nomlarim",
+  type: "symbol",
+  source: "mening-nuqtalarim",
+  minzoom: 12,
+  layout: {
+    "text-field": ["get", "name"],
+    "text-font": ["Noto Sans Bold"],
+    "text-size": 12,
+  },
+  paint: {
+    "text-color": "#9a3412",
+    "text-halo-color": "#ffffff",
+    "text-halo-width": 1.6,
+  },
+});`}</Code>
+      <P>
+        Qatlam tartibi ham muhim: <C>addLayer</C> ning ikkinchi argumenti sifatida mavjud qatlam{" "}
+        <C>id</C> sini bersangiz, yangi qatlam o&apos;shaning OSTIGA qo&apos;yiladi. Poligon
+        qatlamlarini yozuvlar ostiga tushirish uchun shu kerak:
+      </P>
+      <Code lang="js">{`const birinchiYozuv = map.getStyle().layers.find((l) => l.type === "symbol")?.id;
+map.addLayer({ id: "mening-fonim", type: "fill", source: "…", paint: { … } }, birinchiYozuv);`}</Code>
+
       <H2 id="kalit">API kalit</H2>
       <P>
         Xaritaning o&apos;zini ko&apos;rsatish uchun kalit talab qilinmaydi. Kalit{" "}

@@ -37,6 +37,17 @@ export default function IpsPage() {
           [<C key="3">2001:db8::1</C>, "IPv6 manzil"],
         ]}
       />
+      <P>
+        Yakka manzil ichkarida <C>/32</C> (IPv6 uchun <C>/128</C>) sifatida saqlanadi.
+      </P>
+      <Callout kind="warn">
+        <p>
+          Juda keng diapazon <strong className="text-foreground">rad etiladi</strong>:{" "}
+          <C>0.0.0.0/0</C> va shunga o&apos;xshashlar cheklovni ma&apos;nosiz qiladi. Agar butun
+          internetdan ruxsat kerak bo&apos;lsa, IP ro&apos;yxatini shunchaki bo&apos;sh qoldiring —
+          kalit baribir o&apos;zi va API ruxsatlari bilan chegaralangan.
+        </p>
+      </Callout>
 
       <H2 id="qaysi-ip">Qaysi IP ni yozish kerak</H2>
       <P>

@@ -108,6 +108,21 @@ export default function CdnPage() {
         </p>
       </Callout>
 
+      <H2 id="atribut">Atribut</H2>
+      <P>
+        Xarita ma&apos;lumoti OpenStreetMap va Microsoft Building Footprints&apos;dan olingan —
+        ikkalasi ham ODbL va atribut ko&apos;rsatilishini talab qiladi. U uslub faylida yozilgan va
+        kutubxona uni <strong className="text-foreground">o&apos;zi chiqaradi</strong>: yuqoridagi
+        kodda qo&apos;shimcha hech narsa qilinmagan.
+      </P>
+      <Callout kind="warn">
+        <p>
+          <C>attributionControl: false</C> yozib yorliqni o&apos;chirib qo&apos;ymang. Brendni
+          almashtirish kerak bo&apos;lsa —{" "}
+          <A href="/docs/js/general#brend">JavaScript API → O&apos;z brendingiz bilan</A>.
+        </p>
+      </Callout>
+
       <H2 id="talablar">Talablar</H2>
       <Panel label="Kerakli talablar">
         <CheckList

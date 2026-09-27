@@ -11,11 +11,13 @@
   "sources": {
     "ondex": {
       "type": "vector",
-      "url": "pmtiles://__TILES_URL__"
+      "url": "pmtiles://__TILES_URL__",
+      "attribution": "© <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\" rel=\"noopener\">OpenStreetMap</a> hissadorlari"
     },
     "ondex-buildings": {
       "type": "vector",
-      "url": "pmtiles://__BUILDINGS_URL__"
+      "url": "pmtiles://__BUILDINGS_URL__",
+      "attribution": "Bino konturlari © <a href=\"https://github.com/microsoft/GlobalMLBuildingFootprints\" target=\"_blank\" rel=\"noopener\">Microsoft</a>"
     }
   },
   "layers": [

@@ -69,6 +69,17 @@ http://localhost:3000`}</Code>
         ]}
       />
 
+      <Callout kind="warn">
+        <p>
+          Wildcard faqat <C>https</C> bilan qabul qilinadi va yulduzcha faqat{" "}
+          <strong className="text-foreground">eng chapda, bitta marta</strong> turishi mumkin. Rad
+          etiladigan shakllar: <C>http://*.sayt.uz</C>, <C>https://*</C>, <C>https://*.uz</C>{" "}
+          (yuqori darajali domen), <C>https://*.*.sayt.uz</C>, <C>https://a*.sayt.uz</C>. Lokal
+          ishlab chiqish uchun <C>http://localhost:3000</C> to&apos;g&apos;ridan yoziladi —{" "}
+          <C>http://*.localhost</C> ishlamaydi.
+        </p>
+      </Callout>
+
       <H2 id="tavsiya">Tavsiya etilgan sozlama</H2>
       <UL>
         <li>

@@ -162,6 +162,10 @@ map.addLayer({
                 lekin xaritada chizilmaydi.
               </li>
               <li>
+                Bir javobda ko&apos;pi bilan <strong className="text-foreground">500 ta</strong>{" "}
+                chegara keladi. Hozirgi to&apos;plam bundan ancha kichik.
+              </li>
+              <li>
                 Javob bir soat keshlanadi (<C>Cache-Control: public, max-age=3600</C>). Xarita
                 harakatlanganda qayta so&apos;ramang — bu keraksiz kvota sarfi.
               </li>
