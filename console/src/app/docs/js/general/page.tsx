@@ -100,6 +100,13 @@ REST API:   https://maps.ondex.uz/v2/...`}</Code>
         Footprints&apos;dan olingan. Ikkalasi ham{" "}
         <A href="https://opendatacommons.org/licenses/odbl/">ODbL</A> litsenziyasi ostida va{" "}
         <strong className="text-foreground">atribut ko&apos;rsatilishini talab qiladi</strong>.
+        OnDexMap krediti ham shu yozuvda keladi va uni saqlash — foydalanish shartlarining bir
+        qismi.
+      </P>
+      <Code lang="terminal">{`© OpenStreetMap hissadorlari · © OnDexMap`}</Code>
+      <P>
+        «OnDexMap» yozuvi <A href="https://maps.ondex.uz/copyright">maps.ondex.uz/copyright</A>{" "}
+        sahifasiga olib boradi — u yerda manbalar, litsenziyalar va shartlar to&apos;liq yozilgan.
       </P>
       <P>
         Uslub faylida atribut allaqachon yozilgan — kutubxona uni o&apos;zi chiqaradi. Hech narsa
@@ -110,12 +117,37 @@ const map = new maplibregl.Map({
   container: "map",
   style: "https://maps.ondex.uz/tiles/style.json",
 });`}</Code>
+      <Table
+        head={["Mumkin", "Mumkin emas"]}
+        rows={[
+          [
+            "Yorliqni yig'ilgan (compact) holatga keltirish",
+            "Yozuvni butunlay o'chirish",
+          ],
+          ["Joyini boshqa burchakka ko'chirish", "CSS bilan yashirish yoki shaffof qilish"],
+          ["Yoniga o'z brendingizni qo'shish", "O'qib bo'lmaydigan darajada kichraytirish"],
+          [
+            "Shrift o'lchami va rangini moslashtirish",
+            <>
+              <C key="x">attributionControl: false</C> yozib qaytarmaslik
+            </>,
+          ],
+        ]}
+      />
       <Callout kind="warn">
         <p>
-          <C>attributionControl: false</C> yozsangiz atribut yo&apos;qoladi va litsenziya shartini
-          buzasiz. Ko&apos;rinishini o&apos;zgartirish kerak bo&apos;lsa —{" "}
-          <A href="#brend">pastdagi bo&apos;limga</A> qarang: yorliqni olib tashlash emas, uni
+          Atributni olib tashlash — foydalanish shartlarining buzilishi va{" "}
+          <strong className="text-foreground">API kaliti bekor qilinishiga</strong> olib keladi.
+          Ko&apos;rinishini o&apos;zgartirish kerak bo&apos;lsa —{" "}
+          <A href="#brend">pastdagi bo&apos;limga</A> qarang: yorliqni o&apos;chirish emas, uni
           o&apos;z joyingizga ko&apos;chirish kerak.
+        </p>
+      </Callout>
+      <Callout kind="note">
+        <p>
+          Texnik jihatdan brauzerdagi istalgan elementni o&apos;chirish mumkin — bu barcha xarita
+          xizmatlarida shunday. Shuning uchun talab shartnoma darajasida: kalit sizning
+          hisobingizga bog&apos;langan va shart buzilsa u to&apos;xtatiladi.
         </p>
       </Callout>
 

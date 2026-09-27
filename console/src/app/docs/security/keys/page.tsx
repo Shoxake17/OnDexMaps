@@ -183,6 +183,26 @@ const res = await fetch("https://maps.ondex.uz/v2/geocode?q=Chust", {
         kiradi.
       </P>
 
+      <H2 id="shartlar">Kalit bekor qilinadigan holatlar</H2>
+      <P>
+        Kalit sizning hisobingizga bog&apos;langan. Quyidagi hollarda u to&apos;xtatilishi mumkin:
+      </P>
+      <UL>
+        <li>
+          Xarita <A href="/docs/js/general#atribut">atributi</A> o&apos;chirilgan, yashirilgan yoki
+          o&apos;qib bo&apos;lmaydigan qilib qo&apos;yilgan.
+        </li>
+        <li>
+          Xarita tile&apos;lari yoki API javoblari qayta tarqatilgan (o&apos;z proksi xizmatingiz
+          orqali boshqalarga berish).
+        </li>
+        <li>Kalit boshqa shaxsga berilgan yoki ommaviy joyda e&apos;lon qilingan.</li>
+        <li>Tezlik chegarasini muntazam aylanib o&apos;tishga urinish.</li>
+      </UL>
+      <P>
+        To&apos;liq shartlar: <A href="https://maps.ondex.uz/copyright">maps.ondex.uz/copyright</A>.
+      </P>
+
       <H2 id="bekor">Bekor qilish</H2>
       <P>
         Bekor qilingan kalit bilan kelgan so&apos;rov <C>401 invalid_key</C> qaytaradi. Bekor qilish

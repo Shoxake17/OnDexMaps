@@ -32,19 +32,53 @@ func TestStyleKeepsAttribution(t *testing.T) {
 		t.Fatalf("uslub o'qilmadi: %v", err)
 	}
 
-	want := map[string]string{
-		"ondex":           "OpenStreetMap",
-		"ondex-buildings": "Microsoft",
+	want := map[string][]string{
+		// OSM — ODbL talabi. OnDexMap — foydalanish shartlari talabi;
+		// yozuv mualliflik sahifasiga olib borishi kerak.
+		"ondex":           {"OpenStreetMap", "OnDexMap", "/copyright"},
+		"ondex-buildings": {"Microsoft"},
 	}
-	for src, must := range want {
+	for src, musts := range want {
 		got, ok := style.Sources[src]
 		if !ok {
 			t.Errorf("uslubda %q manbasi yo'q", src)
 			continue
 		}
-		if !strings.Contains(got.Attribution, must) {
-			t.Errorf("%q manbasining atributida %q yo'q (ODbL talabi): %q",
-				src, must, got.Attribution)
+		for _, must := range musts {
+			if !strings.Contains(got.Attribution, must) {
+				t.Errorf("%q manbasining atributida %q yo'q: %q", src, must, got.Attribution)
+			}
+		}
+	}
+}
+
+// TestCopyrightPageIsOpen — mualliflik sahifasi kalitsiz ochilishi.
+//
+// Uslubdagi atribut yozuvi shu sahifaga ishora qiladi. Agar u yopiq
+// bo'lsa yoki yo'qolsa, yozuv "o'lik havola"ga aylanadi va atribut
+// talabi ma'nosini yo'qotadi.
+func TestCopyrightPageIsOpen(t *testing.T) {
+	h := testServer(t, baseCfg())
+	res := do(h, "GET", "/copyright", "")
+
+	if res.Code != 200 {
+		t.Fatalf("/copyright holati %d, 200 kutilgandi", res.Code)
+	}
+	if ct := res.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/html") {
+		t.Errorf("Content-Type %q, text/html kutilgandi", ct)
+	}
+
+	// Umumiy `default-src 'none'` sahifaning uslubini bloklaydi —
+	// sahifa uchun alohida siyosat qo'yilgan bo'lishi kerak.
+	csp := res.Header().Get("Content-Security-Policy")
+	if !strings.Contains(csp, "style-src") {
+		t.Errorf("CSP'da `style-src` yo'q — sahifa bezaksiz chiqadi: %q", csp)
+	}
+
+	body := res.Body.String()
+	for _, must := range []string{"OpenStreetMap", "ODbL", "Microsoft", "attributionControl"} {
+		if !strings.Contains(body, must) {
+			t.Errorf("mualliflik sahifasida %q yo'q", must)
 		}
 	}
 }

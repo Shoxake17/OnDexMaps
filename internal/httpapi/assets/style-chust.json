@@ -12,7 +12,7 @@
     "ondex": {
       "type": "vector",
       "url": "pmtiles://__TILES_URL__",
-      "attribution": "© <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\" rel=\"noopener\">OpenStreetMap</a> hissadorlari"
+      "attribution": "© <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\" rel=\"noopener\">OpenStreetMap</a> hissadorlari · © <a href=\"__SELF__/copyright\" target=\"_blank\" rel=\"noopener\">OnDexMap</a>"
     },
     "ondex-buildings": {
       "type": "vector",

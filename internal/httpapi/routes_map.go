@@ -19,6 +19,11 @@ var chustPMTiles []byte
 //go:embed assets/style-chust.json
 var chustStyle []byte
 
+// Mualliflik sahifasi — uslubdagi atribut yozuvi shunga ishora qiladi.
+//
+//go:embed assets/copyright.html
+var copyrightHTML []byte
+
 // Shrift gliflari (PBF). MapLibre yozuvlarni CHIZA OLMAYDI agar bu
 // fayllar bo'lmasa — ko'cha va mahalla nomlari umuman ko'rinmay
 // qolardi. Ular ham o'z serverimizdan beriladi: tashqi shrift
@@ -111,6 +116,27 @@ func (s *Server) registerMapAssets(mux *http.ServeMux) {
 	// so'raydi va bitta so'rovda vergul bilan bir nechta shrift
 	// nomini yuborishi mumkin — birinchisini olamiz.
 	mux.HandleFunc("GET /fonts/{stack}/{range}", serveGlyphs)
+
+	// Mualliflik sahifasi. Uslubdagi atribut yozuvi shu yerga olib
+	// keladi, shuning uchun u HAR DOIM ochiq bo'lishi kerak: kalit ham,
+	// sessiya ham talab qilinmaydi.
+	mux.HandleFunc("GET /copyright", serveCopyright)
+}
+
+// serveCopyright — ma'lumot manbalari, litsenziyalar va atribut talabi.
+//
+// ⚠️ CSP: serverning umumiy siyosati `default-src 'none'` — u JSON API
+// uchun to'g'ri, lekin HTML sahifadagi uslubni ham bloklaydi va sahifa
+// bezaksiz chiqadi. Shuning uchun bu yerda sahifaga moslangan siyosat
+// QAYTA yoziladi. Skript yo'q, shuning uchun `script-src` ochilmaydi.
+func serveCopyright(w http.ResponseWriter, _ *http.Request) {
+	h := w.Header()
+	h.Set("Content-Type", "text/html; charset=utf-8")
+	h.Set("Content-Security-Policy",
+		"default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; "+
+			"base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+	h.Set("Cache-Control", "public, max-age=3600")
+	_, _ = w.Write(copyrightHTML)
 }
 
 // buildStyle — uslub faylidagi manzil o'rinbosarlarini haqiqiy

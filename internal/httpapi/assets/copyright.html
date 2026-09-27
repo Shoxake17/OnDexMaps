@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OnDexMap — mualliflik va atribut</title>
+<meta name="description" content="OnDexMap xarita ma'lumotining manbalari, litsenziyalari va atribut ko'rsatish talabi." />
+<style>
+  :root { --bg:#f8fafc; --card:#fff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b; --brand:#f97316; }
+  * { box-sizing:border-box }
+  body { margin:0; background:var(--bg); color:var(--text);
+         font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif }
+  .wrap { max-width:760px; margin:0 auto; padding:48px 20px 72px }
+  header { display:flex; align-items:center; gap:10px; margin-bottom:28px }
+  .mark { color:var(--brand); font-size:22px }
+  .name { font-size:20px; font-weight:700; letter-spacing:-.01em }
+  .name b { color:var(--brand) }
+  h1 { font-size:30px; line-height:1.25; letter-spacing:-.02em; margin:0 0 10px }
+  .lead { color:var(--muted); margin:0 0 32px }
+  h2 { font-size:19px; margin:34px 0 10px; letter-spacing:-.01em }
+  p, li { color:#334155 }
+  a { color:var(--brand) }
+  code { background:#f1f5f9; border-radius:4px; padding:1px 6px; font-size:.88em;
+         font-family:ui-monospace,Menlo,Consolas,monospace }
+  table { width:100%; border-collapse:collapse; background:var(--card);
+          border:1px solid var(--line); border-radius:10px; overflow:hidden; margin:14px 0 }
+  th, td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); font-size:14.5px }
+  th { background:#f1f5f9; color:var(--muted); font-size:12.5px; text-transform:uppercase; letter-spacing:.04em }
+  tr:last-child td { border-bottom:0 }
+  .box { background:var(--card); border:1px solid var(--line); border-left:3px solid var(--brand);
+         border-radius:10px; padding:14px 16px; margin:16px 0 }
+  .box.warn { border-left-color:#dc2626; background:#fef2f2 }
+  .box h3 { margin:0 0 6px; font-size:15px }
+  .box p { margin:0; font-size:14.5px }
+  pre { background:#0f172a; color:#e2e8f0; border-radius:10px; padding:14px 16px;
+        overflow-x:auto; font-size:13px; line-height:1.6 }
+  footer { margin-top:44px; padding-top:18px; border-top:1px solid var(--line);
+           color:var(--muted); font-size:13.5px }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0b0f19; --card:#131a2a; --line:#232a3b; --text:#e5e7eb; --muted:#94a3b8 }
+    p, li { color:#cbd5e1 }
+    code { background:#1e293b }
+    th { background:#1a2234 }
+    .box.warn { background:#2a1515 }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="mark">&#9672;</span>
+    <span class="name">OnDex<b>Map</b></span>
+  </header>
+
+  <h1>Mualliflik va atribut</h1>
+  <p class="lead">
+    OnDexMap xaritasi ochiq ma'lumotlar asosida qurilgan. Undan foydalanganda
+    ma'lumot manbalari ko'rsatilishi shart.
+  </p>
+
+  <h2>Ma'lumot manbalari</h2>
+  <table>
+    <thead><tr><th>Nima</th><th>Manba</th><th>Litsenziya</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Ko'chalar, joylar, geografiya</td>
+        <td><a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a></td>
+        <td><a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noopener">ODbL 1.0</a></td>
+      </tr>
+      <tr>
+        <td>Bino konturlari</td>
+        <td><a href="https://github.com/microsoft/GlobalMLBuildingFootprints" target="_blank" rel="noopener">Microsoft Global ML Building Footprints</a></td>
+        <td><a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noopener">ODbL 1.0</a></td>
+      </tr>
+      <tr>
+        <td>Mahalla chegaralari, ob'ektlar bazasi, xarita uslubi</td>
+        <td>OnDexMap</td>
+        <td>OnDexMap shartlari</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Atribut ko'rsatish — talab</h2>
+  <p>
+    Xaritani ishlatgan har qanday sahifa yoki ilova quyidagi yozuvni
+    <strong>ko'rinadigan joyda</strong> saqlashi shart:
+  </p>
+  <pre>&#169; OpenStreetMap hissadorlari &#183; &#169; OnDexMap</pre>
+  <p>
+    Bu yozuv xarita uslubiga (<code>style.json</code>) kiritilgan va xarita
+    kutubxonasi uni <strong>o'zi chiqaradi</strong> — odatdagi holatda
+    hech narsa qilish kerak emas.
+  </p>
+
+  <div class="box warn">
+    <h3>Nima qilish mumkin emas</h3>
+    <p>
+      Atribut yozuvini o'chirish, yashirish, o'qib bo'lmaydigan qilib qo'yish
+      (shaffoflik, juda kichik shrift, boshqa element ostiga berkitish) yoki
+      <code>attributionControl: false</code> yozib uni qaytarmaslik — foydalanish
+      shartlarining buzilishi hisoblanadi va API kalitining bekor qilinishiga
+      olib keladi.
+    </p>
+  </div>
+
+  <div class="box">
+    <h3>Nima qilish mumkin</h3>
+    <p>
+      Yorliqni yig'ilgan (compact) holatga keltirish, joyini o'zgartirish va
+      yoniga o'z brendingizni qo'shish. Buning usuli hujjatlarda ko'rsatilgan:
+      <a href="https://console.ondex.uz/docs/js/general#brend">O'z brendingiz bilan</a>.
+    </p>
+  </div>
+
+  <h2>Ma'lumotni qayta ishlatish</h2>
+  <p>
+    ODbL — «share-alike» litsenziyasi. OpenStreetMap ma'lumotidan hosila
+    ma'lumotlar bazasi yaratsangiz, uni ham shu litsenziya ostida tarqatishingiz
+    kerak bo'ladi. Xaritani sahifangizda ko'rsatish yoki API javoblarini
+    ilovangizda ishlatish bunga kirmaydi — talab faqat atribut.
+  </p>
+  <p>
+    Xarita tile'larini, uslubni yoki API javoblarini ommaviy qayta tarqatish
+    (o'z proksi xizmatingizni ochish, ma'lumotni yuklab olib boshqalarga berish)
+    alohida kelishuvni talab qiladi.
+  </p>
+
+  <h2>Xato topdingizmi</h2>
+  <p>
+    Xaritadagi noto'g'ri ma'lumot ko'pincha OpenStreetMap'da tuzatiladi va
+    keyingi yangilanishda OnDexMap'ga o'tadi. OnDexMap'ning o'z ob'ektlari va
+    mahalla chegaralari bo'yicha
+    <a href="https://console.ondex.uz/docs/faq">hujjatlardagi bog'lanish</a>
+    bo'limiga qarang.
+  </p>
+
+  <footer>
+    <a href="https://console.ondex.uz/docs">Hujjatlar</a> &#183;
+    <a href="https://console.ondex.uz/docs/js/general#atribut">Atribut bo'yicha qo'llanma</a> &#183;
+    <a href="https://maps.ondex.uz/">Xarita</a>
+  </footer>
+</div>
+</body>
+</html>
