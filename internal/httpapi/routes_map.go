@@ -24,6 +24,12 @@ var chustStyle []byte
 //go:embed assets/copyright.html
 var copyrightHTML []byte
 
+// OnDex brend belgisi. Atribut yozuvida `<img>` sifatida chiqadi, ya'ni
+// har bir integrator uni O'ZI chizmaydi — hamma joyda bir xil logotip.
+//
+//go:embed assets/ondex-logo.png
+var ondexLogoPNG []byte
+
 // Shrift gliflari (PBF). MapLibre yozuvlarni CHIZA OLMAYDI agar bu
 // fayllar bo'lmasa — ko'cha va mahalla nomlari umuman ko'rinmay
 // qolardi. Ular ham o'z serverimizdan beriladi: tashqi shrift
@@ -121,7 +127,21 @@ func (s *Server) registerMapAssets(mux *http.ServeMux) {
 	// keladi, shuning uchun u HAR DOIM ochiq bo'lishi kerak: kalit ham,
 	// sessiya ham talab qilinmaydi.
 	mux.HandleFunc("GET /copyright", serveCopyright)
+
+	// Brend belgisi — atribut yozuvidagi `<img>` shu yerdan yuklanadi.
+	// Kalitsiz va uzoq keshlanadi: u har xarita yuklanishida so'raladi.
+	mux.HandleFunc("GET /brand/ondex.png", func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("Content-Type", "image/png")
+		h.Set("Cache-Control", "public, max-age=604800, immutable")
+		h.Set("Access-Control-Allow-Origin", "*")
+		http.ServeContent(w, r, "ondex.png", brandModTime, bytes.NewReader(ondexLogoPNG))
+	})
 }
+
+// brandModTime — `If-Modified-Since` uchun; belgi binar ichida, ya'ni
+// har deploy'da yangi jarayon = yangi vaqt.
+var brandModTime = time.Now()
 
 // serveCopyright — ma'lumot manbalari, litsenziyalar va atribut talabi.
 //
@@ -147,12 +167,26 @@ func serveCopyright(w http.ResponseWriter, _ *http.Request) {
 // tashlanadi. Bo'sh manzilli manbani qoldirish xarita kutubxonasida
 // xatoga olib keladi va butun sahifa yuklanmay qolishi mumkin —
 // fail-closed tamoyili: sozlanmagan narsa yo'q deb hisoblanadi.
+// msAttribution — bino konturlari krediti. Atribut TARTIBI muhim
+// (OnDexMap → Microsoft → OpenStreetMap), shuning uchun u alohida
+// manbaga emas, asosiy manbaning satriga qo'yiladi: MapLibre har bir
+// manbaning kreditini FAQAT o'sha manba ayni paytda ishlatilayotgan
+// bo'lsa ko'rsatadi, ya'ni binolar z13 dan pastda yo'qolib, tartib
+// buzilardi.
+//
+// Tirnoqlar `\"` — satr JSON ichiga qo'yiladi.
+const msAttribution = ` · Bino konturlari © <a href=\"https://github.com/microsoft/GlobalMLBuildingFootprints\" target=\"_blank\" rel=\"noopener\">Microsoft</a>`
+
 func (s *Server) buildStyle() []byte {
 	out := bytes.ReplaceAll(chustStyle, []byte("__TILES_URL__"), []byte(s.tilesURL()))
 
 	if s.cfg.BuildingsURL != "" {
+		out = bytes.ReplaceAll(out, []byte("__MS__"), []byte(msAttribution))
 		return bytes.ReplaceAll(out, []byte("__BUILDINGS_URL__"), []byte(s.cfg.BuildingsURL))
 	}
+
+	// Binolar sozlanmagan — ularning krediti ham chiqmasligi kerak.
+	out = bytes.ReplaceAll(out, []byte("__MS__"), nil)
 
 	const src = "ondex-buildings"
 	var doc struct {

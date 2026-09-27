@@ -32,23 +32,86 @@ func TestStyleKeepsAttribution(t *testing.T) {
 		t.Fatalf("uslub o'qilmadi: %v", err)
 	}
 
-	want := map[string][]string{
-		// OSM — ODbL talabi. OnDexMap — foydalanish shartlari talabi;
-		// yozuv mualliflik sahifasiga olib borishi kerak.
-		"ondex":           {"OpenStreetMap", "OnDexMap", "/copyright"},
-		"ondex-buildings": {"Microsoft"},
+	// Hammasi BITTA satrda — tartib kafolatlangan bo'lishi uchun.
+	got := style.Sources["ondex"].Attribution
+	for _, must := range []string{
+		"OnDexMap", "/copyright", "/brand/ondex.png", // brend + logotip + havola
+		"Microsoft", // bino konturlari (ODbL)
+		"OpenStreetMap",
+	} {
+		if !strings.Contains(got, must) {
+			t.Errorf("atributda %q yo'q: %q", must, got)
+		}
 	}
-	for src, musts := range want {
-		got, ok := style.Sources[src]
-		if !ok {
-			t.Errorf("uslubda %q manbasi yo'q", src)
-			continue
+
+	// TARTIB: OnDexMap → Microsoft → OpenStreetMap.
+	iOndex := strings.Index(got, "OnDexMap")
+	iMS := strings.Index(got, "Microsoft")
+	iOSM := strings.Index(got, "OpenStreetMap")
+	if !(iOndex < iMS && iMS < iOSM) {
+		t.Errorf("atribut tartibi noto'g'ri (OnDexMap=%d, Microsoft=%d, OSM=%d): %q",
+			iOndex, iMS, iOSM, got)
+	}
+
+	// Binolar manbasida alohida atribut BO'LMASLIGI kerak — aks holda
+	// MapLibre uni oxiriga qo'shib, tartibni buzadi.
+	if a := style.Sources["ondex-buildings"].Attribution; a != "" {
+		t.Errorf("binolar manbasida ortiqcha atribut: %q", a)
+	}
+
+	// O'rinbosar qolib ketmasin.
+	if strings.Contains(got, "__MS__") {
+		t.Errorf("`__MS__` almashtirilmagan: %q", got)
+	}
+}
+
+// TestStyleDropsMicrosoftCreditWithoutBuildings — binolar manbasi
+// sozlanmaganda ularning krediti ham chiqmasligi kerak: bo'lmagan
+// ma'lumot uchun atribut ko'rsatish noto'g'ri.
+func TestStyleDropsMicrosoftCreditWithoutBuildings(t *testing.T) {
+	cfg := baseCfg()
+	cfg.TilesURL = "https://example.test/tiles.pmtiles"
+	cfg.BuildingsURL = "" // sozlanmagan
+
+	var style struct {
+		Sources map[string]struct {
+			Attribution string `json:"attribution"`
+		} `json:"sources"`
+	}
+	if err := json.Unmarshal(New(cfg, nil).buildStyle(), &style); err != nil {
+		t.Fatalf("uslub o'qilmadi: %v", err)
+	}
+
+	got := style.Sources["ondex"].Attribution
+	if strings.Contains(got, "Microsoft") {
+		t.Errorf("binolar yo'q, lekin Microsoft krediti qoldi: %q", got)
+	}
+	if strings.Contains(got, "__MS__") {
+		t.Errorf("`__MS__` almashtirilmagan: %q", got)
+	}
+	for _, must := range []string{"OnDexMap", "OpenStreetMap"} {
+		if !strings.Contains(got, must) {
+			t.Errorf("atributda %q yo'q: %q", must, got)
 		}
-		for _, must := range musts {
-			if !strings.Contains(got.Attribution, must) {
-				t.Errorf("%q manbasining atributida %q yo'q: %q", src, must, got.Attribution)
-			}
-		}
+	}
+}
+
+// TestBrandLogoIsServed — atributdagi `<img>` manzili haqiqatan ishlashi.
+func TestBrandLogoIsServed(t *testing.T) {
+	res := do(testServer(t, baseCfg()), "GET", "/brand/ondex.png", "")
+
+	if res.Code != 200 {
+		t.Fatalf("/brand/ondex.png holati %d", res.Code)
+	}
+	if ct := res.Header().Get("Content-Type"); ct != "image/png" {
+		t.Errorf("Content-Type %q, image/png kutilgandi", ct)
+	}
+	if b := res.Body.Bytes(); len(b) < 8 || string(b[1:4]) != "PNG" {
+		t.Error("javob PNG emas")
+	}
+	// Har xarita yuklanishida so'raladi — keshlanishi shart.
+	if cc := res.Header().Get("Cache-Control"); !strings.Contains(cc, "max-age") {
+		t.Errorf("Cache-Control keshlashga ruxsat bermayapti: %q", cc)
 	}
 }
 

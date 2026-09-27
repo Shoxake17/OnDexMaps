@@ -12,12 +12,11 @@
     "ondex": {
       "type": "vector",
       "url": "pmtiles://__TILES_URL__",
-      "attribution": "© <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\" rel=\"noopener\">OpenStreetMap</a> hissadorlari · © <a href=\"__SELF__/copyright\" target=\"_blank\" rel=\"noopener\">OnDexMap</a>"
+      "attribution": "<a href=\"__SELF__/copyright\" target=\"_blank\" rel=\"noopener\" style=\"display:inline-flex;align-items:center;gap:4px;vertical-align:middle\"><img src=\"__SELF__/brand/ondex.png\" width=\"13\" height=\"13\" alt=\"\" style=\"display:block\">OnDexMap</a>__MS__ · © <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\" rel=\"noopener\">OpenStreetMap</a>"
     },
     "ondex-buildings": {
       "type": "vector",
-      "url": "pmtiles://__BUILDINGS_URL__",
-      "attribution": "Bino konturlari © <a href=\"https://github.com/microsoft/GlobalMLBuildingFootprints\" target=\"_blank\" rel=\"noopener\">Microsoft</a>"
+      "url": "pmtiles://__BUILDINGS_URL__"
     }
   },
   "layers": [
