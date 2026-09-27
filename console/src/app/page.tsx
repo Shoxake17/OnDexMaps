@@ -65,10 +65,10 @@ const IMKONIYATLAR = [
     havola: "/docs/api/directions",
   },
   {
-    nom: "Mahalla chegaralari",
+    nom: "Ob'ektlar",
     tavsif:
-      "Poligon ko'rinishida GeoJSON. To'plam bir marta olinadi va 1 soat keshlanadi.",
-    havola: "/docs/api/mahallas",
+      "Moderatsiyadan o'tgan ob'ektlar GeoJSON ko'rinishida — to'rtburchak bo'yicha so'raladi.",
+    havola: "/docs/api/places",
   },
 ];
 
@@ -98,11 +98,6 @@ const QAMROV = [
     nima: "Bino konturlari",
     qamrov: "Butun O'zbekiston",
     holat: "toliq" as const,
-  },
-  {
-    nima: "Mahalla chegaralari",
-    qamrov: "Hozircha Chust tumani — 21 ta poligon",
-    holat: "qisman" as const,
   },
   {
     nima: "OnDexMap ob'ektlari (/v2/places)",

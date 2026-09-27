@@ -54,12 +54,6 @@ export default function RestApiPage() {
             icon: <LayersIcon size={20} />,
           },
           {
-            href: "/docs/api/mahallas",
-            title: "Mahallas",
-            desc: "Mahalla, qishloq va daha chegaralari (GeoJSON).",
-            icon: <LayersIcon size={20} />,
-          },
-          {
             href: "/docs/api/errors",
             title: "Errors",
             desc: "Xato kodlari, sabablari va qayta urinish qoidalari.",

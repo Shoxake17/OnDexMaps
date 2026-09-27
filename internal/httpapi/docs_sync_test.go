@@ -41,8 +41,8 @@ const tsPage = "../../console/src/app/docs/integration/typescript/page.tsx"
 //
 // ┌─ NEGA ─────────────────────────────────────────────────────────────┐
 // TypeScript sahifasi «REST API javoblarining tiplari» deb va'da
-// beradi. 2026-09-27 da tekshirilganda `/v2/places`, `/v2/places/{id}`
-// va `/v2/mahallas` uchun HECH QANDAY tip yo'q edi — ya'ni TS
+// beradi. 2026-09-27 da tekshirilganda `/v2/places` va
+// `/v2/places/{id}` uchun HECH QANDAY tip yo'q edi — ya'ni TS
 // dasturchisi ularni `any` bilan ishlatishga majbur bo'lardi va
 // sahifaning va'dasi bajarilmasdi.
 //
@@ -56,7 +56,6 @@ var tsTypeForPath = map[string]string{
 	"/v2/directions":   "DirectionsResponse",
 	"/v2/places":       "PlacesResponse",
 	"/v2/places/{id}":  "PlaceDetailResponse",
-	"/v2/mahallas":     "MahallasResponse",
 	"/v2/openapi.yaml": "", // kontraktning o'zi — javob tipi kerak emas
 }
 
@@ -354,11 +353,6 @@ func TestDocPagesMatchSpecFields(t *testing.T) {
 			expect: append([]string{"status"},
 				prefixed("result.", schemaProps(t, spec, "PlaceDetail"))...),
 		},
-		{
-			page: "mahallas",
-			expect: append([]string{"status", "result", "features[].geometry"},
-				prefixed("features[].properties.", featureProps(t, spec, "MahallasResponse"))...),
-		},
 	}
 
 	for _, c := range cases {
@@ -393,14 +387,12 @@ func TestDocResponseExamplesUseRealFields(t *testing.T) {
 			legal[p] = true
 		}
 	}
-	for _, s := range []string{"PlacesResponse", "MahallasResponse"} {
-		for _, p := range featureProps(t, spec, s) {
-			legal[p] = true
-		}
+	for _, p := range featureProps(t, spec, "PlacesResponse") {
+		legal[p] = true
 	}
 
 	key := regexp.MustCompile(`"([a-z_]+)":`)
-	for _, page := range []string{"geocode", "reverse", "directions", "places", "places-by-id", "mahallas"} {
+	for _, page := range []string{"geocode", "reverse", "directions", "places", "places-by-id"} {
 		t.Run(page, func(t *testing.T) {
 			src := readFile(t, docsDir+"/"+page+"/page.tsx")
 			at := strings.Index(src, "\n        response: `")

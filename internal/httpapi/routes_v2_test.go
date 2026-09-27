@@ -98,8 +98,11 @@ func TestV2AllowlistDeniesEverythingElse(t *testing.T) {
 		{"POST", "/v2/geocode"},
 		{"GET", "/v2/places/00000000-0000-0000-0000-000000000000/photos/1"}, // rasm — YO'Q
 		{"GET", "/v2/places/meta"},
-		{"POST", "/v2/mahallas"}, // o'qish bor, YOZISH yo'q
-		{"GET", "/v2/route"},     // v1 nomi — v2'da yo'q (directions)
+		// Mahalla chegaralari `/v2` dan OLIB TASHLANGAN: bitta so'rov
+		// butun to'plamni berardi. Endi GET ham rad etilishi kerak.
+		{"GET", "/v2/mahallas"},
+		{"POST", "/v2/mahallas"},
+		{"GET", "/v2/route"}, // v1 nomi — v2'da yo'q (directions)
 		{"GET", "/v2/admin/ping"},
 		{"GET", "/v2/"},
 		{"GET", "/v2/geocode/extra"},

@@ -59,7 +59,7 @@ export default function SlaPage() {
           <li>
             REST API: <code>/v2/geocode</code>, <code>/v2/reverse</code>,{" "}
             <code>/v2/directions</code>, <code>/v2/places</code>,{" "}
-            <code>/v2/places/{"{id}"}</code>, <code>/v2/mahallas</code>;
+            <code>/v2/places/{"{id}"}</code>;
           </li>
           <li>
             xarita tayllari, uslub fayli va shriftlar (<code>/tiles/*</code>,{" "}

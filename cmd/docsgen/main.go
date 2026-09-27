@@ -1,7 +1,7 @@
 // Command docsgen — `/v2` endpointlarining PARAMETR jadvallarini
 // `internal/httpapi/openapi.yaml` dan TypeScript fayliga ko'chiradi.
 //
-// NEGA KERAK
+// # NEGA KERAK
 //
 // Hujjat sahifalari qo'lda yoziladi va kontraktdan jimgina ajralib ketadi.
 // 2026-09-26 da aynan shunday bo'ldi. `docs_sync_test.go` javob MAYDONLARINI
@@ -51,7 +51,6 @@ var endpoints = []struct{ path, page string }{
 	{"/v2/directions", "directions"},
 	{"/v2/places", "places"},
 	{"/v2/places/{id}", "places-by-id"},
-	{"/v2/mahallas", "mahallas"},
 }
 
 type param struct {

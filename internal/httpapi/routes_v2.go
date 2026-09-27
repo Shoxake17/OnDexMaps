@@ -62,10 +62,18 @@ func (s *Server) registerV2Routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v2/directions", s.v2(devplatform.APIDirections, s.v2Directions))
 	mux.HandleFunc("GET /v2/places", s.v2(devplatform.APIPlaces, s.v2Places))
 	mux.HandleFunc("GET /v2/places/{id}", s.v2(devplatform.APIPlaces, s.v2Place))
-	// Mahalla chegaralari — `places` ruxsati ostida: bu ham ob'ekt
-	// ma'lumoti, faqat nuqta emas, maydon. Yangi API nomi qo'shilsa
-	// migratsiya va mavjud kalitlarni yangilash kerak bo'lardi.
-	mux.HandleFunc("GET /v2/mahallas", s.v2(devplatform.APIPlaces, s.v2Mahallas))
+
+	// ┌─ MAHALLA CHEGARALARI `/v2` DA ATAYLAB YO'Q ────────────────────┐
+	// `/v2/mahallas` mavjud edi va bitta so'rovda BUTUN to'plamni
+	// qaytarardi: bbox ham, sahifalash ham yo'q edi. Ya'ni bepul
+	// rejadagi bitta chaqiruv Operatorning qo'lda yig'ilgan va
+	// moderatsiyadan o'tkazilgan barcha chegaralarini nusxalash uchun
+	// yetarli bo'lardi.
+	//
+	// Chegaralar ichki `/v1/mahallas` da qoladi (u `V1_FIRST_PARTY_ONLY`
+	// bilan qo'riqlanadi). Tashqi dasturchilar uchun ular endi
+	// berilmaydi; talab bo'lsa alohida kelishuv bilan ochiladi.
+	// └────────────────────────────────────────────────────────────────┘
 
 	// Kontrakt — ATAYLAB kalitsiz va hisoblanmaydi: dasturchi kalit olishdan
 	// OLDIN API nima qila olishini ko'ra olishi kerak. Sir emas.
@@ -83,7 +91,7 @@ func (s *Server) registerV2Routes(mux *http.ServeMux) {
 	mux.HandleFunc("/v2/", func(w http.ResponseWriter, r *http.Request) {
 		v2Fail(w, http.StatusForbidden, devplatform.CodeAPINotAllowed,
 			"bu endpoint dasturchi API'sida mavjud emas "+
-				"(faqat geocode, reverse, directions, places, mahallas — GET)")
+				"(faqat geocode, reverse, directions, places — GET)")
 	})
 }
 
@@ -367,31 +375,6 @@ func (s *Server) v2Places(w http.ResponseWriter, r *http.Request) {
 		v2Fail(w, http.StatusBadGateway, "upstream_error", "so'rov bajarilmadi")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"status": "OK", "result": json.RawMessage(body)})
-}
-
-// v2Mahallas — mahalla, qishloq va daha chegaralari (GeoJSON).
-//
-// To'plam BUTUNLIGICHA qaytariladi, bbox bo'yicha bo'linmaydi: u kichik
-// (~100 KB) va kamdan-kam o'zgaradi, mijoz esa uni bir marta olib xaritada
-// qatlam sifatida ushlab turadi. Har harakatda qayta so'rash — keraksiz
-// trafik va keraksiz kvota sarfi bo'lardi.
-//
-// Chegarasi chizilmagan mahallalar javobga tushmaydi (`geom IS NULL`).
-func (s *Server) v2Mahallas(w http.ResponseWriter, r *http.Request) {
-	if s.db == nil {
-		v2Fail(w, http.StatusServiceUnavailable, devplatform.CodeUnavailable, "baza ulanmagan")
-		return
-	}
-	body, err := s.db.MahallasGeoJSON(r.Context())
-	if err != nil {
-		slog.Error("v2 mahallas xatosi", "err", err)
-		v2Fail(w, http.StatusBadGateway, "upstream_error", "so'rov bajarilmadi")
-		return
-	}
-	// `s.v2` standart holda `no-store` qo'yadi — bu yerda ataylab bekor
-	// qilinadi: ma'lumot sekin o'zgaradi va keshlanishi kerak.
-	w.Header().Set("Cache-Control", "public, max-age=3600")
 	writeJSON(w, http.StatusOK, map[string]any{"status": "OK", "result": json.RawMessage(body)})
 }
 

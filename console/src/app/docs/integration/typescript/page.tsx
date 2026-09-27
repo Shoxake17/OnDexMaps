@@ -135,7 +135,7 @@ export interface Point {
 
 export interface Feature<G, P> {
   type: "Feature";
-  /** GeoJSON'ning o'z identifikatori. \`/v2/places\` da bor, \`/v2/mahallas\` da yo'q. */
+  /** GeoJSON'ning o'z identifikatori — \`/v2/places\` javobida bor. */
   id?: string;
   geometry: G;
   properties: P;
@@ -183,23 +183,6 @@ export interface PlaceDetail {
 export interface PlaceDetailResponse {
   status: Status;
   result?: PlaceDetail;
-}
-
-export interface MahallaProps {
-  id: string;
-  kind: string;
-  name: string;
-  /** Nom chizish uchun — poligonning o'ziga chizmang. */
-  center?: Point;
-}
-
-export type MahallaGeometry =
-  | { type: "Polygon"; coordinates: [number, number][][] }
-  | { type: "MultiPolygon"; coordinates: [number, number][][][] };
-
-export interface MahallasResponse {
-  status: Status;
-  result: FeatureCollection<MahallaGeometry, MahallaProps>;
 }`,
           },
           {
