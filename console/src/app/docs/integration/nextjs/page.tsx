@@ -65,7 +65,10 @@ export default function OnDexMap({
   const map = useRef<MapLibreMap | null>(null);
 
   useEffect(() => {
-    if (map.current || !container.current) return;
+    // \`container.current\` tekshiruvi TypeScript uchun kerak: u
+    // \`HTMLDivElement | null\`. \`map.current\` ni tekshirish esa shart
+    // emas — tozalash uni \`null\` qiladi (React sahifasidagi izohga qarang).
+    if (!container.current) return;
 
     map.current = new maplibregl.Map({
       container: container.current,
