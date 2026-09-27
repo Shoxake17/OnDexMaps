@@ -44,10 +44,18 @@ func TestIntegrationSubscriptionBillingChain(t *testing.T) {
 	}
 	t.Cleanup(mpool.Close)
 
+	// ⚠️ PREFIKS PAKETGA XOS BO'LISHI SHART.
+	//
+	// `go test ./...` paket binarlarini PARALLEL ishga tushiradi, CI'da
+	// esa baza bitta. Ilgari bu yerda ham, `internal/devplatform` da ham
+	// `itest-%` ishlatilardi: bir paketning tozalashi ikkinchisining
+	// hisobini o'rtada o'chirib yuborardi va test tasodifiy yiqilardi
+	// ("topilmadi" — `SetSuspended` 0 qator yangiladi). Yangi paket
+	// qo'shsangiz unga ham O'Z prefiksini bering.
 	clean := func() {
 		for _, q := range []string{
-			`DELETE FROM billing_invoices WHERE account_id IN (SELECT id FROM dev_accounts WHERE email LIKE 'itest-%')`,
-			`DELETE FROM dev_accounts WHERE email LIKE 'itest-%'`,
+			`DELETE FROM billing_invoices WHERE account_id IN (SELECT id FROM dev_accounts WHERE email LIKE 'itest-adminapi-%')`,
+			`DELETE FROM dev_accounts WHERE email LIKE 'itest-adminapi-%'`,
 		} {
 			if _, err := owner.Exec(ctx, q); err != nil {
 				t.Fatalf("tozalash: %v", err)
@@ -62,7 +70,7 @@ func TestIntegrationSubscriptionBillingChain(t *testing.T) {
 	ms := devplatform.NewPGStore(mpool)
 	plans := devplatform.DefaultPlans()
 
-	acc, err := cs.CreateAccount(ctx, "itest-billing@example.com")
+	acc, err := cs.CreateAccount(ctx, "itest-adminapi-billing@example.com")
 	if err != nil {
 		t.Fatal(err)
 	}

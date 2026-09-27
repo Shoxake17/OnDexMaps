@@ -9,7 +9,7 @@ package devplatform_test
 //  2. XAVFSIZLIK: rol grantlari haqiqatan ushlaydi — konsol o'ziga obuna/ekotizim bera olmaydi, hisob-fakturaga
 //     yozolmaydi; hisoblovchi kalit yarata olmaydi; ommaviy rollar yangi jadvallarni ko'rmaydi.
 //
-// Test o'z qatorlarini o'zi tozalaydi (`itest-` email prefiksi).
+// Test o'z qatorlarini o'zi tozalaydi (`itest-devplat-` email prefiksi).
 
 import (
 	"context"
@@ -87,12 +87,18 @@ func asPg(err error, target **pgconn.PgError) bool {
 	return false
 }
 
+// cleanup — shu paket yaratgan qatorlarni o'chiradi.
+//
+// ⚠️ PREFIKS PAKETGA XOS: `itest-devplat-`. `go test ./...` paketlarni
+// parallel ishlatadi va CI'da baza bitta — umumiy `itest-%` naqshi
+// `internal/adminapi` ning hisobini o'rtada o'chirib, o'sha testni
+// tasodifiy yiqitardi.
 func cleanup(t *testing.T, owner string) {
 	t.Helper()
 	q := []string{
-		`DELETE FROM billing_invoices WHERE account_id IN (SELECT id FROM dev_accounts WHERE email LIKE 'itest-%')`,
-		`DELETE FROM dev_accounts WHERE email LIKE 'itest-%'`,
-		`DELETE FROM dev_otps WHERE email LIKE 'itest-%'`,
+		`DELETE FROM billing_invoices WHERE account_id IN (SELECT id FROM dev_accounts WHERE email LIKE 'itest-devplat-%')`,
+		`DELETE FROM dev_accounts WHERE email LIKE 'itest-devplat-%'`,
+		`DELETE FROM dev_otps WHERE email LIKE 'itest-devplat-%'`,
 	}
 	for _, s := range q {
 		if err := exec(t, owner, s); err != nil {
@@ -121,11 +127,11 @@ func TestIntegrationMeterAndConsoleStores(t *testing.T) {
 	defer mpool.Close()
 	cs, ms := console.NewPGStore(cpool), devplatform.NewPGStore(mpool)
 
-	acc, err := cs.CreateAccount(ctx, "itest-a@example.com")
+	acc, err := cs.CreateAccount(ctx, "itest-devplat-a@example.com")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if again, err := cs.CreateAccount(ctx, "itest-a@example.com"); err != nil || again.ID != acc.ID {
+	if again, err := cs.CreateAccount(ctx, "itest-devplat-a@example.com"); err != nil || again.ID != acc.ID {
 		t.Fatalf("takroriy CreateAccount: %v", err)
 	}
 	if acc.Subscription || acc.Ecosystem || acc.Suspended {
@@ -212,7 +218,7 @@ func TestIntegrationConstraints(t *testing.T) {
 	}
 	defer cpool.Close()
 	cs := console.NewPGStore(cpool)
-	acc, _ := cs.CreateAccount(ctx, "itest-c@example.com")
+	acc, _ := cs.CreateAccount(ctx, "itest-devplat-c@example.com")
 
 	mk := func(kind string, apis, origins, ips []string) error {
 		s, p, _ := devplatform.GenerateKey(kind)
@@ -258,7 +264,7 @@ func TestIntegrationPurgeExpired(t *testing.T) {
 	t.Cleanup(cpool.Close)
 	cs := console.NewPGStore(cpool)
 
-	acc, err := cs.CreateAccount(ctx, "itest-purge@example.com")
+	acc, err := cs.CreateAccount(ctx, "itest-devplat-purge@example.com")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -305,10 +311,10 @@ func TestIntegrationRolePrivileges(t *testing.T) {
 	t.Cleanup(func() { cleanup(t, d.owner) })
 
 	// tayyorgarlik: egasi orqali hisob, kalit, hisob-faktura
-	if err := exec(t, d.owner, `INSERT INTO dev_accounts (email) VALUES ('itest-p@example.com')`); err != nil {
+	if err := exec(t, d.owner, `INSERT INTO dev_accounts (email) VALUES ('itest-devplat-p@example.com')`); err != nil {
 		t.Fatal(err)
 	}
-	const acc = `(SELECT id FROM dev_accounts WHERE email = 'itest-p@example.com')`
+	const acc = `(SELECT id FROM dev_accounts WHERE email = 'itest-devplat-p@example.com')`
 	if err := exec(t, d.owner, `INSERT INTO api_keys (account_id, name, kind, prefix, key_hash, apis)
 		VALUES (`+acc+`, 'k', 'server', 'omk_s_aaaaaaaa', decode('00112233','hex'), ARRAY['geocode'])`); err != nil {
 		t.Fatal(err)
@@ -324,8 +330,8 @@ func TestIntegrationRolePrivileges(t *testing.T) {
 		"konsol: ekotizimni yoqish":          `UPDATE dev_accounts SET is_ecosystem = true`,
 		"konsol: hisobni tiklash":            `UPDATE dev_accounts SET status = 'active'`,
 		"konsol: obuna sanasi":               `UPDATE dev_accounts SET subscription_since = now()`,
-		"konsol: obunali hisob yaratish":     `INSERT INTO dev_accounts (email, subscription) VALUES ('itest-x@example.com', true)`,
-		"konsol: ekotizimli hisob":           `INSERT INTO dev_accounts (email, is_ecosystem) VALUES ('itest-y@example.com', true)`,
+		"konsol: obunali hisob yaratish":     `INSERT INTO dev_accounts (email, subscription) VALUES ('itest-devplat-x@example.com', true)`,
+		"konsol: ekotizimli hisob":           `INSERT INTO dev_accounts (email, is_ecosystem) VALUES ('itest-devplat-y@example.com', true)`,
 		"konsol: hisob-faktura yozish":       `INSERT INTO billing_invoices (account_id, period_start, period_end, amount_uzs, due_at) VALUES (` + acc + `, current_date + 100, current_date + 130, 0, now())`,
 		"konsol: hisob-faktura to'lash":      `UPDATE billing_invoices SET status = 'paid', paid_at = now()`,
 		"konsol: hisob-faktura narxi":        `UPDATE billing_invoices SET amount_uzs = 0`,
@@ -340,7 +346,7 @@ func TestIntegrationRolePrivileges(t *testing.T) {
 		denied(t, name, exec(t, d.console, sql))
 	}
 	// ...lekin o'z vazifasini bajara oladi
-	if err := exec(t, d.console, `UPDATE dev_accounts SET name = 'Ali' WHERE email = 'itest-p@example.com'`); err != nil {
+	if err := exec(t, d.console, `UPDATE dev_accounts SET name = 'Ali' WHERE email = 'itest-devplat-p@example.com'`); err != nil {
 		t.Errorf("konsol ism o'zgartira olmadi: %v", err)
 	}
 	if err := exec(t, d.console, `UPDATE api_keys SET status = 'revoked', revoked_at = now() WHERE prefix = 'omk_s_aaaaaaaa'`); err != nil {
