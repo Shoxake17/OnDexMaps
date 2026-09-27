@@ -36,7 +36,8 @@ func TestStyleKeepsAttribution(t *testing.T) {
 	got := style.Sources["ondex"].Attribution
 	for _, must := range []string{
 		"OnDexMap", "/copyright", "/brand/ondex.png", // brend + logotip + havola
-		"Microsoft", // bino konturlari (ODbL)
+		"display:block", // brend yozuvi ALOHIDA qatorda (kreditlar ustida)
+		"Microsoft",     // bino konturlari (ODbL)
 		"OpenStreetMap",
 	} {
 		if !strings.Contains(got, must) {
