@@ -109,25 +109,61 @@ REST API:   https://maps.ondex.uz/v2/...`}</Code>
         sahifasiga olib boradi — u yerda manbalar, litsenziyalar va shartlar to&apos;liq yozilgan.
       </P>
       <P>
-        Uslub faylida atribut allaqachon yozilgan — kutubxona uni o&apos;zi chiqaradi. Hech narsa
-        qilish shart emas:
+        Uslub faylida atribut allaqachon yozilgan — kutubxona uni o&apos;zi chiqaradi. Lekin
+        standart sozlama <strong className="text-foreground">tor ekranda yetarli emas</strong>:
+        MapLibre kengligi 640px dan kichik xaritada yorliqni yig&apos;adi va foydalanuvchi
+        xaritani birinchi marta surganda uni «i» tugmasi ortiga yashiradi. Shuning uchun{" "}
+        <C>compact: false</C> ni ochiq yozing:
       </P>
-      <Code lang="js">{`// Standart holat: atribut pastki o'ng burchakda chiqadi.
-const map = new maplibregl.Map({
+      <Code lang="js">{`const map = new maplibregl.Map({
   container: "map",
   style: "https://maps.ondex.uz/tiles/style.json",
-});`}</Code>
+  attributionControl: false,   // standart yorliq o'rniga...
+});
+
+// ...yig'ilmaydigan yorliq. Atribut matni uslubdan keladi.
+map.addControl(
+  new maplibregl.AttributionControl({ compact: false }),
+  "bottom-right",
+);`}</Code>
+      <Callout kind="warn">
+        <p>
+          Haqiqiy brauzerda o&apos;lchangan (MapLibre 4.7.1, xarita 420px kenglikda):
+        </p>
+        <Table
+          head={["Sozlama", "Boshida", "Foydalanuvchi surganidan keyin"]}
+          rows={[
+            [<C key="a">compact: false</C>, "ko'rinadi", "ko'rinadi"],
+            [<C key="b">compact</C>, "ko'rinadi", "YASHIRINADI"],
+            [<C key="c">compact: true</C>, "ko'rinadi", "YASHIRINADI"],
+          ]}
+        />
+        <p className="mt-2">
+          Kengligi 640px dan katta xaritada <C>compact</C> berilmasa yorliq yig&apos;ilmaydi —
+          shuning uchun muammo faqat telefonda ko&apos;rinadi va kompyuterda sinaganda
+          sezilmaydi.
+        </p>
+      </Callout>
       <Table
         head={["Mumkin", "Mumkin emas"]}
         rows={[
           [
-            "Yorliqni yig'ilgan (compact) holatga keltirish",
+            "Joyini boshqa burchakka ko'chirish",
             "Yozuvni butunlay o'chirish",
           ],
-          ["Joyini boshqa burchakka ko'chirish", "CSS bilan yashirish yoki shaffof qilish"],
-          ["Yoniga o'z brendingizni qo'shish", "O'qib bo'lmaydigan darajada kichraytirish"],
           [
-            "Shrift o'lchami va rangini moslashtirish",
+            "Yoniga o'z brendingizni qo'shish",
+            <>
+              <C key="c">compact: true</C> — surilganda «i» tugmasi ortiga yashiradi
+            </>,
+          ],
+          ["Shrift o'lchami va rangini moslashtirish", "CSS bilan yashirish yoki shaffof qilish"],
+          [
+            "O'qilishi uchun oq halo (text-shadow) qo'shish",
+            "O'qib bo'lmaydigan darajada kichraytirish",
+          ],
+          [
+            "Fon va ramka rangini mavzuyingizga moslash",
             <>
               <C key="x">attributionControl: false</C> yozib qaytarmaslik
             </>,
@@ -153,8 +189,8 @@ const map = new maplibregl.Map({
 
       <H3 id="brend">O&apos;z brendingiz bilan</H3>
       <P>
-        Standart yorliqni yig&apos;ilgan (compact) holatga keltirib, yoniga o&apos;z nomingizni
-        qo&apos;yishingiz mumkin. Atribut matni saqlanib qoladi:
+        Yorliqni boshqa burchakka ko&apos;chirib, yoniga o&apos;z nomingizni qo&apos;yishingiz
+        mumkin. Atribut matni saqlanib qoladi:
       </P>
       <Code lang="js">{`const map = new maplibregl.Map({
   container: "map",
@@ -166,7 +202,10 @@ const map = new maplibregl.Map({
 // baribir chiqadi — faqat ko'rinishi va joyi o'zgaradi.
 map.addControl(
   new maplibregl.AttributionControl({
-    compact: true,
+    // ⚠️ compact: false — SHART. \`true\` bo'lsa yorliq boshida
+    // ko'rinadi, lekin foydalanuvchi xaritani surishi bilan «i»
+    // tugmasi ortiga yig'iladi va OnDexMap krediti yo'qoladi.
+    compact: false,
     customAttribution: "© Mening Kompaniyam",
   }),
   "bottom-left",
@@ -176,6 +215,23 @@ map.addControl(
           <C>AttributionControl</C> uslubdagi <C>attribution</C> maydonlarini{" "}
           <C>customAttribution</C> bilan BIRGA ko&apos;rsatadi. Ya&apos;ni o&apos;z brendingizni
           qo&apos;shish OpenStreetMap kreditini o&apos;chirmaydi.
+        </p>
+        <p className="mt-2">
+          <C>customAttribution</C> ro&apos;yxat <strong className="text-foreground">boshiga</strong>{" "}
+          qo&apos;shiladi — sizning nomingiz OnDexMap kreditidan oldin turadi.
+        </p>
+      </Callout>
+      <Callout kind="warn">
+        <p>
+          <C>customAttribution</C> ga{" "}
+          <strong className="text-foreground">foydalanuvchi matnini qo&apos;ymang</strong>. MapLibre
+          bu satrni HTML sifatida kiritadi va 4.7.1 uni tozalamaydi — ya&apos;ni{" "}
+          <C>&lt;img onerror=...&gt;</C> ishlab ketadi (
+          <A href="https://github.com/advisories/GHSA-jrc7-96c5-q579">GHSA-jrc7-96c5-q579</A>).
+        </p>
+        <p className="mt-2">
+          Faqat kodda yozilgan, sobit matn bering. Nomni ma&apos;lumotlar bazasidan yoki URL
+          parametridan olayotgan bo&apos;lsangiz — avval HTML belgilarini ekranlang.
         </p>
       </Callout>
 

@@ -61,9 +61,18 @@ export default function CdnPage() {
       style: "https://maps.ondex.uz/tiles/style.json",
       center: [69.2401, 41.2995],
       zoom: 12,
+      attributionControl: false,   // pastda o'zimiz qo'shamiz
     });
 
     map.addControl(new maplibregl.NavigationControl(), "top-right");
+
+    // Atribut. \`compact: false\` SHART: usiz MapLibre tor ekranda
+    // (640px dan kichik) yorliqni yig'adi va foydalanuvchi xaritani
+    // surishi bilan OnDexMap krediti «i» tugmasi ortida yo'qoladi.
+    map.addControl(
+      new maplibregl.AttributionControl({ compact: false }),
+      "bottom-right",
+    );
   </script>
 </body>
 </html>`,
@@ -111,9 +120,16 @@ export default function CdnPage() {
       <H2 id="atribut">Atribut</H2>
       <P>
         Xarita ma&apos;lumoti OpenStreetMap va Microsoft Building Footprints&apos;dan olingan —
-        ikkalasi ham ODbL va atribut ko&apos;rsatilishini talab qiladi. U uslub faylida yozilgan va
-        kutubxona uni <strong className="text-foreground">o&apos;zi chiqaradi</strong>: yuqoridagi
-        kodda qo&apos;shimcha hech narsa qilinmagan.
+        ikkalasi ham ODbL va atribut ko&apos;rsatilishini talab qiladi. Matn uslub faylida
+        yozilgan, ya&apos;ni siz yozmaysiz — lekin yorliq{" "}
+        <strong className="text-foreground">yig&apos;ilib qolmasligi</strong> uchun{" "}
+        <C>compact: false</C> ni ochiq berish kerak. Yuqoridagi kodda shu qilingan.
+      </P>
+      <P>
+        Sababi: MapLibre kengligi 640px dan kichik xaritada yorliqni avtomatik yig&apos;adi va
+        foydalanuvchi xaritani birinchi marta surganda uni «i» tugmasi ortiga yashiradi. Bu faqat
+        telefonda ko&apos;rinadi, shuning uchun kompyuterda sinaganda sezilmaydi. Batafsil —{" "}
+        <A href="/docs/js/general#atribut">JavaScript API → Atribut</A>.
       </P>
       <Callout kind="warn">
         <p>
