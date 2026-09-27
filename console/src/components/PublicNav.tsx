@@ -141,7 +141,7 @@ export function PublicNav() {
   return (
     <header className="sticky top-0 z-40 bg-nav text-slate-100">
       <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-6 px-4 xl:px-6">
-        <Link href="/docs" className="flex shrink-0 items-center gap-2">
+        <Link href="/" className="flex shrink-0 items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element -- kichik statik belgi, Image optimizatsiyasi ortiqcha */}
           <img src="/logo.png" alt="" width={26} height={26} className="shrink-0" />
           <span className="text-[19px] font-bold tracking-tight">OnDexMap</span>

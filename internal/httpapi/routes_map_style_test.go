@@ -148,6 +148,22 @@ func TestCopyrightPageIsOpen(t *testing.T) {
 			t.Errorf("mualliflik sahifasida %q yo'q", must)
 		}
 	}
+
+	// Huquqiy hujjatlarga va aloqaga havola. Bu sahifa atribut yozuvidan
+	// ochiladigan yagona sahifa, ya'ni ko'p foydalanuvchi uchun birinchi
+	// (ba'zan yagona) kirish nuqtasi. Havolalarsiz u "kim bu va shartlari
+	// qayerda" degan savolga javob bermaydi.
+	for _, must := range []string{
+		"console.ondex.uz/oferta",
+		"console.ondex.uz/shartlar",
+		"console.ondex.uz/maxfiylik",
+		"console.ondex.uz/sla",
+		"support@ondex.uz",
+	} {
+		if !strings.Contains(body, must) {
+			t.Errorf("mualliflik sahifasida %q havolasi yo'q", must)
+		}
+	}
 }
 
 // Xarita uslubi buzilsa, MapLibre uni BUTUNLAY rad etadi va xarita

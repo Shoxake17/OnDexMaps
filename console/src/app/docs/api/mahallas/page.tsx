@@ -146,6 +146,20 @@ map.addLayer({
         notes: (
           <>
             <Callout kind="warn">
+              <p className="font-semibold">Ma&apos;lumot qamrovi</p>
+              <p className="mt-1.5">
+                Chegaralar hozircha faqat <strong className="text-foreground">Chust tumani</strong>{" "}
+                bo&apos;yicha kiritilgan — 2026-09-27 holatiga ko&apos;ra{" "}
+                <strong className="text-foreground">21 ta</strong> poligon. «To&apos;plam
+                butunligicha keladi» degani shu 21 tani anglatadi, butun O&apos;zbekistonni
+                emas.
+              </p>
+              <p className="mt-2">
+                Boshqa hududlar bosqichma-bosqich qo&apos;shiladi. Integratsiyangiz mahalla
+                topilmagan holatni ham to&apos;g&apos;ri ko&apos;rsatishi kerak.
+              </p>
+            </Callout>
+            <Callout kind="warn">
               <p>
                 Nomni poligonning o&apos;ziga chizmang. Xarita kutubxonasi poligonni tile
                 chegaralari bo&apos;ylab bo&apos;laklarga bo&apos;ladi va{" "}

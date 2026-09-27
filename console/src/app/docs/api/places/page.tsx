@@ -14,7 +14,7 @@ export default function PlacesPage() {
         title: "Places",
         method: "GET",
         path: "/v2/places",
-        desc: "Berilgan to'rtburchak ichidagi tasdiqlangan ob'ektlarni GeoJSON FeatureCollection ko'rinishida qaytaradi. Qamrov — butun O'zbekiston.",
+        desc: "Berilgan to'rtburchak ichidagi tasdiqlangan ob'ektlarni GeoJSON FeatureCollection ko'rinishida qaytaradi. So'rov butun O'zbekiston bo'yicha qabul qilinadi, lekin jadval hozircha deyarli bo'sh — pastdagi «Ma'lumot qamrovi» ga qarang.",
         page: "places",
         requests: [
           {
@@ -123,6 +123,23 @@ map.on("moveend", async () => {
         ],
         notes: (
           <>
+            <Callout kind="warn">
+              <p className="font-semibold">Ma&apos;lumot qamrovi</p>
+              <p className="mt-1.5">
+                <C>/v2/places</C> — OnDexMap&apos;ning moderatsiyadan o&apos;tgan{" "}
+                <strong className="text-foreground">o&apos;z</strong> ob&apos;ektlar jadvali va u
+                production&apos;da hozircha <strong className="text-foreground">deyarli bo&apos;sh</strong>:
+                2026-09-27 da butun xizmat hududi 1,4° li panjara bilan skanerlandi (91 so&apos;rov)
+                va jami <strong className="text-foreground">1 ta</strong> ob&apos;ekt topildi.
+              </p>
+              <p className="mt-2">
+                Ya&apos;ni ko&apos;p hududda bo&apos;sh <C>FeatureCollection</C> qaytadi va bu
+                xato emas. Xaritadagi do&apos;kon, maktab, dorixona yozuvlari{" "}
+                <strong className="text-foreground">tayllardan</strong> keladi — butunlay boshqa
+                manba, ular butun mamlakat bo&apos;ylab ko&apos;rinadi va bu endpointga
+                bog&apos;liq emas.
+              </p>
+            </Callout>
             <P>
               Javob faqat <strong className="text-foreground">tasdiqlangan</strong> ob&apos;ektlarni
               o&apos;z ichiga oladi. Moderatsiyadan o&apos;tmagan takliflar bu yerda ko&apos;rinmaydi.
