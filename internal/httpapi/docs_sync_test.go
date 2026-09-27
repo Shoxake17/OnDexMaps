@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"sort"
@@ -31,6 +32,67 @@ import (
 
 // docsDir — hujjat sahifalari (Go paketidan nisbiy yo'l).
 const docsDir = "../../console/src/app/docs/api"
+
+// TestAttributionExampleMatchesStyle — hujjatdagi kredit NAMUNASI
+// uslubdagi HAQIQIY atribut bilan bir xil bo'lishi.
+//
+// ┌─ NEGA ─────────────────────────────────────────────────────────────┐
+// `/docs/js/general#atribut` integratorga «xaritada aynan shu yozuv
+// chiqadi» deb namuna ko'rsatadi. Uslubdagi atribut esa mustaqil
+// fayl (`assets/style-chust.json`) — ular bog'lanmagan. Kredit
+// tartibi yoki matni o'zgarsa hujjat JIMGINA eskirardi.
+//
+// Atribut talabi shartnoma darajasida ishlagani uchun (buzilsa kalit
+// bekor qilinadi) namuna noto'g'ri bo'lishi ayniqsa yomon.
+// └────────────────────────────────────────────────────────────────────┘
+func TestAttributionExampleMatchesStyle(t *testing.T) {
+	cfg := baseCfg()
+	cfg.TilesURL = "https://example.test/tiles.pmtiles"
+	cfg.BuildingsURL = "https://example.test/buildings.pmtiles"
+
+	var style struct {
+		Sources map[string]struct {
+			Attribution string `json:"attribution"`
+		} `json:"sources"`
+	}
+	if err := json.Unmarshal(New(cfg, nil).buildStyle(), &style); err != nil {
+		t.Fatalf("uslub o'qilmadi: %v", err)
+	}
+
+	// HTML teglarini olib tashlab faqat matnni qoldiramiz. Brend yozuvi
+	// (birinchi `<a>`) kredit qatoridan TASHQARIDA turadi, shuning uchun
+	// hisobga olinmaydi: birinchi `©` dan boshlaymiz.
+	plain := regexp.MustCompile(`<[^>]*>`).ReplaceAllString(style.Sources["ondex"].Attribution, "")
+	if i := strings.Index(plain, "©"); i > 0 {
+		plain = plain[i:]
+	}
+	plain = strings.Join(strings.Fields(plain), " ")
+
+	src := readFile(t, "../../console/src/app/docs/js/general/page.tsx")
+
+	// ⚠️ Sahifada bir nechta `terminal` bloki bor (birinchisi — kutubxona
+	// versiyalari). Atribut BO'LIMIDAN boshlab qidiramiz, aks holda test
+	// butunlay boshqa blokni tekshirardi.
+	sec := strings.Index(src, `<H2 id="atribut">`)
+	if sec < 0 {
+		t.Fatal("hujjatda `id=\"atribut\"` bo'limi topilmadi")
+	}
+	const marker = "<Code lang=\"terminal\">{`"
+	at := strings.Index(src[sec:], marker)
+	if at < 0 {
+		t.Fatal("atribut bo'limida kredit namunasi topilmadi")
+	}
+	rest := src[sec+at+len(marker):]
+	end := strings.Index(rest, "`")
+	if end < 0 {
+		t.Fatal("kredit namunasi yopilmagan")
+	}
+	doc := strings.Join(strings.Fields(rest[:end]), " ")
+
+	if doc != plain {
+		t.Errorf("hujjatdagi kredit namunasi uslubdagi atributdan farq qiladi:\n  hujjat: %q\n  uslub:  %q", doc, plain)
+	}
+}
 
 // reSchemaStart — `components: schemas:` ichidagi keyingi sxema sarlavhasi.
 var reSchemaStart = regexp.MustCompile(`(?m)^    [A-Za-z][A-Za-z0-9]*:$`)
