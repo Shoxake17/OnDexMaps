@@ -35,9 +35,12 @@ func TestStyleKeepsAttribution(t *testing.T) {
 	// Hammasi BITTA satrda — tartib kafolatlangan bo'lishi uchun.
 	got := style.Sources["ondex"].Attribution
 	for _, must := range []string{
-		"OnDexMap", "/copyright", "/brand/ondex.png", // brend + logotip + havola
-		"display:block", // brend yozuvi ALOHIDA qatorda (kreditlar ustida)
-		"Microsoft",     // bino konturlari (ODbL)
+		"OnDexMap", "/copyright", // brend yozuvi va mualliflik havolasi
+		// Brend yozuvi kredit qutisidan TASHQARIDA, uning USTIDA turadi.
+		// `.maplibregl-ctrl` dagi `transform` joylashtirish konteyneri
+		// bo'lib xizmat qiladi, `-attrib` da esa `overflow` yo'q.
+		"position:absolute", "bottom:100%",
+		"Microsoft", // bino konturlari (ODbL)
 		"OpenStreetMap",
 	} {
 		if !strings.Contains(got, must) {
