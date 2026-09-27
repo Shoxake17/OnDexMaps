@@ -155,10 +155,27 @@
     <a href="https://console.ondex.uz/maxfiylik">maxfiylik siyosati</a> va
     <a href="https://console.ondex.uz/sla">xizmat darajasi kelishuvi</a>.
   </p>
+  <!--
+    ⚠️ `email_off` — Cloudflare'ning Email Address Obfuscation funksiyasini
+    SHU JOYDA o'chiradi. Usiz Cloudflare `mailto:` havolasini
+    `/cdn-cgi/l/email-protection#…` ga, matnni esa `[email protected]` ga
+    almashtiradi va o'zining ochuvchi skriptini sahifaga qo'shadi.
+
+    Bu sahifada u skript ISHLAMAYDI: sahifaning CSP'si tashqi skriptni
+    bloklaydi va React hidratsiyasi ham yo'q (bu oddiy HTML). Natijada
+    manzil hech qachon ochilmaydi — atribut yozuvidan kelgan foydalanuvchi
+    buzuq havolani ko'radi.
+
+    To'liq yechim — Cloudflare panelida funksiyani o'chirish
+    (Scrape Shield → Email Address Obfuscation). Bu belgi esa shu
+    sahifani mustaqil ravishda himoya qiladi.
+  -->
+  <!--email_off-->
   <p>
     Savol yoki shartlarning buzilishi haqida xabar:
     <a href="mailto:support@ondex.uz">support@ondex.uz</a>.
   </p>
+  <!--email_on-->
 
   <footer>
     <a href="https://console.ondex.uz/docs">Hujjatlar</a> &#183;
