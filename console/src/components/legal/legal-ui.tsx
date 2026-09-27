@@ -130,11 +130,23 @@ export function LegalPage({
   title,
   subtitle,
   toc,
+  /**
+   * Rekvizitlar ogohlantirishini ko'rsatish.
+   *
+   * Shartnoma hujjatlari (oferta, shartlar, maxfiylik, SLA) uchun SHART:
+   * rekvizitsiz ular huquqiy kuchga ega emas. Mualliflik sahifasi esa
+   * axborot sahifasi — u o'zicha to'liq va u yerda «hujjat yakuniy
+   * emas» degan yozuv faqat chalg'itadi. Ayni o'sha sahifaga xaritadagi
+   * atribut yozuvidan kirishadi, ya'ni ko'pchilik uchun bu birinchi
+   * taassurot.
+   */
+  requisites = true,
   children,
 }: {
   title: string;
   subtitle: string;
   toc: { n: string; title: string }[];
+  requisites?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -165,7 +177,7 @@ export function LegalPage({
         </div>
       </dl>
 
-      {operatorIncomplete() && (
+      {requisites && operatorIncomplete() && (
         <div className="mt-6 rounded-xl border-l-4 border-amber-400 bg-amber-50 p-4 text-sm text-amber-900">
           <p className="font-semibold">Diqqat: hujjat hali yakuniy emas.</p>
           <p className="mt-1.5 leading-relaxed">

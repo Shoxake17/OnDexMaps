@@ -3,6 +3,7 @@ package httpapi
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 )
@@ -100,7 +101,10 @@ func TestStyleDropsMicrosoftCreditWithoutBuildings(t *testing.T) {
 	}
 }
 
-// TestBrandLogoIsServed — atributdagi `<img>` manzili haqiqatan ishlashi.
+// TestBrandLogoIsServed — brend belgisining ommaviy manzili ishlashi.
+//
+// ⚠️ Atribut uni artiq ishlatmaydi (brend matn ko'rinishida chiqadi),
+// lekin manzil e'lon qilingan va PNG bo'lib qolishi kerak.
 func TestBrandLogoIsServed(t *testing.T) {
 	res := do(testServer(t, baseCfg()), "GET", "/brand/ondex.png", "")
 
@@ -119,50 +123,34 @@ func TestBrandLogoIsServed(t *testing.T) {
 	}
 }
 
-// TestCopyrightPageIsOpen — mualliflik sahifasi kalitsiz ochilishi.
+// TestCopyrightRedirectsToConsole — mualliflik havolasi kalitsiz
+// ishlashi va konsoldagi sahifaga olib borishi.
 //
-// Uslubdagi atribut yozuvi shu sahifaga ishora qiladi. Agar u yopiq
-// bo'lsa yoki yo'qolsa, yozuv "o'lik havola"ga aylanadi va atribut
-// talabi ma'nosini yo'qotadi.
-func TestCopyrightPageIsOpen(t *testing.T) {
+// Uslubdagi atribut yozuvi `maps.ondex.uz/copyright` ga ishora qiladi.
+// Sahifaning o'zi konsolda (u yerda navbar, futer va huquqiy
+// hujjatlarga havolalar yagona manbadan keladi), shuning uchun bu
+// yerda yo'naltirish turadi. U buzilsa atribut yozuvi "o'lik
+// havola"ga aylanadi va ODbL talabi ma'nosini yo'qotadi.
+func TestCopyrightRedirectsToConsole(t *testing.T) {
 	h := testServer(t, baseCfg())
 	res := do(h, "GET", "/copyright", "")
 
-	if res.Code != 200 {
-		t.Fatalf("/copyright holati %d, 200 kutilgandi", res.Code)
-	}
-	if ct := res.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/html") {
-		t.Errorf("Content-Type %q, text/html kutilgandi", ct)
+	if res.Code != http.StatusMovedPermanently {
+		t.Fatalf("/copyright holati %d, 301 kutilgandi", res.Code)
 	}
 
-	// Umumiy `default-src 'none'` sahifaning uslubini bloklaydi —
-	// sahifa uchun alohida siyosat qo'yilgan bo'lishi kerak.
-	csp := res.Header().Get("Content-Security-Policy")
-	if !strings.Contains(csp, "style-src") {
-		t.Errorf("CSP'da `style-src` yo'q — sahifa bezaksiz chiqadi: %q", csp)
+	loc := res.Header().Get("Location")
+	if loc != copyrightURL {
+		t.Errorf("Location %q, %q kutilgandi", loc, copyrightURL)
+	}
+	if !strings.HasPrefix(loc, "https://") {
+		t.Errorf("Location HTTPS bo'lishi kerak: %q", loc)
 	}
 
-	body := res.Body.String()
-	for _, must := range []string{"OpenStreetMap", "ODbL", "Microsoft", "attributionControl"} {
-		if !strings.Contains(body, must) {
-			t.Errorf("mualliflik sahifasida %q yo'q", must)
-		}
-	}
-
-	// Huquqiy hujjatlarga va aloqaga havola. Bu sahifa atribut yozuvidan
-	// ochiladigan yagona sahifa, ya'ni ko'p foydalanuvchi uchun birinchi
-	// (ba'zan yagona) kirish nuqtasi. Havolalarsiz u "kim bu va shartlari
-	// qayerda" degan savolga javob bermaydi.
-	for _, must := range []string{
-		"console.ondex.uz/oferta",
-		"console.ondex.uz/shartlar",
-		"console.ondex.uz/maxfiylik",
-		"console.ondex.uz/sla",
-		"support@ondex.uz",
-	} {
-		if !strings.Contains(body, must) {
-			t.Errorf("mualliflik sahifasida %q havolasi yo'q", must)
-		}
+	// Doimiy yo'naltirish `Cache-Control` siz brauzerda CHEKSIZ
+	// keshlanadi va manzilni keyin qaytarib bo'lmaydi.
+	if cc := res.Header().Get("Cache-Control"); !strings.Contains(cc, "max-age") {
+		t.Errorf("301 da `Cache-Control: max-age` yo'q — brauzer uni abadiy eslab qoladi: %q", cc)
 	}
 }
 

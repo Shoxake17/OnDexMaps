@@ -19,13 +19,13 @@ var chustPMTiles []byte
 //go:embed assets/style-chust.json
 var chustStyle []byte
 
-// Mualliflik sahifasi — uslubdagi atribut yozuvi shunga ishora qiladi.
+// OnDex brend belgisi — ommaviy statik manzil sifatida beriladi.
 //
-//go:embed assets/copyright.html
-var copyrightHTML []byte
-
-// OnDex brend belgisi. Atribut yozuvida `<img>` sifatida chiqadi, ya'ni
-// har bir integrator uni O'ZI chizmaydi — hamma joyda bir xil logotip.
+// ⚠️ Atribut yozuvi uni ARTIQ ISHLATMAYDI: `<img>` uslubdagi atribut
+// satridan olib tashlangan va brend endi matn ko'rinishida chiqadi
+// (`style-chust.json`). Ya'ni bu endpoint hech qayerdan chaqirilmaydi.
+// U brend belgisining barqaror manzili sifatida qoldirildi; atribut
+// bilan bog'liqligi yo'q va uni olib tashlash xaritaga ta'sir qilmaydi.
 //
 //go:embed assets/ondex-logo.png
 var ondexLogoPNG []byte
@@ -125,11 +125,13 @@ func (s *Server) registerMapAssets(mux *http.ServeMux) {
 
 	// Mualliflik sahifasi. Uslubdagi atribut yozuvi shu yerga olib
 	// keladi, shuning uchun u HAR DOIM ochiq bo'lishi kerak: kalit ham,
-	// sessiya ham talab qilinmaydi.
+	// sessiya ham talab qilinmaydi. Sahifaning o'zi konsolda —
+	// bu yerda faqat yo'naltirish.
 	mux.HandleFunc("GET /copyright", serveCopyright)
 
-	// Brend belgisi — atribut yozuvidagi `<img>` shu yerdan yuklanadi.
-	// Kalitsiz va uzoq keshlanadi: u har xarita yuklanishida so'raladi.
+	// Brend belgisining ommaviy manzili. Atribut endi uni ishlatmaydi
+	// (yuqoridagi `ondexLogoPNG` izohiga qarang) — kalitsiz va uzoq
+	// keshlanadigan statik fayl bo'lib qoladi.
 	mux.HandleFunc("GET /brand/ondex.png", func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
 		h.Set("Content-Type", "image/png")
@@ -143,20 +145,28 @@ func (s *Server) registerMapAssets(mux *http.ServeMux) {
 // har deploy'da yangi jarayon = yangi vaqt.
 var brandModTime = time.Now()
 
-// serveCopyright — ma'lumot manbalari, litsenziyalar va atribut talabi.
+// copyrightURL — mualliflik sahifasining HAQIQIY manzili.
 //
-// ⚠️ CSP: serverning umumiy siyosati `default-src 'none'` — u JSON API
-// uchun to'g'ri, lekin HTML sahifadagi uslubni ham bloklaydi va sahifa
-// bezaksiz chiqadi. Shuning uchun bu yerda sahifaga moslangan siyosat
-// QAYTA yoziladi. Skript yo'q, shuning uchun `script-src` ochilmaydi.
-func serveCopyright(w http.ResponseWriter, _ *http.Request) {
-	h := w.Header()
-	h.Set("Content-Type", "text/html; charset=utf-8")
-	h.Set("Content-Security-Policy",
-		"default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; "+
-			"base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
-	h.Set("Cache-Control", "public, max-age=3600")
-	_, _ = w.Write(copyrightHTML)
+// Sahifa konsol ilovasida turadi, chunki u yerda navbar, futer va
+// huquqiy hujjatlarga havolalar YAGONA manbadan keladi. Bu yerda
+// qo'lda yozilgan HTML saqlangan paytda u boshqa sahifalarga umuman
+// o'xshamasdi va yangi hujjat qo'shilganda unutilardi.
+const copyrightURL = "https://console.ondex.uz/copyright"
+
+// serveCopyright — uslubdagi atribut havolasi shu yerga tushadi va
+// konsoldagi haqiqiy sahifaga yo'naltiriladi.
+//
+// ⚠️ Manzil `maps.ondex.uz/copyright` bo'lib QOLADI: u uslub faylidagi
+// atribut satriga (`__SELF__/copyright`) yozilgan va allaqachon
+// integratorlarning sahifalarida ishlayapti. Shuning uchun bu yerda
+// yo'naltirish qoldirildi — havola hech qachon o'lmaydi.
+//
+// ⚠️ 301 ga ATAYLAB `Cache-Control` qo'yilgan: usiz brauzer doimiy
+// yo'naltirishni cheksiz keshlaydi va kelajakda manzilni qaytarib
+// bo'lmaydi.
+func serveCopyright(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	http.Redirect(w, r, copyrightURL, http.StatusMovedPermanently)
 }
 
 // buildStyle — uslub faylidagi manzil o'rinbosarlarini haqiqiy
