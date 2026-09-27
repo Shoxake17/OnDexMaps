@@ -123,6 +123,83 @@ export interface DirectionsResponse {
 export interface ApiError {
   status: Status;
   error: { code: string; message: string };
+}
+
+/* ── Ob'ektlar va mahallalar: GeoJSON ───────────────────────────── */
+
+export interface Point {
+  type: "Point";
+  /** [lng, lat] — kenglik EMAS, avval uzunlik. */
+  coordinates: [number, number];
+}
+
+export interface Feature<G, P> {
+  type: "Feature";
+  /** GeoJSON'ning o'z identifikatori. \`/v2/places\` da bor, \`/v2/mahallas\` da yo'q. */
+  id?: string;
+  geometry: G;
+  properties: P;
+}
+
+export interface FeatureCollection<G, P> {
+  type: "FeatureCollection";
+  features: Feature<G, P>[];
+}
+
+export interface PlaceProps {
+  /** Toza UUID — \`/v2/places/{id}\` ga o'zgartirmasdan beriladi. */
+  id: string;
+  kind: string;
+  name?: string;
+  category?: string;
+}
+
+export interface PlacesResponse {
+  status: Status;
+  result: FeatureCollection<Point, PlaceProps>;
+}
+
+/** \`/v2/places/{id}\` — ro'yxatdagidan ancha boy. */
+export interface PlaceDetail {
+  id: string;
+  kind: string;
+  kind_label: string;
+  lat: number;
+  lng: number;
+  photos: number;
+  created_at: string;
+  geometry: Point;
+  name?: string;
+  category?: string;
+  description?: string;
+  phone?: string;
+  hours?: string;
+  street?: string;
+  house?: string;
+  site?: string;
+  social?: string;
+}
+
+export interface PlaceDetailResponse {
+  status: Status;
+  result?: PlaceDetail;
+}
+
+export interface MahallaProps {
+  id: string;
+  kind: string;
+  name: string;
+  /** Nom chizish uchun — poligonning o'ziga chizmang. */
+  center?: Point;
+}
+
+export type MahallaGeometry =
+  | { type: "Polygon"; coordinates: [number, number][][] }
+  | { type: "MultiPolygon"; coordinates: [number, number][][][] };
+
+export interface MahallasResponse {
+  status: Status;
+  result: FeatureCollection<MahallaGeometry, MahallaProps>;
 }`,
           },
           {

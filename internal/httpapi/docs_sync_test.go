@@ -33,6 +33,82 @@ import (
 // docsDir — hujjat sahifalari (Go paketidan nisbiy yo'l).
 const docsDir = "../../console/src/app/docs/api"
 
+// tsPage — TypeScript integratsiya sahifasi (`types.ts` shu yerda).
+const tsPage = "../../console/src/app/docs/integration/typescript/page.tsx"
+
+// tsTypeForPath — har bir `/v2` endpointi uchun `types.ts` da
+// bo'lishi SHART bo'lgan javob tipi.
+//
+// ┌─ NEGA ─────────────────────────────────────────────────────────────┐
+// TypeScript sahifasi «REST API javoblarining tiplari» deb va'da
+// beradi. 2026-09-27 da tekshirilganda `/v2/places`, `/v2/places/{id}`
+// va `/v2/mahallas` uchun HECH QANDAY tip yo'q edi — ya'ni TS
+// dasturchisi ularni `any` bilan ishlatishga majbur bo'lardi va
+// sahifaning va'dasi bajarilmasdi.
+//
+// Yangi endpoint qo'shilganda bu jadval ham to'ldirilishi kerak —
+// aks holda quyidagi test «kontraktda bor, jadvalda yo'q» deb
+// to'xtatadi va tip yozish unutilmaydi.
+// └────────────────────────────────────────────────────────────────────┘
+var tsTypeForPath = map[string]string{
+	"/v2/geocode":      "GeocodeResponse",
+	"/v2/reverse":      "ReverseResponse",
+	"/v2/directions":   "DirectionsResponse",
+	"/v2/places":       "PlacesResponse",
+	"/v2/places/{id}":  "PlaceDetailResponse",
+	"/v2/mahallas":     "MahallasResponse",
+	"/v2/openapi.yaml": "", // kontraktning o'zi — javob tipi kerak emas
+}
+
+// TestTypeScriptCoversEveryEndpoint — har bir `/v2` endpointi uchun
+// TypeScript sahifasida javob tipi e'lon qilinganligi.
+func TestTypeScriptCoversEveryEndpoint(t *testing.T) {
+	spec := readFile(t, "openapi.yaml")
+	src := readFile(t, tsPage)
+
+	// `types.ts` yorlig'ining tanasi.
+	at := strings.Index(src, `name: "types.ts"`)
+	if at < 0 {
+		t.Fatal("TypeScript sahifasida `types.ts` yorlig'i yo'q")
+	}
+	boshi := strings.Index(src[at:], "`")
+	if boshi < 0 {
+		t.Fatal("`types.ts` kodi topilmadi")
+	}
+	types := src[at+boshi+1:]
+	if end := strings.Index(types, "`,"); end > 0 {
+		types = types[:end]
+	}
+
+	// Kontraktdagi `/v2/...` yo'llari.
+	rePath := regexp.MustCompile(`(?m)^  (/v2/[^:]*):`)
+	got := map[string]bool{}
+	for _, m := range rePath.FindAllStringSubmatch(spec, -1) {
+		got[m[1]] = true
+		want, ok := tsTypeForPath[m[1]]
+		if !ok {
+			t.Errorf("kontraktda `%s` bor, lekin `tsTypeForPath` jadvalida yo'q — TypeScript tipi yozilganmi?", m[1])
+			continue
+		}
+		if want == "" {
+			continue
+		}
+		// ⚠️ `{` SHART: usiz `interface Foo` tekshiruvi `interface FooBar`
+		// ga ham mos kelardi va nomi o'zgartirilgan tipni o'tkazib
+		// yuborardi (mutatsiya sinovida aynan shunday bo'ldi).
+		if !strings.Contains(types, "interface "+want+" {") {
+			t.Errorf("`%s` uchun `types.ts` da `%s` interfeysi yo'q", m[1], want)
+		}
+	}
+
+	// Jadvalda bor, kontraktda yo'q — endpoint olib tashlangan.
+	for p := range tsTypeForPath {
+		if !got[p] {
+			t.Errorf("`tsTypeForPath` da `%s` bor, kontraktda esa yo'q", p)
+		}
+	}
+}
+
 // TestAttributionExampleMatchesStyle — hujjatdagi kredit NAMUNASI
 // uslubdagi HAQIQIY atribut bilan bir xil bo'lishi.
 //
