@@ -32,7 +32,7 @@ export const SPEC_PARAMS: Record<string, SpecParam[]> = {
   "mahallas": [
   ],
   "places": [
-    { name: "bbox", required: true, desc: "`g'arb,janub,sharq,shimol` (uzunlik, kenglik, uzunlik, kenglik). Tomonlari 1.5 gradusdan oshmasligi kerak.", constraints: "shakl: ^-?\\d+(\\.\\d+)?(,-?\\d+(\\.\\d+)?){3}$", example: "71.20,40.98,71.28,41.03" },
+    { name: "bbox", required: true, desc: "`g'arb,janub,sharq,shimol` (uzunlik, kenglik, uzunlik, kenglik). Ikki shart bor va ikkalasini ham buzganda `400 INVALID_REQUEST` qaytadi: 1. `sharq - g'arb` va `shimol - janub` — har biri 1.5 gradusdan oshmasligi kerak; 2. to'rtta burchak ham xizmat hududida bo'lishi kerak: uzunlik 55.5–73.5, kenglik 37.0–45.8. Ikkinchi shart xaritadan olingan ko'rinishni to'g'ridan-to'g'ri yuborganda ishga tushadi: chegara yaqinida yaqinlashtirilgan bo'lsa ham ko'rinishning bir chekkasi hududdan chiqib ketadi. Yuborishdan oldin bbox'ni hududga qirqing.", constraints: "shakl: ^-?\\d+(\\.\\d+)?(,-?\\d+(\\.\\d+)?){3}$", example: "71.20,40.98,71.28,41.03" },
   ],
   "places-by-id": [
     { name: "id", required: true, desc: "Ob'ekt identifikatori (UUID).", constraints: "", example: "7b1f2c33-0000-4000-8000-00000000abcd" },

@@ -26,12 +26,27 @@ export default function PlacesPage() {
           {
             name: "javascript",
             lang: "js",
-            code: `async function obyektlar(bounds) {
+            code: `// Xizmat hududi va tomon chegarasi — ikkisi ham 400 beradi,
+// shuning uchun so'rovdan OLDIN tekshiriladi.
+const HUDUD = { minLng: 55.5, minLat: 37.0, maxLng: 73.5, maxLat: 45.8 };
+const MAX_SPAN = 1.5;
+const qirq = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+
+async function obyektlar(bounds) {
+  // Ko'rinish juda keng bo'lsa so'rov yubormaymiz.
+  if (bounds.getEast() - bounds.getWest() > MAX_SPAN) return null;
+  if (bounds.getNorth() - bounds.getSouth() > MAX_SPAN) return null;
+
+  // Chetlarini hududga qirqamiz: chegara yonida yaqinlashtirilgan
+  // ko'rinishning bir qirrasi baribir hududdan chiqib ketadi.
+  const w = qirq(bounds.getWest(), HUDUD.minLng, HUDUD.maxLng);
+  const e = qirq(bounds.getEast(), HUDUD.minLng, HUDUD.maxLng);
+  const s = qirq(bounds.getSouth(), HUDUD.minLat, HUDUD.maxLat);
+  const n = qirq(bounds.getNorth(), HUDUD.minLat, HUDUD.maxLat);
+  if (w >= e || s >= n) return null;   // butunlay hudud tashqarisida
+
   const url = new URL("https://maps.ondex.uz/v2/places");
-  url.searchParams.set(
-    "bbox",
-    [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()].join(","),
-  );
+  url.searchParams.set("bbox", [w, s, e, n].join(","));
   url.searchParams.set("key", "omk_b_...");
 
   const data = await (await fetch(url)).json();
@@ -115,9 +130,26 @@ map.on("moveend", async () => {
             <Callout kind="warn">
               <p>
                 <C>bbox</C> tartibi xarita kutubxonalaridagidan farq qiladi: avval{" "}
-                <strong className="text-foreground">uzunlik</strong>, keyin kenglik. Juda katta
-                to&apos;rtburchak ko&apos;p ma&apos;lumot qaytaradi — xarita masshtabiga qarab
-                so&apos;rang.
+                <strong className="text-foreground">uzunlik</strong>, keyin kenglik.
+              </p>
+              <p className="mt-2">
+                Ko&apos;rinishni to&apos;g&apos;ridan-to&apos;g&apos;ri yuborish{" "}
+                <strong className="text-foreground">yaramaydi</strong> — ikki qat&apos;iy shart bor
+                va buzilganda <C>400 INVALID_REQUEST</C> qaytadi:
+              </p>
+              <ol className="mt-2 list-decimal space-y-1 pl-5">
+                <li>
+                  tomonlari 1.5 gradusdan oshmasin (uzoqlashtirilgan xarita darhol oshib ketadi);
+                </li>
+                <li>
+                  to&apos;rtta burchak ham xizmat hududida bo&apos;lsin — uzunlik{" "}
+                  <C>55.5–73.5</C>, kenglik <C>37.0–45.8</C>.
+                </li>
+              </ol>
+              <p className="mt-2">
+                Ikkinchisi eng ko&apos;p adashtiradi: Termiz yoki Nukus yonida
+                yaqinlashtirilgan bo&apos;lsangiz ham ko&apos;rinishning bir chekkasi hududdan
+                chiqadi. Yuqoridagi <C>javascript</C> namunasi ikkisini ham hisobga oladi.
               </p>
             </Callout>
             <P>Yuklashni kamaytirish uchun so&apos;rovni kechiktirib yuboring:</P>
@@ -132,7 +164,11 @@ map.on("moveend", () => {
           </>
         ),
         errors: [
-          ["400 INVALID_REQUEST", "bbox yo'q, to'rtta sondan iborat emas yoki chegaralar teskari"],
+          [
+            "400 INVALID_REQUEST",
+            "bbox yo'q, to'rtta sondan iborat emas, chegaralar teskari, tomoni 1.5° dan katta " +
+              "yoki burchagi xizmat hududidan tashqarida (lng 55.5–73.5, lat 37.0–45.8)",
+          ],
           ["401 missing_key / invalid_key", "kalit yuborilmagan yoki noto'g'ri"],
           ["403 key_restricted", "so'rov kalitning domen yoki IP ro'yxatiga mos kelmadi"],
           ["403 api_not_allowed", "kalitda places yoqilmagan"],

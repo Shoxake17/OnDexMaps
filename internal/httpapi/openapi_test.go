@@ -157,8 +157,42 @@ func TestOpenAPIBoundsMatchCode(t *testing.T) {
 		t.Errorf("koddagi xizmat hududi o'zgargan (%v–%v, %v–%v) — kontraktni yangilang",
 			minLat, maxLat, minLng, maxLng)
 	}
-	if uzMinLat != 37.0 || uzMaxLng != 73.5 {
-		t.Errorf("koddagi O'zbekiston chegarasi o'zgargan — kontraktni yangilang")
+	if uzMinLng != 55.5 || uzMinLat != 37.0 || uzMaxLng != 73.5 || uzMaxLat != 45.8 {
+		t.Errorf("koddagi O'zbekiston chegarasi o'zgargan (%v–%v, %v–%v) — kontraktni yangilang",
+			uzMinLng, uzMaxLng, uzMinLat, uzMaxLat)
+	}
+}
+
+// `bbox` ikkita shart bilan rad etiladi: tomoni 1.5° dan katta bo'lsa VA
+// burchagi xizmat hududidan chiqsa. Ikkinchisi hujjatda uzoq vaqt
+// yozilmagan edi va integrator xaritadan olingan ko'rinishni
+// to'g'ridan-to'g'ri yuborib 400 olardi. Shu tuzoq qaytib kelmasin.
+func TestOpenAPIDocumentsBBoxLimits(t *testing.T) {
+	spec := readFile(t, "openapi.yaml")
+	i := strings.Index(spec, "operationId: listPlaces")
+	if i < 0 {
+		t.Fatal("kontraktda listPlaces yo'q")
+	}
+	// Faqat shu endpoint bo'limini olamiz — keyingi yo'l boshlangunga qadar.
+	bolim := spec[i:]
+	if k := strings.Index(bolim, "\n  /"); k > 0 {
+		bolim = bolim[:k]
+	}
+	for nom, want := range map[string]string{
+		"tomon chegarasi":        "1.5",
+		"hudud: min uzunlik":     "55.5",
+		"hudud: max uzunlik":     "73.5",
+		"hudud: min kenglik":     "37.0",
+		"hudud: max kenglik":     "45.8",
+		"qirqish haqida eslatma": "qirq",
+	} {
+		if !strings.Contains(bolim, want) {
+			t.Errorf("`bbox` tavsifida %s (`%s`) yozilmagan", nom, want)
+		}
+	}
+	// Raqamlar koddagi haqiqiy chegara bilan bir xilmi.
+	if maxBBoxSpan != 1.5 {
+		t.Errorf("koddagi maxBBoxSpan = %v — kontraktni yangilang", maxBBoxSpan)
 	}
 }
 
