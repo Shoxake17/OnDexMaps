@@ -266,6 +266,18 @@ export function PinIcon(p: IconProps) {
   );
 }
 
+/** SDK bo'limi — npm paketi. */
+export function PackageIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M21 8.5v7a1.6 1.6 0 0 1-.85 1.4l-7.4 3.9a1.6 1.6 0 0 1-1.5 0l-7.4-3.9A1.6 1.6 0 0 1 3 15.5v-7" />
+      <path d="M3.3 7.8 12 12.3l8.7-4.5" />
+      <path d="M12 12.3V21" />
+      <path d="m12 2.8 8.7 4.5L12 11.8 3.3 7.3 12 2.8Z" />
+    </Svg>
+  );
+}
+
 /** Menyu elementlari `nav.ts` da nom bilan belgilanadi — shu jadval ularni komponentga bog'laydi. */
 export const NAV_ICON = {
   home: HomeIcon,
@@ -280,6 +292,7 @@ export const NAV_ICON = {
   help: HelpIcon,
   shield: ShieldIcon,
   monitor: MonitorIcon,
+  package: PackageIcon,
 } as const;
 
 export type NavIconName = keyof typeof NAV_ICON;

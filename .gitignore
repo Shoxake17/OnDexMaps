@@ -92,3 +92,9 @@ Desktop.ini
 
 
 README.md
+
+# ⚠️ Yuqoridagi qoida QAVATLI: u ildizdagini emas, HAR papkadagi
+# `README.md` ni yashiradi. SDK'niki — nashr etiladigan paketning
+# asosiy hujjati, va CI uni tekshiradi (`npm run check:readme`);
+# kuzatuvdan chiqsa pipeline "fayl topilmadi" bilan yiqilardi.
+!sdk/js/README.md

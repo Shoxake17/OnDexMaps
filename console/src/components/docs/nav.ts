@@ -31,6 +31,16 @@ export const DOCS_NAV: DocsSection[] = [
     ],
   },
   {
+    label: "SDK",
+    href: "/docs/sdk",
+    icon: "package",
+    items: [
+      { href: "/docs/sdk/xarita", label: "Xarita" },
+      { href: "/docs/sdk/rest", label: "REST" },
+      { href: "/docs/sdk/xatolar", label: "Xatolar va kvota" },
+    ],
+  },
+  {
     label: "Integratsiya",
     href: "/docs/integration",
     icon: "plug",
@@ -92,6 +102,10 @@ export const DOCS_ORDER: DocsItem[] = [
   { href: "/docs/js", label: "JavaScript API" },
   { href: "/docs/js/general", label: "Umumiy ma'lumot" },
   { href: "/docs/js/quickstart", label: "Quick Start" },
+  { href: "/docs/sdk", label: "SDK" },
+  { href: "/docs/sdk/xarita", label: "Xarita" },
+  { href: "/docs/sdk/rest", label: "REST" },
+  { href: "/docs/sdk/xatolar", label: "Xatolar va kvota" },
   { href: "/docs/integration", label: "Integratsiya" },
   { href: "/docs/integration/cdn", label: "CDN" },
   { href: "/docs/integration/npm", label: "NPM" },

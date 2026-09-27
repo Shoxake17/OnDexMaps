@@ -43,6 +43,12 @@ import (
 // birgalikda OSRM'ni to'ldirib, o'z saytimiz marshrutini to'sib qo'ymasin.
 const v2MaxConcurrentRoutes = 16
 
+// v2GeocodeMaxLimit — `/v2/geocode?limit=` ning yuqori chegarasi.
+//
+// Nomlangan konstanta, chunki bu son kontraktda, hujjatda va SDK'da ham
+// takrorlanadi; `sdk_sync_test.go` ularni aynan shu qiymatga bog'laydi.
+const v2GeocodeMaxLimit = 25
+
 // WithPlatform — /v2 ni yoqadi. `nil` bo'lsa /v2 endpointlari 503 qaytaradi (fail-closed).
 func (s *Server) WithPlatform(p *devplatform.Platform) *Server {
 	s.platform = p
@@ -256,8 +262,8 @@ func (s *Server) v2Geocode(w http.ResponseWriter, r *http.Request) {
 	limit := 10
 	if v := r.URL.Query().Get("limit"); v != "" {
 		n, err := strconv.Atoi(v)
-		if err != nil || n < 1 || n > 25 {
-			v2Invalid(w, "limit 1–25 orasida bo'lishi kerak")
+		if err != nil || n < 1 || n > v2GeocodeMaxLimit {
+			v2Invalid(w, "limit 1–"+strconv.Itoa(v2GeocodeMaxLimit)+" orasida bo'lishi kerak")
 			return
 		}
 		limit = n

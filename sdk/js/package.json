@@ -1,0 +1,51 @@
+{
+  "name": "@ondexmap/sdk",
+  "version": "0.1.0",
+  "description": "OnDexMap rasmiy JavaScript/TypeScript SDK'si — xarita va REST API.",
+  "license": "MIT",
+  "homepage": "https://console.ondex.uz/docs/sdk",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "generate:check": "node scripts/generate.mjs --check",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "check:readme": "node scripts/check-readme.mjs",
+    "test": "node --test test/",
+    "verify": "npm run generate:check && npm run typecheck && npm run build && npm run check:readme && npm test",
+    "prepublishOnly": "npm run verify"
+  },
+  "peerDependencies": {
+    "maplibre-gl": "^4.7.1",
+    "pmtiles": "^3.2.1"
+  },
+  "peerDependenciesMeta": {
+    "maplibre-gl": {
+      "optional": true
+    },
+    "pmtiles": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "maplibre-gl": "4.7.1",
+    "openapi-typescript": "^7.13.0",
+    "pmtiles": "3.2.1",
+    "typescript": "^5.9.3"
+  }
+}

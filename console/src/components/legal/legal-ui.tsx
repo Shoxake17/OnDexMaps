@@ -78,13 +78,8 @@ export const OPERATOR: OperatorInfo = {
   registration: "", // TODO
   /** Yuridik manzil. */
   address: "", // TODO
-  /**
-   * Bank rekvizitlari.
-   *
-   * ⚠️ Bank NOMI hali yo'q — hisob-fakturada u ham ko'rsatilishi kerak,
-   * aks holda to'lovchi o'tkazmani to'ldira olmaydi.
-   */
-  bank: "Hisob raqami: 20218000907519062001, MFO: 00083",
+  /** Bank rekvizitlari — hisob-faktura uchun to'liq to'plam. */
+  bank: "Hamkorbank, hisob raqami: 20218000907519062001, MFO: 00083",
   /**
    * Shaxsga doir ma'lumotlar bazasining davlat reyestridagi raqami
    * (pd.gov.uz). «Shaxsga doir ma'lumotlar to'g'risida»gi qonunning

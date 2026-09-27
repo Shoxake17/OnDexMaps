@@ -1,0 +1,5 @@
+node_modules/
+dist/
+# README tekshiruvining vaqtinchalik papkasi (`scripts/check-readme.mjs`).
+.readme-check/
+*.tgz
