@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -86,6 +87,69 @@ func errCode(t *testing.T, w *httptest.ResponseRecorder) (status, code string) {
 		t.Fatalf("JSON emas: %q", w.Body.String())
 	}
 	return b.Status, b.Error.Code
+}
+
+// TestV2PlacesBBoxLimitIsPerPlan — ob'ektlar bazasini ommaviy
+// nusxalashdan himoya.
+//
+// ┌─ NEGA ─────────────────────────────────────────────────────────────┐
+// `/v2/places` to'rtburchak bo'yicha so'raladi, ya'ni butun bazani
+// panjara bilan aylanib chiqish mumkin. Kerakli so'rovlar soni
+// to'rtburchak tomoniga BOG'LIQ: 1.5 gradus bilan butun mamlakat
+// 91 so'rovda qoplanardi — bepul rejadagi bir necha daqiqa.
+//
+// Shuning uchun chegara rejaga bog'landi. Bu test uni qulflaydi:
+// bepul kalit keng to'rtburchak so'rasa RAD ETILISHI, obuna kaliti
+// esa o'tishi kerak.
+//
+// `503` = bbox tekshiruvidan O'TDI (test muhitida baza yo'q), ya'ni
+// `400` va `503` ni ajratish tekshiruvning o'zagi.
+// └────────────────────────────────────────────────────────────────────┘
+func TestV2PlacesBBoxLimitIsPerPlan(t *testing.T) {
+	e := newV2Env(t, nil)
+
+	// Obunali hisobga tegishli alohida server kaliti.
+	paidKey, _, _ := devplatform.GenerateKey(devplatform.KindServer)
+	e.st.keys[string(devplatform.HashKey(v2Pepper, paidKey))] = &devplatform.KeyRecord{
+		ID: "kp", AccountID: "a2", Kind: devplatform.KindServer, APIs: devplatform.AllAPIs,
+		Account: devplatform.AccountState{ID: "a2", Subscription: true},
+	}
+
+	plans := devplatform.DefaultPlans()
+	// Chegaradan biroz OSHIQ va biroz KAM to'rtburchaklar.
+	kata := plans.Free.MaxBBoxSpan * 2
+	kichik := plans.Free.MaxBBoxSpan / 2
+
+	bbox := func(span float64) string {
+		// Chust atrofida, xizmat hududi ichida.
+		return "71.0,40.8," +
+			strconv.FormatFloat(71.0+span, 'f', -1, 64) + "," +
+			strconv.FormatFloat(40.8+span, 'f', -1, 64)
+	}
+
+	for _, tc := range []struct {
+		nom    string
+		key    string
+		span   float64
+		status int
+	}{
+		{"bepul + keng to'rtburchak — RAD", e.serverKey, kata, http.StatusBadRequest},
+		{"bepul + tor to'rtburchak — o'tadi", e.serverKey, kichik, http.StatusServiceUnavailable},
+		{"obuna + o'sha keng to'rtburchak — o'tadi", paidKey, kata, http.StatusServiceUnavailable},
+	} {
+		t.Run(tc.nom, func(t *testing.T) {
+			w := e.get("/v2/places?bbox="+bbox(tc.span), map[string]string{apiKeyHeader: tc.key})
+			if w.Code != tc.status {
+				t.Fatalf("holat %d, %d kutilgandi: %s", w.Code, tc.status, w.Body.String())
+			}
+			if tc.status == http.StatusBadRequest {
+				// Xabar dasturchiga ANIQ raqamni aytishi kerak.
+				if !strings.Contains(w.Body.String(), "gradus") {
+					t.Errorf("xato xabarida chegara raqami yo'q: %s", w.Body.String())
+				}
+			}
+		})
+	}
 }
 
 func TestV2AllowlistDeniesEverythingElse(t *testing.T) {

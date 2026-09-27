@@ -32,6 +32,25 @@ type Plan struct {
 	RPS, Burst float64
 	// MonthlyCap — HISOB bo'yicha oylik hisoblanadigan so'rovlar chegarasi. 0 = chegarasiz.
 	MonthlyCap int64
+	// MaxBBoxSpan — `/v2/places` uchun to'rtburchak tomonining eng katta
+	// o'lchami (daraja).
+	//
+	// ┌─ NEGA REJAGA BOG'LIQ ──────────────────────────────────────────┐
+	// Bu chegara ob'ektlar bazasini ommaviy nusxalash NARXINI
+	// belgilaydi: mamlakat ~18° × 8.8°, ya'ni kerakli so'rovlar soni
+	// (18/span) × (8.8/span).
+	//
+	//   1.5° -> 91 so'rov      (eski holat: bepul rejada bir necha daqiqa)
+	//   0.25° -> 2 592 so'rov  (28 barobar qimmat)
+	//
+	// Haqiqiy foydalanishga xalal bermaydi: ob'ektlar z12+ da
+	// ko'rsatiladi va u masshtabda ko'rinish 0.05° atrofida bo'ladi.
+	// 0.25° — z9 ga teng, ya'ni butun viloyat bir ekranda.
+	//
+	// Obunachi va ekotizim uchun chegara kengroq: ular hisobga
+	// bog'langan, to'lovi bor va shartnoma bilan aniqlanadi.
+	// └────────────────────────────────────────────────────────────────┘
+	MaxBBoxSpan float64
 }
 
 // Plans — uchala reja.
@@ -40,9 +59,9 @@ type Plans struct{ Free, Paid, Ecosystem Plan }
 // DefaultPlans — kelishilgan standart chegaralar.
 func DefaultPlans() Plans {
 	return Plans{
-		Free:      Plan{ID: PlanFree, RPS: 10, Burst: 20, MonthlyCap: 200_000},
-		Paid:      Plan{ID: PlanPaid, RPS: 100, Burst: 200, MonthlyCap: 0},
-		Ecosystem: Plan{ID: PlanEcosystem, RPS: 500, Burst: 1000, MonthlyCap: 0},
+		Free:      Plan{ID: PlanFree, RPS: 10, Burst: 20, MonthlyCap: 200_000, MaxBBoxSpan: 0.25},
+		Paid:      Plan{ID: PlanPaid, RPS: 100, Burst: 200, MonthlyCap: 0, MaxBBoxSpan: 1.0},
+		Ecosystem: Plan{ID: PlanEcosystem, RPS: 500, Burst: 1000, MonthlyCap: 0, MaxBBoxSpan: 1.5},
 	}
 }
 

@@ -277,8 +277,18 @@ paths:
             Ikki shart bor va ikkalasini ham buzganda `400 INVALID_REQUEST`
             qaytadi:
 
-            1. `sharq - g'arb` va `shimol - janub` — har biri 1.5 gradusdan
-               oshmasligi kerak;
+            1. `sharq - g'arb` va `shimol - janub` — har biri TARIFINGIZDAGI
+               chegaradan oshmasligi kerak:
+
+               | Tarif    | Eng katta tomon |
+               |----------|-----------------|
+               | Bepul    | 0.25 gradus     |
+               | Obuna    | 1.0 gradus      |
+               | Ekotizim | 1.5 gradus      |
+
+               0.25 gradus taxminan z9 ga teng — butun viloyat bitta
+               ekranda. Ob'ektlar z12+ da ko'rsatilgani uchun haqiqiy
+               xaritada bu chegaraga yetilmaydi.
             2. to'rtta burchak ham xizmat hududida bo'lishi kerak:
                uzunlik 55.5–73.5, kenglik 37.0–45.8.
 

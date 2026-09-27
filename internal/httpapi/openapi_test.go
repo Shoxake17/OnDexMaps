@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -163,10 +164,14 @@ func TestOpenAPIBoundsMatchCode(t *testing.T) {
 	}
 }
 
-// `bbox` ikkita shart bilan rad etiladi: tomoni 1.5° dan katta bo'lsa VA
-// burchagi xizmat hududidan chiqsa. Ikkinchisi hujjatda uzoq vaqt
-// yozilmagan edi va integrator xaritadan olingan ko'rinishni
+// `bbox` ikkita shart bilan rad etiladi: tomoni tarif chegarasidan
+// katta bo'lsa VA burchagi xizmat hududidan chiqsa. Ikkinchisi hujjatda
+// uzoq vaqt yozilmagan edi va integrator xaritadan olingan ko'rinishni
 // to'g'ridan-to'g'ri yuborib 400 olardi. Shu tuzoq qaytib kelmasin.
+//
+// Tomon chegarasi endi REJAGA bog'liq va u ob'ektlar bazasini ommaviy
+// nusxalash narxini belgilaydi — shuning uchun kontraktdagi raqamlar
+// koddagi rejalar bilan bir xil bo'lishi SHART.
 func TestOpenAPIDocumentsBBoxLimits(t *testing.T) {
 	spec := readFile(t, "openapi.yaml")
 	i := strings.Index(spec, "operationId: listPlaces")
@@ -178,21 +183,28 @@ func TestOpenAPIDocumentsBBoxLimits(t *testing.T) {
 	if k := strings.Index(bolim, "\n  /"); k > 0 {
 		bolim = bolim[:k]
 	}
+
+	p := devplatform.DefaultPlans()
 	for nom, want := range map[string]string{
-		"tomon chegarasi":        "1.5",
-		"hudud: min uzunlik":     "55.5",
-		"hudud: max uzunlik":     "73.5",
-		"hudud: min kenglik":     "37.0",
-		"hudud: max kenglik":     "45.8",
-		"qirqish haqida eslatma": "qirq",
+		"bepul tarif chegarasi":     strconv.FormatFloat(p.Free.MaxBBoxSpan, 'f', -1, 64),
+		"obuna tarifi chegarasi":    strconv.FormatFloat(p.Paid.MaxBBoxSpan, 'f', -1, 64),
+		"ekotizim tarifi chegarasi": strconv.FormatFloat(p.Ecosystem.MaxBBoxSpan, 'f', -1, 64),
+		"hudud: min uzunlik":        "55.5",
+		"hudud: max uzunlik":        "73.5",
+		"hudud: min kenglik":        "37.0",
+		"hudud: max kenglik":        "45.8",
+		"qirqish haqida eslatma":    "qirq",
 	} {
 		if !strings.Contains(bolim, want) {
 			t.Errorf("`bbox` tavsifida %s (`%s`) yozilmagan", nom, want)
 		}
 	}
-	// Raqamlar koddagi haqiqiy chegara bilan bir xilmi.
-	if maxBBoxSpan != 1.5 {
-		t.Errorf("koddagi maxBBoxSpan = %v — kontraktni yangilang", maxBBoxSpan)
+
+	// Bepul reja eng tor bo'lishi SHART: aks holda himoya ma'nosini
+	// yo'qotadi (nusxalash narxi to'lovsiz ham arzon bo'lib qoladi).
+	if !(p.Free.MaxBBoxSpan < p.Paid.MaxBBoxSpan && p.Paid.MaxBBoxSpan <= p.Ecosystem.MaxBBoxSpan) {
+		t.Errorf("tarif chegaralari tartibi buzilgan: bepul=%v obuna=%v ekotizim=%v",
+			p.Free.MaxBBoxSpan, p.Paid.MaxBBoxSpan, p.Ecosystem.MaxBBoxSpan)
 	}
 }
 

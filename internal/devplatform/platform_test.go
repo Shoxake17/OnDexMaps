@@ -493,3 +493,27 @@ func TestPlansForDefaultsAreAsAgreed(t *testing.T) {
 	}
 	_ = netip.Addr{}
 }
+
+// TestFreePlanBBoxMakesBulkCopyExpensive — bepul rejadagi to'rtburchak
+// chegarasi ob'ektlar bazasini nusxalash NARXINI ushlab turishi.
+//
+// Chegara kattalashtirilsa himoya jimgina yo'qoladi: kod ishlayveradi,
+// faqat butun bazani ko'chirish arzonlashadi. Shuning uchun narx
+// raqam bilan qulflanadi.
+func TestFreePlanBBoxMakesBulkCopyExpensive(t *testing.T) {
+	// Xizmat hududi: uzunlik 55.5–73.5 (18°), kenglik 37.0–45.8 (8.8°).
+	const kengligi, balandligi = 18.0, 8.8
+
+	span := DefaultPlans().Free.MaxBBoxSpan
+	if span <= 0 {
+		t.Fatal("bepul rejada MaxBBoxSpan belgilanmagan")
+	}
+	hujayralar := int(kengligi/span+1) * int(balandligi/span+1)
+
+	// 1.5° da bu 91 ta edi — bepul rejada bir necha daqiqalik ish.
+	const engKami = 2000
+	if hujayralar < engKami {
+		t.Errorf("bepul reja %.2f° bilan butun mamlakat %d so'rovda qoplanadi — kamida %d bo'lishi kerak",
+			span, hujayralar, engKami)
+	}
+}

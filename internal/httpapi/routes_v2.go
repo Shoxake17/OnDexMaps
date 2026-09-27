@@ -2,9 +2,11 @@ package httpapi
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"math"
 	"net/http"
@@ -158,8 +160,26 @@ func (s *Server) v2(api string, h http.HandlerFunc) http.HandlerFunc {
 			}
 			s.platform.Record(grant, api, st)
 		}()
-		h(rec, r)
+		// Reja handlerga kontekst orqali beriladi: `/v2/places` dagi
+		// to'rtburchak chegarasi rejaga bog'liq (bepul reja tor).
+		h(rec, r.WithContext(context.WithValue(r.Context(), planCtxKey{}, grant.Plan)))
 	}
+}
+
+// planCtxKey — kontekstdagi reja kaliti. Alohida tip: boshqa paket
+// qo'ygan qiymat bilan to'qnashmaydi.
+type planCtxKey struct{}
+
+// planFrom — so'rov kontekstidagi reja.
+//
+// Reja yo'q bo'lishi FAQAT `s.v2` o'ramisiz chaqirilganda mumkin
+// (masalan testda). Bunday holatda eng TOR chegara qaytariladi —
+// fail-closed: noma'lum holatda kamroq ma'lumot beriladi.
+func planFrom(ctx context.Context) devplatform.Plan {
+	if p, ok := ctx.Value(planCtxKey{}).(devplatform.Plan); ok {
+		return p
+	}
+	return devplatform.DefaultPlans().Free
 }
 
 // v2Secret — kalit: X-API-Key sarlavhasi (afzal) yoki ?key=. Qaysi biridan kelgani
@@ -361,10 +381,23 @@ func (s *Server) v2Places(w http.ResponseWriter, r *http.Request) {
 		v[i] = f
 	}
 	west, south, east, north := v[0], v[1], v[2], v[3]
-	if west >= east || south >= north || east-west > maxBBoxSpan || north-south > maxBBoxSpan {
-		v2Invalid(w, "bbox hajmi noto'g'ri yoki juda katta")
+	if west >= east || south >= north {
+		v2Invalid(w, "bbox hajmi noto'g'ri")
 		return
 	}
+
+	// To'rtburchak tomonining chegarasi REJAGA bog'liq: u ob'ektlar
+	// bazasini ommaviy nusxalash narxini belgilaydi
+	// (`devplatform.Plan.MaxBBoxSpan` izohiga qarang). Xabar aniq
+	// raqamni ko'rsatadi — dasturchi nima qilishni bilishi kerak.
+	span := planFrom(r.Context()).MaxBBoxSpan
+	if east-west > span || north-south > span {
+		v2Invalid(w, fmt.Sprintf(
+			"bbox tomoni %.2f gradusdan oshmasligi kerak (joriy tarifingiz uchun); yaqinlashtiring yoki hududni bo'lib so'rang",
+			span))
+		return
+	}
+
 	if s.db == nil {
 		v2Fail(w, http.StatusServiceUnavailable, devplatform.CodeUnavailable, "baza ulanmagan")
 		return
