@@ -1,14 +1,5 @@
 import Link from "next/link";
-import {
-  Clause,
-  LegalPage,
-  LegalTable,
-  Note,
-  OPERATOR,
-  Section,
-  UL,
-  req,
-} from "@/components/legal/legal-ui";
+import { Clause, LegalPage, LegalTable, Note, OPERATOR, OperatorEmail, Section, UL, req } from "@/components/legal/legal-ui";
 
 export const metadata = {
   title: "Maxfiylik siyosati — OnDexMap",
@@ -67,9 +58,7 @@ export default function MaxfiylikPage() {
         </Clause>
         <Clause n="1.3">
           Ma&apos;lumotlar bo&apos;yicha murojaat:{" "}
-          <a href={`mailto:${OPERATOR.email}`} className="text-brand hover:underline">
-            {OPERATOR.email}
-          </a>
+          <OperatorEmail className="text-brand hover:underline" />
           .
         </Clause>
       </Section>
@@ -338,9 +327,7 @@ export default function MaxfiylikPage() {
         </UL>
         <Clause n="9.2">
           Murojaat{" "}
-          <a href={`mailto:${OPERATOR.email}`} className="text-brand hover:underline">
-            {OPERATOR.email}
-          </a>{" "}
+          <OperatorEmail className="text-brand hover:underline" />{" "}
           manziliga yuboriladi va <strong>30 kalendar kun</strong> ichida
           ko&apos;rib chiqiladi.
         </Clause>

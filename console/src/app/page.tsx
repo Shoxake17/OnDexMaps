@@ -2,12 +2,12 @@ import Link from "next/link";
 import { PublicNav } from "@/components/PublicNav";
 import { PublicFooter } from "@/components/PublicFooter";
 import { Code } from "@/components/docs/parts";
-import { OPERATOR } from "@/components/legal/legal-ui";
+import { EmailOff, OPERATOR } from "@/components/legal/legal-ui";
 
 export const metadata = {
   title: "OnDexMap — O'zbekiston uchun xarita platformasi",
   description:
-    "Xarita tayli, geokodlash, marshrut va mahalla chegaralari. Xaritani ko'rsatish bepul va kalitsiz; REST API kalit bilan.",
+    "Xarita tayli, geokodlash, teskari geokodlash, marshrut va joylar. Xaritani ko'rsatish bepul va kalitsiz; REST API kalit bilan.",
 };
 
 /**
@@ -365,12 +365,14 @@ export default function HomePage() {
             >
               Tez boshlash
             </Link>
-            <a
-              href={`mailto:${OPERATOR.email}`}
-              className="rounded-lg border border-border px-5 py-2.5 text-[15px] font-semibold transition hover:border-brand"
-            >
-              Savol berish
-            </a>
+            <EmailOff>
+              <a
+                href={`mailto:${OPERATOR.email}`}
+                className="rounded-lg border border-border px-5 py-2.5 text-[15px] font-semibold transition hover:border-brand"
+              >
+                Savol berish
+              </a>
+            </EmailOff>
           </div>
         </section>
       </div>

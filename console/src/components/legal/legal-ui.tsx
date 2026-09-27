@@ -108,6 +108,57 @@ export function operatorIncomplete(): boolean {
   );
 }
 
+/**
+ * Operatorning elektron pochtasi — Cloudflare uni BUZMAYDIGAN qilib.
+ *
+ * ┌─ NIMA HAL QILINADI ────────────────────────────────────────────────┐
+ * Cloudflare'ning "Email Address Obfuscation" xizmati sahifadagi
+ * pochta manzilini `[email protected]` ga almashtiradi va uni
+ * o'z skripti bilan tiklaydi. Bu spamdan himoya, lekin narxi bor:
+ * JavaScript ishlamasa — brauzerda o'chirilgan bo'lsa, sahifa PDF
+ * qilib saqlansa yoki uni bot/arxiv o'qisa — rasmiy aloqa manzili
+ * O'QILMAYDIGAN bo'lib qoladi.
+ *
+ * 2026-09-27 da bu jonli sahifalarda o'lchandi: `/oferta`,
+ * `/copyright` va `/aloqa` da manzil `data-cfemail` ga aylantirilgan
+ * edi. Oferta — shartnoma; undagi aloqa manzili har qanday holatda
+ * o'qilishi kerak.
+ *
+ * `<!--email_off-->` — Cloudflare'ning O'Z rasmiy istisno belgisi:
+ * shu izohlar orasidagi matnga u tegmaydi. React izohni render
+ * qilmaydi, shuning uchun u `dangerouslySetInnerHTML` bilan
+ * chiqariladi — ichida foydalanuvchi ma'lumoti yo'q, faqat sobit
+ * izoh.
+ * └────────────────────────────────────────────────────────────────────┘
+ */
+export function EmailOff({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <span dangerouslySetInnerHTML={{ __html: "<!--email_off-->" }} />
+      {children}
+      <span dangerouslySetInnerHTML={{ __html: "<!--/email_off-->" }} />
+    </>
+  );
+}
+
+/**
+ * Tayyor pochta havolasi.
+ *
+ * ⚠️ `mailto:` MANZILNING O'ZI ham himoyaga muhtoj: Cloudflare uni
+ * `/cdn-cgi/l/email-protection#…` ga almashtiradi, ya'ni JavaScriptsiz
+ * havola umuman ochilmaydi — matn ko'rinmasa ham. Shuning uchun
+ * `<a>` ning o'zi ham o'rovchi ichida turadi, faqat matni emas.
+ */
+export function OperatorEmail({ className }: { className?: string }) {
+  return (
+    <EmailOff>
+      <a href={`mailto:${OPERATOR.email}`} className={className}>
+        {OPERATOR.email}
+      </a>
+    </EmailOff>
+  );
+}
+
 /** Rekvizit qiymati yoki uning to'ldirilmaganini bildiruvchi belgi. */
 export function req(value: string): ReactNode {
   if (value) return value;
@@ -225,9 +276,7 @@ export function LegalPage({
             {h.label}
           </Link>
         ))}
-        <a href={`mailto:${OPERATOR.email}`} className="transition hover:text-foreground">
-          {OPERATOR.email}
-        </a>
+        <OperatorEmail className="transition hover:text-foreground" />
       </div>
       </main>
       <PublicFooter />

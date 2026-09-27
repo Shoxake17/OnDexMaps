@@ -1,14 +1,5 @@
 import Link from "next/link";
-import {
-  Clause,
-  LegalPage,
-  LegalTable,
-  Note,
-  OPERATOR,
-  Section,
-  UL,
-  req,
-} from "@/components/legal/legal-ui";
+import { Clause, LegalPage, LegalTable, Note, OPERATOR, OperatorEmail, Section, UL, req } from "@/components/legal/legal-ui";
 
 export const metadata = {
   title: "Ommaviy oferta — OnDexMap",
@@ -162,9 +153,7 @@ export default function OfertaPage() {
         <Clause n="4.4">
           Hisobga kirish elektron pochta orqali amalga oshiriladi. Pochta qutisi
           ustidan nazorat yo&apos;qolganda Foydalanuvchi Operatorga{" "}
-          <a href={`mailto:${OPERATOR.email}`} className="text-brand hover:underline">
-            {OPERATOR.email}
-          </a>{" "}
+          <OperatorEmail className="text-brand hover:underline" />{" "}
           manziliga xabar beradi.
         </Clause>
         <Clause n="4.5">
@@ -493,9 +482,7 @@ export default function OfertaPage() {
         <Clause n="16.5">Bank rekvizitlari: {req(OPERATOR.bank)}</Clause>
         <Clause n="16.6">
           Elektron pochta:{" "}
-          <a href={`mailto:${OPERATOR.email}`} className="text-brand hover:underline">
-            {OPERATOR.email}
-          </a>
+          <OperatorEmail className="text-brand hover:underline" />
         </Clause>
         <Clause n="16.7">
           Telefon:{" "}

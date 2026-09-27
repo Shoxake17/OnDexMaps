@@ -1,13 +1,5 @@
 import Link from "next/link";
-import {
-  Clause,
-  LegalPage,
-  LegalTable,
-  Note,
-  OPERATOR,
-  Section,
-  UL,
-} from "@/components/legal/legal-ui";
+import { Clause, LegalPage, LegalTable, Note, OPERATOR, OperatorEmail, Section, UL } from "@/components/legal/legal-ui";
 
 export const metadata = {
   title: "Xizmat darajasi kelishuvi (SLA) — OnDexMap",
@@ -195,9 +187,7 @@ export default function SlaPage() {
         <Clause n="6.2">
           Talab uzilish sodir bo&apos;lgan oy tugaganidan keyin{" "}
           <strong>30 kalendar kun</strong> ichida{" "}
-          <a href={`mailto:${OPERATOR.email}`} className="text-brand hover:underline">
-            {OPERATOR.email}
-          </a>{" "}
+          <OperatorEmail className="text-brand hover:underline" />{" "}
           manziliga yuboriladi. Muddat o&apos;tsa chegirma berilmaydi.
         </Clause>
         <Clause n="6.3">Talabda ko&apos;rsatiladi:</Clause>

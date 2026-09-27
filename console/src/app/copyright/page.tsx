@@ -1,13 +1,5 @@
 import Link from "next/link";
-import {
-  Clause,
-  LegalPage,
-  LegalTable,
-  Note,
-  OPERATOR,
-  Section,
-  UL,
-} from "@/components/legal/legal-ui";
+import { Clause, LegalPage, LegalTable, Note, OPERATOR, OperatorEmail, Section, UL } from "@/components/legal/legal-ui";
 
 export const metadata = {
   title: "Mualliflik va atribut — OnDexMap",
@@ -170,9 +162,7 @@ export default function CopyrightPage() {
       <Section n="4" title="Xato topdingizmi">
         <Clause n="4.1">
           Noto&apos;g&apos;ri ma&apos;lumotni bizga yuboring:{" "}
-          <a href={`mailto:${OPERATOR.email}`} className="text-brand hover:underline">
-            {OPERATOR.email}
-          </a>{" "}
+          <OperatorEmail className="text-brand hover:underline" />{" "}
           yoki{" "}
           <a
             href={OPERATOR.telegramUrl}
@@ -236,9 +226,7 @@ export default function CopyrightPage() {
         </UL>
         <Clause n="5.2">
           Savol yoki shartlarning buzilishi haqida xabar:{" "}
-          <a href={`mailto:${OPERATOR.email}`} className="text-brand hover:underline">
-            {OPERATOR.email}
-          </a>{" "}
+          <OperatorEmail className="text-brand hover:underline" />{" "}
           (
           <Link href="/aloqa" className="text-brand hover:underline">
             boshqa kanallar

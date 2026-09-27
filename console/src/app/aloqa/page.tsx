@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PublicNav } from "@/components/PublicNav";
 import { PublicFooter } from "@/components/PublicFooter";
-import { OPERATOR, operatorIncomplete, req } from "@/components/legal/legal-ui";
+import { EmailOff, OPERATOR, operatorIncomplete, req } from "@/components/legal/legal-ui";
 
 export const metadata = {
   title: "Aloqa — OnDexMap",
@@ -69,13 +69,15 @@ export default function AloqaPage() {
         </p>
 
         <div className="mt-7 grid gap-3 sm:grid-cols-2">
-          <a
-            href={`mailto:${OPERATOR.email}`}
-            className="rounded-xl border border-border bg-card p-4 transition hover:border-brand"
-          >
-            <p className="text-[13px] text-muted">Elektron pochta</p>
-            <p className="mt-1 text-[17px] font-semibold">{OPERATOR.email}</p>
-          </a>
+          <EmailOff>
+            <a
+              href={`mailto:${OPERATOR.email}`}
+              className="block rounded-xl border border-border bg-card p-4 transition hover:border-brand"
+            >
+              <p className="text-[13px] text-muted">Elektron pochta</p>
+              <p className="mt-1 text-[17px] font-semibold">{OPERATOR.email}</p>
+            </a>
+          </EmailOff>
 
           <a
             href={OPERATOR.telegramUrl}

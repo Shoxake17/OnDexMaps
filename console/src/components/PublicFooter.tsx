@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { OPERATOR } from "./legal/legal-ui";
+import { OPERATOR, OperatorEmail } from "./legal/legal-ui";
 
 /**
  * PublicFooter — barcha ochiq sahifalar uchun pastki qism.
@@ -91,9 +91,7 @@ export function PublicFooter() {
           <Link href="/aloqa" className="font-medium text-foreground transition hover:text-brand">
             Aloqa
           </Link>
-          <a href={`mailto:${OPERATOR.email}`} className="transition hover:text-foreground">
-            {OPERATOR.email}
-          </a>
+          <OperatorEmail className="transition hover:text-foreground" />
           {OPERATOR.telegramUrl && (
             <a
               href={OPERATOR.telegramUrl}

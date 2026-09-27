@@ -1,13 +1,5 @@
 import Link from "next/link";
-import {
-  Clause,
-  LegalPage,
-  LegalTable,
-  Note,
-  OPERATOR,
-  Section,
-  UL,
-} from "@/components/legal/legal-ui";
+import { Clause, LegalPage, LegalTable, Note, OPERATOR, OperatorEmail, Section, UL } from "@/components/legal/legal-ui";
 
 export const metadata = {
   title: "Foydalanish shartlari — OnDexMap",
@@ -288,16 +280,12 @@ export default function ShartlarPage() {
           qiladi. Xizmatni o&apos;z ilovangizda ishlatish hosila bazani tarqatish
           hisoblanmaydi — talab faqat atribut. Ma&apos;lumotni ommaviy tarqatmoqchi
           bo&apos;lsangiz, avval{" "}
-          <a href={`mailto:${OPERATOR.email}`} className="text-brand hover:underline">
-            {OPERATOR.email}
-          </a>{" "}
+          <OperatorEmail className="text-brand hover:underline" />{" "}
           manziliga murojaat qiling.
         </Clause>
         <Clause n="7.4">
           Xaritadagi noto&apos;g&apos;ri ma&apos;lumot haqida bizga xabar bering:{" "}
-          <a href={`mailto:${OPERATOR.email}`} className="text-brand hover:underline">
-            {OPERATOR.email}
-          </a>
+          <OperatorEmail className="text-brand hover:underline" />
           . Tuzatish keyingi yangilanishda xaritaga chiqadi.
         </Clause>
       </Section>
@@ -322,9 +310,7 @@ export default function ShartlarPage() {
         </Clause>
         <Clause n="8.4">
           Shartlarning buzilishini ko&apos;rsangiz —{" "}
-          <a href={`mailto:${OPERATOR.email}`} className="text-brand hover:underline">
-            {OPERATOR.email}
-          </a>
+          <OperatorEmail className="text-brand hover:underline" />
           .
         </Clause>
       </Section>
