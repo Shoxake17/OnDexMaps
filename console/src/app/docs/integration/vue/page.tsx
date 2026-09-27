@@ -151,19 +151,46 @@ function tozala() {
   markerlar = [];
 }
 
+// Kuzatuv ro'yxat bilan BIRGA \`map\` ni ham oladi va \`immediate\`
+// bilan ishlaydi — sabab quyidagi izohda.
 watch(
-  () => props.joylar,
-  (joylar) => {
+  [map, () => props.joylar],
+  ([m, joylar]) => {
     tozala();
-    if (!map.value) return;
+    if (!m) return;          // xarita hali yaratilmagan
     markerlar = joylar.map((j) =>
-      new maplibregl.Marker().setLngLat([j.lng, j.lat]).addTo(map.value),
+      new maplibregl.Marker().setLngLat([j.lng, j.lat]).addTo(m),
     );
   },
-  { deep: true },
+  { deep: true, immediate: true },
 );
 
 onBeforeUnmount(tozala);`}</Code>
+      <Callout kind="warn">
+        <p>
+          Bu yerda ikkita nozik joy bor va ikkalasi ham{" "}
+          <strong className="text-foreground">jimgina</strong> ishlamay qo&apos;yadi:
+        </p>
+        <ol className="mt-2 list-decimal space-y-1 pl-5">
+          <li>
+            <C>immediate: true</C> bo&apos;lmasa <C>watch</C> mount paytida{" "}
+            <strong className="text-foreground">umuman ishlamaydi</strong> — komponentga boshdan
+            berilgan markerlar hech qachon chizilmaydi. Ular faqat ro&apos;yxat{" "}
+            <em>o&apos;zgargandan</em> keyin paydo bo&apos;ladi. O&apos;lchandi: 2 ta joy bilan
+            ochilganda ekranda 0 ta marker edi.
+          </li>
+          <li>
+            Faqat <C>immediate</C> qo&apos;shish yetarli emas: u <C>onMounted</C> dan OLDIN
+            ishlaydi, ya&apos;ni <C>map.value</C> hali <C>null</C> va <C>if (!m) return</C>{" "}
+            ishlab ketadi. Shuning uchun kuzatuvga <C>map</C> ref&apos;i ham qo&apos;shiladi —
+            xarita tayyor bo&apos;lganda kuzatuvchi o&apos;zi qayta ishlaydi.
+          </li>
+        </ol>
+        <p className="mt-2">
+          Tuzatilgandan keyin o&apos;lchandi: ochilganda 2 ta marker, ro&apos;yxat
+          almashgandan keyin 1 ta — eskilari tozalanadi.
+        </p>
+      </Callout>
 
       <H2 id="nuxt">Nuxt</H2>
       <P>
