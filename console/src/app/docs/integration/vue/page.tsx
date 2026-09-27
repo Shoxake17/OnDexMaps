@@ -94,9 +94,16 @@ import OnDexMap from "./OnDexMap.vue";
       />
       <Callout kind="warn">
         <p>
-          Xarita obyekti uchun <C>shallowRef()</C> ishlatiladi. Oddiy <C>ref()</C> uni chuqur reaktiv
-          proksiga o&apos;raydi, bu esa kutubxonaning ichki holatiga ta&apos;sir qiladi va xatolarga olib
-          keladi.
+          Xarita obyekti uchun <C>shallowRef()</C> ishlatiladi. Oddiy <C>ref()</C> uni{" "}
+          <strong className="text-foreground">chuqur reaktiv proksiga</strong> o&apos;raydi: xarita
+          minglab ichki obyektdan iborat va ularning har biriga murojaat Proxy orqali o&apos;tadi.
+        </p>
+        <p className="mt-2">
+          Halol bo&apos;lish uchun: sinovda oddiy <C>ref()</C> bilan ham xarita{" "}
+          <strong className="text-foreground">ishladi</strong> va xato chiqmadi. Muammo shunda —
+          u darhol ko&apos;rinmaydi, lekin ortiqcha yuk qoladi va xarita ichki holatini kuzatuvga
+          ochib qo&apos;yadi. Shuning uchun boshidan <C>shallowRef</C> yozgan ma&apos;qul:
+          keyinchalik sabab topish ancha qiyin.
         </p>
       </Callout>
 

@@ -101,6 +101,20 @@ export default function OnDexMap({
           qo&apos;ying.
         </p>
       </Callout>
+      <Callout kind="note">
+        <p>
+          Yuqoridagi <C>@/components/OnDexMap</C> importi <C>tsconfig.json</C> dagi taxallusga
+          tayanadi:
+        </p>
+        <Code lang="json">{`"paths": { "@/*": ["./*"] }`}</Code>
+        <p>
+          <C>create-next-app</C> uni o&apos;zi qo&apos;shadi. Loyihani qo&apos;lda yig&apos;ayotgan
+          bo&apos;lsangiz, qo&apos;shishni unutmang — aks holda{" "}
+          <C>Module not found: Can&apos;t resolve &apos;@/components/OnDexMap&apos;</C> chiqadi.
+          Eski qo&apos;llanmalardagi <C>baseUrl</C> endi kerak emas (yangi TypeScript uni rad
+          etadi).
+        </p>
+      </Callout>
 
       <H2 id="route-handler">Server tomonidan qidiruv</H2>
       <P>

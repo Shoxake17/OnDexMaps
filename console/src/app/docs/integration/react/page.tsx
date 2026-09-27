@@ -40,8 +40,6 @@ export default function OnDexMap({ center = [69.2401, 41.2995], zoom = 12 }) {
   const map = useRef(null);
 
   useEffect(() => {
-    if (map.current) return; // StrictMode ikkinchi chaqiruvida qayta yaratilmaydi
-
     map.current = new maplibregl.Map({
       container: container.current,
       style: "https://maps.ondex.uz/tiles/style.json",
@@ -84,9 +82,22 @@ export default function App() {
       />
       <Callout kind="warn">
         <p>
-          React <C>StrictMode</C> ishlab chiqish rejimida effektlarni ikki marta ishga tushiradi.{" "}
-          <C>if (map.current) return</C> tekshiruvi va tozalash funksiyasi ikkinchi nusxa yaratilishining
-          oldini oladi.
+          React <C>StrictMode</C> ishlab chiqish rejimida effektni ikki marta ishga tushiradi. Bu
+          yerda <strong className="text-foreground">tozalash funksiyasi</strong> hamma narsani hal
+          qiladi: birinchi xarita <C>remove()</C> bilan o&apos;chiriladi, so&apos;ng ikkinchisi
+          yaratiladi.
+        </p>
+        <p className="mt-2">
+          Ya&apos;ni ishlab chiqishda xarita{" "}
+          <strong className="text-foreground">haqiqatan ikki marta</strong> yaratiladi (o&apos;lchandi:
+          2 ta yaratish, 1 ta o&apos;chirish, ekranda 1 ta canvas). Bu normal va sizib ketish emas;
+          production build&apos;da bir marta yaratiladi.
+        </p>
+        <p className="mt-2">
+          <C>if (map.current) return</C> kabi qo&apos;riqchi bu yerda{" "}
+          <strong className="text-foreground">ishlamaydi</strong>: tozalash <C>map.current</C> ni{" "}
+          <C>null</C> qilib qo&apos;yadi, shuning uchun ikkinchi chaqiruvda shart baribir
+          bajarilmaydi. Duplikatni qo&apos;riqchi emas, <C>remove()</C> to&apos;xtatadi.
         </p>
       </Callout>
 
@@ -124,13 +135,44 @@ export default function App() {
           [<C key="3">joylar</C>, "markerlarni alohida effektda qayta chizing"],
         ]}
       />
-      <Code lang="jsx">{`// Prop o'zgarganda xaritani SURISH (qayta yaratmaslik)
+      <Code lang="jsx">{`// Prop o'zgarganda xaritani SURISH (qayta yaratmaslik).
+//
+// ⚠️ Bog'liqlik ro'yxatida \`center\` MASSIVINING o'zi EMAS, uning
+// QIYMATLARI turadi. \`<OnDexMap center={[71.2394, 41.0004]} />\` har
+// renderda YANGI massiv yaratadi va React uni o'zgargan deb biladi —
+// natijada har renderda \`flyTo\` ishlaydi va foydalanuvchi surgan
+// xarita boshlang'ich nuqtaga qaytib ketaveradi.
 useEffect(() => {
   map.current?.flyTo({ center, zoom });
-}, [center, zoom]);`}</Code>
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [center[0], center[1], zoom]);`}</Code>
+      <Callout kind="warn">
+        <p>
+          Bu eng ko&apos;p uchraydigan xato va uni sezish qiyin: xarita{" "}
+          <strong className="text-foreground">ishlaydi</strong>, lekin foydalanuvchi uni surganda
+          bir necha soniyadan keyin o&apos;zi orqaga qaytadi.
+        </p>
+        <p className="mt-2">
+          O&apos;lchangan misol: ota komponent 5 marta qayta render bo&apos;lganda{" "}
+          <C>[center, zoom]</C> bilan <C>flyTo</C> 7 marta chaqirildi — holbuki na <C>center</C>,
+          na <C>zoom</C> o&apos;zgargan edi.
+        </p>
+        <p className="mt-2">
+          Muqobil yechim — ota komponentda <C>useMemo</C> bilan massivni barqaror qilish yoki{" "}
+          <C>center</C> o&apos;rniga <C>lng</C> va <C>lat</C> ni alohida prop qilib uzatish.
+        </p>
+      </Callout>
 
       <H2 id="markerlar">Markerlar</H2>
       <P>Markerlar ham tozalanadi — aks holda ular xaritada to&apos;planib qoladi:</P>
+      <Callout kind="note">
+        <p>
+          <C>joylar</C> ham massiv, ya&apos;ni yuqoridagi tuzoq bu yerga ham tegishli. Uni{" "}
+          <C>useState</C> yoki <C>useMemo</C> da saqlang; JSX ichida{" "}
+          <C>joylar={"{[...]}"}</C> deb yozsangiz markerlar har renderda o&apos;chirilib qayta
+          chiziladi.
+        </p>
+      </Callout>
       <Code lang="jsx">{`useEffect(() => {
   if (!map.current || joylar.length === 0) return;
 
@@ -149,6 +191,16 @@ useEffect(() => {
         Hodisa tinglovchilari xarita bilan birga qo&apos;shiladi va komponent yo&apos;q qilinganda olib
         tashlanadi:
       </P>
+      <Callout kind="warn">
+        <p>
+          <strong className="text-foreground">Tartib muhim.</strong> React effektlarni yozilish
+          tartibida ishga tushiradi, shuning uchun bu effekt xarita yaratadigan effektdan{" "}
+          <strong className="text-foreground">KEYIN</strong> turishi kerak. Yuqoriga qo&apos;ysangiz{" "}
+          <C>map.current</C> hali <C>null</C> bo&apos;ladi, <C>if (!m) return</C> ishlaydi va
+          tinglovchilar <strong className="text-foreground">hech qachon ulanmaydi</strong> — xato
+          ham, ogohlantirish ham chiqmaydi.
+        </p>
+      </Callout>
       <Code lang="jsx">{`useEffect(() => {
   const m = map.current;
   if (!m) return;
