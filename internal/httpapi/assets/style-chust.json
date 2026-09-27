@@ -12,7 +12,7 @@
     "ondex": {
       "type": "vector",
       "url": "pmtiles://__TILES_URL__",
-      "attribution": "<span style=\"display:block;line-height:1;margin:1px 0 3px\"><a href=\"__SELF__/copyright\" target=\"_blank\" rel=\"noopener\" style=\"display:inline-flex;align-items:center;gap:5px;text-decoration:none;color:#111827;font:700 15px/1 system-ui,-apple-system,Segoe UI,Arial,sans-serif;letter-spacing:-.02em;text-shadow:0 1px 2px rgba(255,255,255,.95)\"><img src=\"__SELF__/brand/ondex.png\" width=\"17\" height=\"17\" alt=\"\" style=\"display:block\">OnDex<span style=\"color:#f97316\">Map</span></a></span>© <a href=\"__SELF__/copyright\" target=\"_blank\" rel=\"noopener\">OnDexMap</a>__MS__ · © <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\" rel=\"noopener\">OpenStreetMap</a>"
+      "attribution": "<span style=\"display:block;line-height:1;margin:1px 0 3px\"><a href=\"__SELF__/copyright\" target=\"_blank\" rel=\"noopener\" style=\"display:inline-flex;align-items:center;gap:5px;text-decoration:none;color:#111827;font:700 15px/1 system-ui,-apple-system,Segoe UI,Arial,sans-serif;letter-spacing:-.02em;text-shadow:0 1px 2px rgba(255,255,255,.95)\"><img src=\"__SELF__/brand/ondex.png\" width=\"17\" height=\"17\" alt=\"\" style=\"display:block\"><span>OnDex<span style=\"color:#f97316\">Map</span></span></a></span>© <a href=\"__SELF__/copyright\" target=\"_blank\" rel=\"noopener\">OnDexMap</a>__MS__ · © <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\" rel=\"noopener\">OpenStreetMap</a>"
     },
     "ondex-buildings": {
       "type": "vector",
