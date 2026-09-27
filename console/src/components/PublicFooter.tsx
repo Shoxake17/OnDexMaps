@@ -60,14 +60,12 @@ export function PublicFooter() {
               O&apos;zbekiston uchun xarita platformasi: tayl, geokodlash,
               marshrut va mahalla chegaralari.
             </p>
-            <a
-              href={`${OPERATOR.api}/copyright`}
+            <Link
+              href="/copyright"
               className="mt-3 inline-block text-[13px] text-muted transition hover:text-foreground"
-              target="_blank"
-              rel="noopener"
             >
-              © OpenStreetMap · Microsoft · OnDexMap
-            </a>
+              © OnDexMap — ma&apos;lumot manbalari va litsenziyalar
+            </Link>
           </div>
 
           {USTUNLAR.map((u) => (
@@ -96,14 +94,19 @@ export function PublicFooter() {
           <a href={`mailto:${OPERATOR.email}`} className="transition hover:text-foreground">
             {OPERATOR.email}
           </a>
-          {OPERATOR.telegram && (
+          {OPERATOR.telegramUrl && (
             <a
-              href={`https://t.me/${OPERATOR.telegram.replace(/^@/, "")}`}
+              href={OPERATOR.telegramUrl}
               className="transition hover:text-foreground"
               target="_blank"
               rel="noopener"
             >
               Telegram: {OPERATOR.telegram}
+            </a>
+          )}
+          {OPERATOR.phone && (
+            <a href={`tel:${OPERATOR.phone.replace(/\s/g, "")}`} className="transition hover:text-foreground">
+              {OPERATOR.phone}
             </a>
           )}
           <span className="ml-auto">

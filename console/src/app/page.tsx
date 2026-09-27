@@ -55,7 +55,7 @@ const IMKONIYATLAR = [
   {
     nom: "Geokodlash",
     tavsif:
-      "Nom bo'yicha qidirish va koordinatadan manzil aniqlash. Butun O'zbekiston bo'yicha OSM nomlari.",
+      "Nom bo'yicha qidirish va koordinatadan manzil aniqlash. Butun O'zbekiston bo'yicha 339 000 dan ortiq nom.",
     havola: "/docs/api/geocode",
   },
   {
@@ -81,7 +81,7 @@ const QAMROV = [
   },
   {
     nima: "Geokodlash / teskari geokodlash",
-    qamrov: "Butun O'zbekiston — OpenStreetMap nomlari",
+    qamrov: "Butun O'zbekiston — 339 000 dan ortiq nom",
     holat: "toliq" as const,
   },
   {
@@ -91,7 +91,7 @@ const QAMROV = [
   },
   {
     nima: "Bino konturlari",
-    qamrov: "Microsoft GlobalMLBuildingFootprints",
+    qamrov: "Butun O'zbekiston",
     holat: "toliq" as const,
   },
   {
@@ -329,7 +329,7 @@ export default function HomePage() {
               {
                 nom: "Litsenziya va atribut",
                 matn:
-                  "Ma'lumot OpenStreetMap va Microsoft'dan, ODbL ostida. Atribut majburiy — buni integratsiya boshidan hisobga oling.",
+                  "Xaritada OnDexMap krediti ko'rinib turishi shart — buni integratsiya boshidan hisobga oling. Manbalar va litsenziyalar alohida sahifada.",
                 havola: "/shartlar#2",
               },
               {

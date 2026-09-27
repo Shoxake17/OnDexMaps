@@ -96,17 +96,16 @@ REST API:   https://maps.ondex.uz/v2/...`}</Code>
 
       <H2 id="atribut">Atribut — majburiy</H2>
       <P>
-        Xarita ma&apos;lumoti OpenStreetMap&apos;dan, bino konturlari Microsoft Global ML Building
-        Footprints&apos;dan olingan. Ikkalasi ham{" "}
-        <A href="https://opendatacommons.org/licenses/odbl/">ODbL</A> litsenziyasi ostida va{" "}
-        <strong className="text-foreground">atribut ko&apos;rsatilishini talab qiladi</strong>.
-        OnDexMap krediti ham shu yozuvda keladi va uni saqlash — foydalanish shartlarining bir
-        qismi.
+        Xaritani ko&apos;rsatgan har qanday ekranda OnDexMap krediti va ma&apos;lumot
+        manbalarining kreditlari <strong className="text-foreground">ko&apos;rinib turishi shart</strong>.
+        Bu ham foydalanish shartlarining, ham ma&apos;lumot litsenziyasining talabi.
       </P>
-      <Code lang="terminal">{`© OpenStreetMap hissadorlari · © OnDexMap`}</Code>
+      <Code lang="terminal">{`© OnDexMap · Bino konturlari © Microsoft · © OpenStreetMap`}</Code>
       <P>
-        «OnDexMap» yozuvi <A href="https://maps.ondex.uz/copyright">maps.ondex.uz/copyright</A>{" "}
-        sahifasiga olib boradi — u yerda manbalar, litsenziyalar va shartlar to&apos;liq yozilgan.
+        Yozuvning barcha qismlari{" "}
+        <A href="https://maps.ondex.uz/copyright">maps.ondex.uz/copyright</A> sahifasiga olib
+        boradi — u yerda manbalar, litsenziyalar, ommaviy oferta, maxfiylik siyosati va SLA
+        havolalari to&apos;liq yig&apos;ilgan.
       </P>
       <P>
         Uslub faylida atribut allaqachon yozilgan — kutubxona uni o&apos;zi chiqaradi. Lekin
@@ -214,7 +213,7 @@ map.addControl(
         <p>
           <C>AttributionControl</C> uslubdagi <C>attribution</C> maydonlarini{" "}
           <C>customAttribution</C> bilan BIRGA ko&apos;rsatadi. Ya&apos;ni o&apos;z brendingizni
-          qo&apos;shish OpenStreetMap kreditini o&apos;chirmaydi.
+          qo&apos;shish mavjud kreditlarni o&apos;chirmaydi.
         </p>
         <p className="mt-2">
           <C>customAttribution</C> ro&apos;yxat <strong className="text-foreground">boshiga</strong>{" "}

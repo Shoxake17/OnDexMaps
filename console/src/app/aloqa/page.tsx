@@ -77,22 +77,23 @@ export default function AloqaPage() {
             <p className="mt-1 text-[17px] font-semibold">{OPERATOR.email}</p>
           </a>
 
-          {OPERATOR.telegram ? (
-            <a
-              href={`https://t.me/${OPERATOR.telegram.replace(/^@/, "")}`}
-              target="_blank"
-              rel="noopener"
-              className="rounded-xl border border-border bg-card p-4 transition hover:border-brand"
-            >
-              <p className="text-[13px] text-muted">Telegram</p>
-              <p className="mt-1 text-[17px] font-semibold">{OPERATOR.telegram}</p>
-            </a>
-          ) : (
-            <div className="rounded-xl border border-border bg-card p-4">
-              <p className="text-[13px] text-muted">Telegram</p>
-              <p className="mt-1">{req("")}</p>
-            </div>
-          )}
+          <a
+            href={OPERATOR.telegramUrl}
+            target="_blank"
+            rel="noopener"
+            className="rounded-xl border border-border bg-card p-4 transition hover:border-brand"
+          >
+            <p className="text-[13px] text-muted">Telegram</p>
+            <p className="mt-1 text-[17px] font-semibold">{OPERATOR.telegram}</p>
+          </a>
+
+          <a
+            href={`tel:${OPERATOR.phone.replace(/\s/g, "")}`}
+            className="rounded-xl border border-border bg-card p-4 transition hover:border-brand"
+          >
+            <p className="text-[13px] text-muted">Telefon</p>
+            <p className="mt-1 text-[17px] font-semibold">{OPERATOR.phone}</p>
+          </a>
         </div>
 
         <h2 className="mt-10 text-[19px] font-bold">Qaysi masala bo&apos;yicha</h2>
@@ -133,8 +134,11 @@ export default function AloqaPage() {
           {[
             ["To'liq nomi", req(OPERATOR.legalName)],
             ["STIR", req(OPERATOR.taxId)],
+            ["Ro'yxatdan o'tganligi", req(OPERATOR.registration)],
             ["Yuridik manzil", req(OPERATOR.address)],
             ["Bank rekvizitlari", req(OPERATOR.bank)],
+            ["Telefon", OPERATOR.phone],
+            ["Telegram", OPERATOR.telegram],
           ].map(([k, v], i) => (
             <div key={i} className="flex flex-wrap gap-x-3 gap-y-1">
               <dt className="min-w-[10rem] text-muted">{k}</dt>

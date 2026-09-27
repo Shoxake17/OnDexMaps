@@ -184,8 +184,23 @@ func serveCopyright(w http.ResponseWriter, r *http.Request) {
 // bo'lsa ko'rsatadi, ya'ni binolar z13 dan pastda yo'qolib, tartib
 // buzilardi.
 //
+// ⚠️ HAVOLA O'ZIMIZNING `/copyright` SAHIFAMIZGA ketadi, manbaning
+// saytiga EMAS. Sabab ikkita:
+//
+//  1. Joylashuv: xaritadagi yagona yorliqdan foydalanuvchi begona
+//     saytga chiqib ketsa, OnDexMap boshqa birovning ma'lumotini
+//     qayta sotayotganday ko'rinadi.
+//  2. Litsenziya buzilmaydi: ODbL kredit MATNINI ("© OpenStreetMap",
+//     "© Microsoft") va manba hamda litsenziya haqidagi ma'lumotga
+//     BIR BOSISHDA yetib borishni talab qiladi — qayerga havola
+//     qilishni emas. `/copyright` da manba, ODbL va shartlar to'liq
+//     yozilgan, ya'ni talab bajariladi.
+//
+// Kredit MATNINI olib tashlab bo'lmaydi: aynan u ma'lumotdan
+// foydalanish huquqini beradi.
+//
 // Tirnoqlar `\"` — satr JSON ichiga qo'yiladi.
-const msAttribution = ` · Bino konturlari © <a href=\"https://github.com/microsoft/GlobalMLBuildingFootprints\" target=\"_blank\" rel=\"noopener\">Microsoft</a>`
+const msAttribution = ` · Bino konturlari © <a href=\"__SELF__/copyright\" target=\"_blank\" rel=\"noopener\">Microsoft</a>`
 
 func (s *Server) buildStyle() []byte {
 	out := bytes.ReplaceAll(chustStyle, []byte("__TILES_URL__"), []byte(s.tilesURL()))

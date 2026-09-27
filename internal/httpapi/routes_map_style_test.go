@@ -68,6 +68,24 @@ func TestStyleKeepsAttribution(t *testing.T) {
 	if strings.Contains(got, "__MS__") {
 		t.Errorf("`__MS__` almashtirilmagan: %q", got)
 	}
+
+	// ┌─ ATRIBUTDA BEGONA MANZIL BO'LMAYDI ────────────────────────────┐
+	// Kredit MATNI ("© OpenStreetMap", "© Microsoft") — ODbL talabi va
+	// u olib tashlanmaydi. Lekin HAVOLA o'zimizning `/copyright`
+	// sahifamizga ketadi, manbaning saytiga emas: xaritadagi yagona
+	// yorliqdan foydalanuvchi begona saytga chiqib ketsa, OnDexMap
+	// boshqa birovning ma'lumotini qayta sotayotganday ko'rinadi.
+	//
+	// ODbL buni taqiqlamaydi: u manba va litsenziya haqidagi
+	// ma'lumotga BIR BOSISHDA yetib borishni talab qiladi, qayerga
+	// havola qilishni emas. `/copyright` da hammasi yozilgan.
+	// └────────────────────────────────────────────────────────────────┘
+	for _, banned := range []string{"openstreetmap.org", "github.com", "http://", "https://"} {
+		if strings.Contains(got, banned) {
+			t.Errorf("atributda tashqi manzil %q bor — havolalar faqat `__SELF__/copyright` ga ketishi kerak: %q",
+				banned, got)
+		}
+	}
 }
 
 // TestStyleDropsMicrosoftCreditWithoutBuildings — binolar manbasi

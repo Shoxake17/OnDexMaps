@@ -268,12 +268,20 @@ export default function ShartlarPage() {
 
       <Section n="7" title="Uchinchi tomon ma'lumotlari">
         <Clause n="7.1">
-          Xarita ma&apos;lumotlarining katta qismi OpenStreetMap&apos;dan olingan va{" "}
-          <strong>ODbL 1.0</strong> litsenziyasi ostida tarqatiladi.
+          OnDexMap xaritasi bir nechta manbadan yig&apos;iladi: Operatorning
+          o&apos;z ma&apos;lumotlari (mahalla chegaralari, ob&apos;ektlar bazasi,
+          xarita uslubi, marshrut tarmog&apos;i) va ochiq ma&apos;lumot
+          to&apos;plamlari. To&apos;liq ro&apos;yxat{" "}
+          <Link href="/copyright" className="text-brand hover:underline">
+            Mualliflik va atribut
+          </Link>{" "}
+          sahifasida.
         </Clause>
         <Clause n="7.2">
-          Bino konturlari Microsoft GlobalMLBuildingFootprints to&apos;plamidan,
-          u ham ODbL ostida.
+          Ochiq to&apos;plamlarning bir qismi <strong>ODbL 1.0</strong>{" "}
+          litsenziyasi ostida va kredit ko&apos;rsatilishini talab qiladi —
+          shuning uchun atribut yozuvidagi manba kreditlarini{" "}
+          <strong>olib tashlab bo&apos;lmaydi</strong> (2-bo&apos;lim).
         </Clause>
         <Clause n="7.3">
           ODbL «hosila baza»ni tarqatishda uni ham ODbL ostida ochishni talab
@@ -286,17 +294,11 @@ export default function ShartlarPage() {
           manziliga murojaat qiling.
         </Clause>
         <Clause n="7.4">
-          Xaritadagi noto&apos;g&apos;ri ma&apos;lumotni{" "}
-          <a
-            href="https://www.openstreetmap.org/"
-            className="text-brand hover:underline"
-            target="_blank"
-            rel="noopener"
-          >
-            openstreetmap.org
-          </a>{" "}
-          da tuzatish mumkin — tuzatish keyingi yangilanishda OnDexMap&apos;ga
-          o&apos;tadi.
+          Xaritadagi noto&apos;g&apos;ri ma&apos;lumot haqida bizga xabar bering:{" "}
+          <a href={`mailto:${OPERATOR.email}`} className="text-brand hover:underline">
+            {OPERATOR.email}
+          </a>
+          . Tuzatish keyingi yangilanishda xaritaga chiqadi.
         </Clause>
       </Section>
 

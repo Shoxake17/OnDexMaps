@@ -119,9 +119,8 @@ export default function CdnPage() {
 
       <H2 id="atribut">Atribut</H2>
       <P>
-        Xarita ma&apos;lumoti OpenStreetMap va Microsoft Building Footprints&apos;dan olingan —
-        ikkalasi ham ODbL va atribut ko&apos;rsatilishini talab qiladi. Matn uslub faylida
-        yozilgan, ya&apos;ni siz yozmaysiz — lekin yorliq{" "}
+        Xaritada OnDexMap krediti va ma&apos;lumot manbalarining kreditlari ko&apos;rinishi
+        shart. Matn uslub faylida yozilgan, ya&apos;ni siz yozmaysiz — lekin yorliq{" "}
         <strong className="text-foreground">yig&apos;ilib qolmasligi</strong> uchun{" "}
         <C>compact: false</C> ni ochiq berish kerak. Yuqoridagi kodda shu qilingan.
       </P>

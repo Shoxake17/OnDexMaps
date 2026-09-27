@@ -12,7 +12,7 @@
     "ondex": {
       "type": "vector",
       "url": "pmtiles://__TILES_URL__",
-      "attribution": "<a href=\"__SELF__/copyright\" target=\"_blank\" rel=\"noopener\" style=\"position:absolute;right:0;bottom:100%;margin-bottom:7px;white-space:nowrap;text-decoration:none;color:#111827;font:700 17px/1 system-ui,-apple-system,Segoe UI,Arial,sans-serif;letter-spacing:-.02em;text-shadow:0 1px 3px rgba(255,255,255,.95),0 0 10px rgba(255,255,255,.8)\">OnDex<span style=\"color:#f97316\">Map</span></a>© <a href=\"__SELF__/copyright\" target=\"_blank\" rel=\"noopener\">OnDexMap</a>__MS__ · © <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\" rel=\"noopener\">OpenStreetMap</a>"
+      "attribution": "<a href=\"__SELF__/copyright\" target=\"_blank\" rel=\"noopener\" style=\"position:absolute;right:0;bottom:100%;margin-bottom:7px;white-space:nowrap;text-decoration:none;color:#111827;font:700 17px/1 system-ui,-apple-system,Segoe UI,Arial,sans-serif;letter-spacing:-.02em;text-shadow:0 1px 3px rgba(255,255,255,.95),0 0 10px rgba(255,255,255,.8)\">OnDex<span style=\"color:#f97316\">Map</span></a>© <a href=\"__SELF__/copyright\" target=\"_blank\" rel=\"noopener\">OnDexMap</a>__MS__ · © <a href=\"__SELF__/copyright\" target=\"_blank\" rel=\"noopener\">OpenStreetMap</a>"
     },
     "ondex-buildings": {
       "type": "vector",

@@ -59,7 +59,9 @@ type OperatorInfo = Record<
   | "bank"
   | "pdRegistry"
   | "email"
+  | "phone"
   | "telegram"
+  | "telegramUrl"
   | "site"
   | "api",
   string
@@ -69,15 +71,20 @@ export const OPERATOR: OperatorInfo = {
   brand: "OnDexMap",
   service: "OnDexMap Platform",
   /** To'liq yuridik nom. */
-  legalName: "", // TODO: masalan «ONDEX GROUP» MChJ
+  legalName: "", // TODO: masalan «ONDEX GROUP» MChJ yoki YaTT to'liq F.I.Sh.
   /** STIR (soliq to'lovchining identifikatsiya raqami). */
-  taxId: "", // TODO
+  taxId: "070977329",
   /** Davlat ro'yxatidan o'tganlik guvohnomasi raqami va sanasi. */
   registration: "", // TODO
   /** Yuridik manzil. */
   address: "", // TODO
-  /** Bank rekvizitlari: hisob raqami, bank nomi, MFO. */
-  bank: "", // TODO
+  /**
+   * Bank rekvizitlari.
+   *
+   * ⚠️ Bank NOMI hali yo'q — hisob-fakturada u ham ko'rsatilishi kerak,
+   * aks holda to'lovchi o'tkazmani to'ldira olmaydi.
+   */
+  bank: "Hisob raqami: 20218000907519062001, MFO: 00083",
   /**
    * Shaxsga doir ma'lumotlar bazasining davlat reyestridagi raqami
    * (pd.gov.uz). «Shaxsga doir ma'lumotlar to'g'risida»gi qonunning
@@ -86,8 +93,11 @@ export const OPERATOR: OperatorInfo = {
   pdRegistry: "", // TODO
   /** Texnik yordam — hujjatlarda e'lon qilinadigan asosiy kanal. */
   email: "support@ondex.uz",
+  /** Aloqa telefoni. */
+  phone: "+998 90 278 42 07",
   /** Telegram — O'zbekistonda eng tez kanal. */
-  telegram: "", // TODO: masalan @ondexsupport
+  telegram: "@shoxrux_developer",
+  telegramUrl: "https://t.me/shoxrux_developer",
   site: "https://console.ondex.uz",
   api: "https://maps.ondex.uz",
 };

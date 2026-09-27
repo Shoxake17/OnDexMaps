@@ -57,15 +57,7 @@ export default function CopyrightPage() {
           rows={[
             [
               "Ko'chalar, joylar, geografiya",
-              <a
-                key="osm"
-                href="https://www.openstreetmap.org/"
-                target="_blank"
-                rel="noopener"
-                className="text-brand hover:underline"
-              >
-                OpenStreetMap
-              </a>,
+              "OpenStreetMap",
               <a
                 key="l1"
                 href="https://opendatacommons.org/licenses/odbl/"
@@ -78,15 +70,7 @@ export default function CopyrightPage() {
             ],
             [
               "Bino konturlari",
-              <a
-                key="ms"
-                href="https://github.com/microsoft/GlobalMLBuildingFootprints"
-                target="_blank"
-                rel="noopener"
-                className="text-brand hover:underline"
-              >
-                Microsoft Global ML Building Footprints
-              </a>,
+              "Microsoft Global ML Building Footprints",
               <a
                 key="l2"
                 href="https://opendatacommons.org/licenses/odbl/"
@@ -185,21 +169,23 @@ export default function CopyrightPage() {
 
       <Section n="4" title="Xato topdingizmi">
         <Clause n="4.1">
-          Ko&apos;cha, bino, do&apos;kon kabi ma&apos;lumotlarning aksariyati
-          OpenStreetMap&apos;dan keladi. Ularni{" "}
+          Noto&apos;g&apos;ri ma&apos;lumotni bizga yuboring:{" "}
+          <a href={`mailto:${OPERATOR.email}`} className="text-brand hover:underline">
+            {OPERATOR.email}
+          </a>{" "}
+          yoki{" "}
           <a
-            href="https://www.openstreetmap.org/"
+            href={OPERATOR.telegramUrl}
             target="_blank"
             rel="noopener"
             className="text-brand hover:underline"
           >
-            openstreetmap.org
-          </a>{" "}
-          da tuzatish kerak — tuzatish keyingi yangilanishda OnDexMap&apos;ga
-          o&apos;tadi.
+            {OPERATOR.telegram}
+          </a>
+          . Xabarda joyning nomi va koordinatasini ko&apos;rsating.
         </Clause>
         <Clause n="4.2">
-          OnDexMap&apos;ning o&apos;z ob&apos;ektlari boshqacha: ularni{" "}
+          Yangi ob&apos;ektni{" "}
           <a
             href={OPERATOR.api}
             target="_blank"
@@ -210,6 +196,10 @@ export default function CopyrightPage() {
           </a>{" "}
           «Ob&apos;ekt qo&apos;shish» tugmasi orqali yuborish mumkin. Yuborilgan
           ob&apos;ekt darhol chiqmaydi — avval moderatsiyadan o&apos;tadi.
+        </Clause>
+        <Clause n="4.3">
+          Tuzatish upstream manbaga ham yuborilishi mumkin; bunday holatda u
+          keyingi yangilanishda OnDexMap&apos;ga o&apos;tadi.
         </Clause>
       </Section>
 

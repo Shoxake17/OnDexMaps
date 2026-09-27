@@ -498,7 +498,24 @@ export default function OfertaPage() {
           </a>
         </Clause>
         <Clause n="16.7">
-          Telegram: {OPERATOR.telegram ? OPERATOR.telegram : req("")}
+          Telefon:{" "}
+          <a
+            href={`tel:${OPERATOR.phone.replace(/\s/g, "")}`}
+            className="text-brand hover:underline"
+          >
+            {OPERATOR.phone}
+          </a>
+        </Clause>
+        <Clause n="16.8">
+          Telegram:{" "}
+          <a
+            href={OPERATOR.telegramUrl}
+            target="_blank"
+            rel="noopener"
+            className="text-brand hover:underline"
+          >
+            {OPERATOR.telegram}
+          </a>
         </Clause>
       </Section>
     </LegalPage>
