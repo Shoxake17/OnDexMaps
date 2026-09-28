@@ -26,7 +26,7 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "check:readme": "node scripts/check-readme.mjs",
-    "test": "node --test test/",
+    "test": "node --test",
     "verify": "npm run generate:check && npm run typecheck && npm run build && npm run check:readme && npm test",
     "prepublishOnly": "npm run verify"
   },

@@ -2,6 +2,13 @@
 //
 // Ular `dist/` ustida ishlaydi (ya'ni AYNAN nashr qilinadigan kod
 // sinaladi), shuning uchun avval `npm run build` bajarilishi kerak.
+//
+// ⚠️ `npm test` — `node --test`, ARGUMENTSIZ. Papka (`node --test test/`)
+// yoki glob (`test/*.test.mjs`) berilmaydi: birinchisi Linux'da
+// «Cannot find module» beradi, ikkinchisini Windows qobig'i
+// kengaytirmaydi. Argumentsiz chaqiruv test fayllarini o'zi topadi va
+// uchala platformada ham bir xil ishlaydi (CI'da 2026-09-28 da
+// aniqlangan).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
