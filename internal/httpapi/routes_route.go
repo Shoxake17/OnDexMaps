@@ -34,7 +34,35 @@ const (
 
 	// routeMaxResponseBytes — OSRM (yoki uni almashtirgan har qanday
 	// buzuq/soxta javob) xotirani tugatmasin.
-	routeMaxResponseBytes = 2 << 20 // 2 MiB — bitta kichik shahar marshruti uchun ortiqcha
+	//
+	// 2 MiB dan 8 MiB ga oshirildi: chegara butun mamlakatga
+	// kengaygach marshrut ham uzayadi (Nukus–Termiz ≈ 990 km), va
+	// uning geometriyasi bitta shahar ichidagi yo'ldan ancha katta.
+	routeMaxResponseBytes = 8 << 20
+)
+
+// ┌─ MARSHRUT HUDUDI — BUTUN O'ZBEKISTON ──────────────────────────────┐
+// Bu chegara `routes_geo.go` dagi `minLat/minLng` DAN FARQLI va
+// ataylab kengroq.
+//
+// O'sha tor chegara (40.5–41.6° N, 70.5–72.0° E) qidiruv va teskari
+// geokodlash uchun to'g'ri: mahalla va ko'cha ma'lumotimiz hozircha
+// Chust atrofida, undan tashqarida javob baribir bo'lmasdi.
+//
+// Marshrut esa BOSHQA manbadan keladi — o'z OSRM'imizdan, u
+// `uzbekistan.osm.pbf` dan qurilgan va BUTUN mamlakatni qamraydi.
+// 2026-09-28 da o'lchandi: Toshkent ichida, Chust→Toshkent,
+// Buxoro→Toshkent, Nukus→Termiz va Xorazm→Farg'ona (1216 km) —
+// hammasi `code: "Ok"` qaytardi.
+//
+// Ya'ni tor chegara marshrut uchun sun'iy to'siq edi: server
+// ishlaydigan so'rovni rad etardi. Endi u xizmat ko'rsatadigan
+// haqiqiy hududga — mamlakat chegarasiga — moslandi
+// (`internal/places` dagi qiymatlar bilan bir xil).
+// └────────────────────────────────────────────────────────────────────┘
+const (
+	routeMinLat, routeMaxLat = 37.0, 45.8
+	routeMinLng, routeMaxLng = 55.5, 73.5
 )
 
 var routeHTTPClient = &http.Client{Timeout: routeHTTPTimeout}
@@ -67,10 +95,10 @@ type osrmResponse struct {
 // TARTIB: avval validatsiya (arzon), keyin xizmat mavjudligi, keyin
 // tarmoq so'rovi (qimmat) — xuddi handleResolve'dagi kabi.
 func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
-	fromLat, okFromLat := parseCoord(r.URL.Query().Get("from_lat"), minLat, maxLat)
-	fromLng, okFromLng := parseCoord(r.URL.Query().Get("from_lng"), minLng, maxLng)
-	toLat, okToLat := parseCoord(r.URL.Query().Get("to_lat"), minLat, maxLat)
-	toLng, okToLng := parseCoord(r.URL.Query().Get("to_lng"), minLng, maxLng)
+	fromLat, okFromLat := parseCoord(r.URL.Query().Get("from_lat"), routeMinLat, routeMaxLat)
+	fromLng, okFromLng := parseCoord(r.URL.Query().Get("from_lng"), routeMinLng, routeMaxLng)
+	toLat, okToLat := parseCoord(r.URL.Query().Get("to_lat"), routeMinLat, routeMaxLat)
+	toLng, okToLng := parseCoord(r.URL.Query().Get("to_lng"), routeMinLng, routeMaxLng)
 	if !okFromLat || !okFromLng || !okToLat || !okToLng {
 		httpError(w, http.StatusBadRequest, "from_lat/from_lng/to_lat/to_lng noto'g'ri yoki xizmat hududidan tashqarida")
 		return

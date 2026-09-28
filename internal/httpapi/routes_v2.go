@@ -320,22 +320,29 @@ func (s *Server) v2Reverse(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"status": "OK", "result": place})
 }
 
-// parseLatLng — "lat,lng" (Google uslubi), xizmat hududi ichida.
-func parseLatLng(raw string) (lat, lng float64, ok bool) {
+// parseLatLng — "lat,lng" (Google uslubi) berilgan chegara ichida.
+//
+// Chegara parametr sifatida beriladi, chunki u endpointga qarab
+// FARQ QILADI: teskari geokodlash ma'lumot bor hudud bilan, marshrut
+// esa butun mamlakat bilan cheklangan (`routes_route.go` izohiga
+// qarang).
+func parseLatLng(raw string, loLat, hiLat, loLng, hiLng float64) (lat, lng float64, ok bool) {
 	parts := strings.Split(raw, ",")
 	if len(parts) != 2 {
 		return 0, 0, false
 	}
-	lat, okLat := parseCoord(parts[0], minLat, maxLat)
-	lng, okLng := parseCoord(parts[1], minLng, maxLng)
+	lat, okLat := parseCoord(parts[0], loLat, hiLat)
+	lng, okLng := parseCoord(parts[1], loLng, hiLng)
 	return lat, lng, okLat && okLng
 }
 
 func (s *Server) v2Directions(w http.ResponseWriter, r *http.Request) {
-	fromLat, fromLng, ok1 := parseLatLng(r.URL.Query().Get("origin"))
-	toLat, toLng, ok2 := parseLatLng(r.URL.Query().Get("destination"))
+	fromLat, fromLng, ok1 := parseLatLng(
+		r.URL.Query().Get("origin"), routeMinLat, routeMaxLat, routeMinLng, routeMaxLng)
+	toLat, toLng, ok2 := parseLatLng(
+		r.URL.Query().Get("destination"), routeMinLat, routeMaxLat, routeMinLng, routeMaxLng)
 	if !ok1 || !ok2 {
-		v2Invalid(w, "origin va destination `lat,lng` ko'rinishida va xizmat hududi ichida bo'lishi kerak")
+		v2Invalid(w, "origin va destination `lat,lng` ko'rinishida va O'zbekiston hududida bo'lishi kerak")
 		return
 	}
 	if fromLat == toLat && fromLng == toLng {

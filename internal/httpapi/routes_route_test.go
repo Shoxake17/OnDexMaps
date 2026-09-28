@@ -17,21 +17,59 @@ func TestRouteUnconfiguredReturns503(t *testing.T) {
 	}
 }
 
-// Xizmat hududidan tashqaridagi nuqta OSRM'ga UMUMAN yubormasdan
-// rad etilishi kerak (validatsiya tarmoq so'rovidan OLDIN).
+// Mamlakat tashqarisidagi nuqta OSRM'ga UMUMAN yubormasdan rad
+// etilishi kerak (validatsiya tarmoq so'rovidan OLDIN).
 func TestRouteRejectsOutsideServiceArea(t *testing.T) {
 	cfg := baseCfg()
 	cfg.OSRMURL = "http://127.0.0.1:1" // atayin yaroqsiz — chaqirilsa xato beradi
 	h := testServer(t, cfg)
 
 	cases := []string{
-		"/v1/route?from_lat=41.2995&from_lng=69.2401&to_lat=41.01&to_lng=71.23", // Toshkent
+		// ⚠️ Chegara MAMLAKAT bo'yicha (37.0–45.8° N, 55.5–73.5° E),
+		// Chust atrofi bo'yicha emas. Shuning uchun bu yerda
+		// haqiqatan tashqaridagi nuqtalar kerak — Toshkent yoki
+		// Shimkent EMAS, ular ichkarida.
+		//
+		// Qozog'iston, Aqto'be tomoni — shimoldan tashqarida.
+		"/v1/route?from_lat=47.2000&from_lng=60.0000&to_lat=41.01&to_lng=71.23",
+		// Afgʻoniston ichkarisi — janubdan tashqarida.
+		"/v1/route?from_lat=34.5000&from_lng=67.1000&to_lat=41.01&to_lng=71.23",
+		// Kaspiy dengizi — g'arbdan tashqarida.
+		"/v1/route?from_lat=41.0000&from_lng=51.0000&to_lat=41.01&to_lng=71.23",
 		"/v1/route?from_lat=abc&from_lng=71.22&to_lat=41.01&to_lng=71.23",
 		"/v1/route?from_lat=41.00&from_lng=71.22&to_lat=41.01", // to_lng yo'q
 	}
 	for _, path := range cases {
 		if w := do(h, "GET", path, ""); w.Code != http.StatusBadRequest {
 			t.Errorf("%s: kutilgan 400, olingan %d", path, w.Code)
+		}
+	}
+}
+
+// ┌─ MAMLAKAT ICHIDAGI UZOQ MARSHRUT RAD ETILMAYDI ───────────────────┐
+// Ilgari marshrut Chust atrofi bilan cheklangan edi va Toshkentdan
+// yoki Buxorodan so'rov `400` olardi — OSRM esa o'sha yo'llarni
+// bemalol hisoblardi (2026-09-28 da o'lchangan). Bu test o'sha
+// sun'iy to'siqning qaytib kelishiga yo'l qo'ymaydi.
+//
+// OSRM bu yerda yaroqsiz manzilga qaratilgan, ya'ni javob `502`
+// bo'ladi — muhimi shuki, u `400` EMAS: koordinatalar qabul
+// qilingan va so'rov OSRM'ga yetib borgan.
+// └────────────────────────────────────────────────────────────────────┘
+func TestRouteAcceptsWholeCountry(t *testing.T) {
+	cfg := baseCfg()
+	cfg.OSRMURL = "http://127.0.0.1:1"
+	h := testServer(t, cfg)
+
+	cases := map[string]string{
+		"Toshkent ichida":   "/v1/route?from_lat=41.2995&from_lng=69.2401&to_lat=41.3200&to_lng=69.2800",
+		"Chust → Toshkent":  "/v1/route?from_lat=41.0030&from_lng=71.2360&to_lat=41.2995&to_lng=69.2401",
+		"Buxoro → Toshkent": "/v1/route?from_lat=39.7700&from_lng=64.4200&to_lat=41.2995&to_lng=69.2401",
+		"Nukus → Termiz":    "/v1/route?from_lat=42.4600&from_lng=59.6100&to_lat=37.2200&to_lng=67.2800",
+	}
+	for nom, path := range cases {
+		if w := do(h, "GET", path, ""); w.Code == http.StatusBadRequest {
+			t.Errorf("%s: koordinatalar RAD ETILDI (400) — chegara yana torayganmi?", nom)
 		}
 	}
 }

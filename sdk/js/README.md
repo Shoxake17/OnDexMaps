@@ -144,6 +144,9 @@ console.log(yol.geometry);   // GeoJSON LineString
 
 Nuqtalar `[lng, lat]` tartibida (GeoJSON kabi).
 
+Qamrov — **butun O'zbekiston**: Toshkent ichidagi qisqa yo'l ham,
+Nukus–Termiz kabi uzoq marshrut ham. Bu `reverse` dan farq qiladi.
+
 ### `places(bounds)`
 
 Ko'rinayotgan hududdagi ob'ektlar. `bounds` — `map.getBounds()`.

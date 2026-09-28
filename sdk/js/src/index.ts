@@ -32,6 +32,7 @@ export { clampBBox, bboxParam, type BBox, type BoundsLike } from "./bbox.js";
 export {
   SERVICE_AREA,
   REVERSE_AREA,
+  DIRECTIONS_AREA,
   BBOX_SPAN,
   GEOCODE_MAX_LIMIT,
   DEFAULT_API_BASE,

@@ -57,7 +57,11 @@ export interface paths {
         /**
          * A → B marshrut
          * @description Ikki nuqta orasidagi haqiqiy yo'l bo'ylab marshrut: masofa, taxminiy
-         *     vaqt va GeoJSON chizig'i. **Faqat xizmat hududi ichida.**
+         *     vaqt va GeoJSON chizig'i.
+         *
+         *     Qamrov — **butun O'zbekiston** (37.0–45.8° N, 55.5–73.5° E):
+         *     Toshkent ichidagi qisqa yo'l ham, Nukus–Termiz kabi uzoq
+         *     marshrut ham hisoblanadi.
          */
         get: operations["directions"];
         put?: never;

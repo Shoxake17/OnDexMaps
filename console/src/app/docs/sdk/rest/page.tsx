@@ -131,6 +131,13 @@ console.log(yol.geometry);     // GeoJSON LineString`}</Code>
         Nuqtalar <C>[lng, lat]</C> tartibida, GeoJSON kabi. Maydon nomlari <C>distance_m</C> va{" "}
         <C>duration_s</C> — birlik nomda ko&apos;rinib tursin uchun.
       </P>
+      <Callout kind="note">
+        <p>
+          Marshrut <b>butun O&apos;zbekistonda</b> ishlaydi — Toshkent ichidagi qisqa yo&apos;l
+          ham, Nukus–Termiz kabi uzoq marshrut ham. Bu <C>reverse</C> dan farq qiladi: u
+          hozircha faqat Namangan viloyati atrofini qamraydi.
+        </p>
+      </Callout>
 
       <H2 id="places">places(bounds)</H2>
       <P>

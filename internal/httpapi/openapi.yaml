@@ -45,9 +45,9 @@ info:
 
     ## Hududiy qamrov
 
-    - `/v2/geocode`, `/v2/places` — butun O'zbekiston
-    - `/v2/reverse`, `/v2/directions` — xizmat hududi (40.5–41.6° N,
-      70.5–72.0° E)
+    - `/v2/geocode`, `/v2/places`, `/v2/directions` — butun O'zbekiston
+    - `/v2/reverse` — hozircha Namangan viloyati atrofi (40.5–41.6° N,
+      70.5–72.0° E): mahalla va ko'cha ma'lumoti shu hududda to'plangan
   contact:
     name: OnDex Console
     url: https://console.ondex.uz/docs
@@ -212,7 +212,11 @@ paths:
       summary: A → B marshrut
       description: |
         Ikki nuqta orasidagi haqiqiy yo'l bo'ylab marshrut: masofa, taxminiy
-        vaqt va GeoJSON chizig'i. **Faqat xizmat hududi ichida.**
+        vaqt va GeoJSON chizig'i.
+
+        Qamrov — **butun O'zbekiston** (37.0–45.8° N, 55.5–73.5° E):
+        Toshkent ichidagi qisqa yo'l ham, Nukus–Termiz kabi uzoq
+        marshrut ham hisoblanadi.
       parameters:
         - name: origin
           in: query

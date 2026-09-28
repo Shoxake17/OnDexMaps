@@ -25,7 +25,12 @@ export const SERVICE_AREA = {
  * Teskari geokodlash hududi — butun mamlakat EMAS.
  *
  * `/v2/reverse` faqat shu to'rtburchak ichida ishlaydi; tashqarisida
- * server `400` qaytaradi.
+ * server `400` qaytaradi. Sabab — ma'lumot: mahalla va ko'cha
+ * nomlari hozircha shu hududda to'plangan.
+ *
+ * ⚠️ MARSHRUT boshqa: u {@link SERVICE_AREA} — butun mamlakat.
+ * Ikkalasi bir vaqtlar bir xil edi, shuning uchun ularni
+ * adashtirmaslik uchun nomlar aniq.
  */
 export const REVERSE_AREA = {
   minLng: 70.5,
@@ -33,6 +38,16 @@ export const REVERSE_AREA = {
   maxLng: 72.0,
   maxLat: 41.6,
 } as const;
+
+/**
+ * Marshrut hududi — butun O'zbekiston.
+ *
+ * `/v2/directions` o'z OSRM grafigimizdan foydalanadi, u
+ * `uzbekistan.osm.pbf` dan qurilgan. 2026-09-28 da o'lchandi:
+ * Toshkent ichida, Chust→Toshkent, Buxoro→Toshkent, Nukus→Termiz va
+ * Xorazm→Farg'ona (1216 km) — hammasi ishlaydi.
+ */
+export const DIRECTIONS_AREA = SERVICE_AREA;
 
 /**
  * `/v2/places` uchun to'rtburchak tomonining chegarasi — TARIFGA bog'liq.

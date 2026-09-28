@@ -118,6 +118,40 @@ func TestSDKReverseAreaMatchesServer(t *testing.T) {
 	}
 }
 
+// TestSDKDirectionsAreaMatchesServer — SDK'dagi marshrut hududi
+// `routes_route.go` dagi qiymatlar bilan bir xilmi.
+//
+// Bu alohida test, chunki marshrut hududi teskari geokodlashnikidan
+// FARQ QILADI (biri butun mamlakat, ikkinchisi ma'lumot bor joy).
+// Ular bir vaqtlar bir xil edi va SDK ikkalasi uchun bitta
+// o'zgaruvchidan foydalanardi — shu sabab ikkalasi ham alohida
+// tekshiriladi.
+func TestSDKDirectionsAreaMatchesServer(t *testing.T) {
+	matn := sdkLimits(t)
+
+	// `DIRECTIONS_AREA` = `SERVICE_AREA` deb e'lon qilingan, ya'ni
+	// SDK marshrut uchun xizmat hududini ishlatadi. Server tarafdagi
+	// qiymatlar ham shunday bo'lishi kerak.
+	if !strings.Contains(matn, "DIRECTIONS_AREA = SERVICE_AREA") {
+		t.Error("SDK'da `DIRECTIONS_AREA` xizmat hududiga bog'lanmagan")
+	}
+
+	blok := sdkBlok(t, matn, "SERVICE_AREA")
+	for _, c := range []struct {
+		nom  string
+		want float64
+	}{
+		{"minLat", routeMinLat},
+		{"maxLat", routeMaxLat},
+		{"minLng", routeMinLng},
+		{"maxLng", routeMaxLng},
+	} {
+		if got := sdkSoni(t, blok, c.nom); got != c.want {
+			t.Errorf("SDK marshrut hududi %s = %v, serverda %v", c.nom, got, c.want)
+		}
+	}
+}
+
 // TestSDKBBoxSpanMatchesPlans — SDK'dagi tarif chegaralari
 // `devplatform.DefaultPlans()` bilan bir xilmi.
 func TestSDKBBoxSpanMatchesPlans(t *testing.T) {

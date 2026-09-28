@@ -142,7 +142,12 @@ export class OnDexMapClient {
     return this.#get<ReverseResponse>("/reverse", { lat: String(lat), lng: String(lng) });
   }
 
-  /** A nuqtadan B nuqtaga marshrut. */
+  /**
+   * A nuqtadan B nuqtaga marshrut.
+   *
+   * Qamrov — butun O'zbekiston ({@link DIRECTIONS_AREA}), `reverse`
+   * dan farqli. Nuqtalar `[lng, lat]` tartibida, GeoJSON kabi.
+   */
   async directions(from: [number, number], to: [number, number]) {
     return this.#get<DirectionsResponse>("/directions", {
       origin: `${from[1]},${from[0]}`,
