@@ -41,6 +41,7 @@ import (
 
 	"ondexmap/internal/adminapi"
 	"ondexmap/internal/config"
+	"ondexmap/internal/ondexauth"
 	"ondexmap/internal/r2"
 	"ondexmap/internal/storage"
 )
@@ -60,11 +61,25 @@ func main() {
 		slog.Error("sozlama xatosi", "err", err)
 		os.Exit(1)
 	}
-	if strings.TrimSpace(cfg.AdminKey) == "" {
-		slog.Error("ONDEXMAP_ADMIN_KEY yo'q — yozish huquqi kalitsiz ochilmaydi")
+	// ── Kirish: OnDex ID (asosiy) va/yoki statik kalit (favqulodda) ──────
+	// ONDEX_API_URL — ChustApp admin paneli adminning OnDex ID tokeni bilan
+	// keladi, token OnDex'da tekshiriladi (A6/138). Statik kalit endi
+	// ixtiyoriy: faqat favqulodda (break-glass) uchun qoldirilishi mumkin.
+	var ondexV *ondexauth.Verifier
+	if base := strings.TrimSpace(os.Getenv("ONDEX_API_URL")); base != "" {
+		v, err := ondexauth.New(base)
+		if err != nil {
+			slog.Error("ONDEX_API_URL noto'g'ri", "err", err)
+			os.Exit(1)
+		}
+		ondexV = v
+		slog.Info("kirish: OnDex ID admin tokeni", "ondex", base)
+	}
+	if ondexV == nil && strings.TrimSpace(cfg.AdminKey) == "" {
+		slog.Error("na ONDEX_API_URL, na ONDEXMAP_ADMIN_KEY — yozish huquqi himoyasiz ochilmaydi")
 		os.Exit(1)
 	}
-	if len(strings.TrimSpace(cfg.AdminKey)) < 32 {
+	if k := strings.TrimSpace(cfg.AdminKey); k != "" && len(k) < 32 {
 		// `config.validate()` buni production'da TEKSHIRADI, lekin bu
 		// binar validate()dan mustaqil (DevMode talab qilmaydi) —
 		// shuning uchun bu yerda ham QAYTA tekshiriladi: qisqa kalit
@@ -88,6 +103,12 @@ func main() {
 
 	// ── R2 (ixtiyoriy): karantin rasmlarini ko'rish/tozalash uchun ────
 	adminSrv := adminapi.New(cfg, pool)
+	if ondexV != nil {
+		adminSrv.WithOnDex(ondexV)
+	}
+	if strings.TrimSpace(cfg.AdminKey) != "" {
+		slog.Warn("ONDEXMAP_ADMIN_KEY ham yoqiq (favqulodda kirish) — kerak bo'lmasa .env dan olib tashlang")
+	}
 	{
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		store, err := r2.FromConfig(ctx, cfg.R2AccountID, cfg.R2AccessKeyID, cfg.R2SecretAccessKey, cfg.R2Bucket)
@@ -126,7 +147,7 @@ func main() {
 
 	go func() {
 		slog.Info("admin server tayyor (production)", "addr", addr)
-		slog.Warn("bu server YOZISH huquqiga ega — faqat Caddy orqali, ONDEXMAP_ADMIN_KEY bilan himoyalangan bo'lishi SHART")
+		slog.Warn("bu server YOZISH huquqiga ega — faqat Caddy orqali, OnDex ID admin tokeni (yoki favqulodda kalit) bilan")
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("server xatosi", "err", err)
 			os.Exit(1)

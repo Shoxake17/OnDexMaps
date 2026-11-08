@@ -26,8 +26,14 @@ import (
 
 	"ondexmap/internal/apikey"
 	"ondexmap/internal/config"
+	"ondexmap/internal/ondexauth"
 	"ondexmap/internal/storage"
 )
+
+// OnDexVerifier — OnDex admin tokeni tekshiruvchisi (`ondexauth.Verifier`).
+type OnDexVerifier interface {
+	Verify(ctx context.Context, token string) (*ondexauth.Admin, error)
+}
 
 // maxBodyBytes — so'rov tanasi chegarasi.
 //
@@ -39,6 +45,9 @@ type Server struct {
 	cfg  *config.Config
 	db   *storage.Pool
 	keys *apikey.Set
+	// ondex — OnDex ID admin tokeni (A6/138): ChustApp admin paneli shu
+	// bilan kiradi. `nil` — faqat kalit (lokal `cmd/admin`).
+	ondex OnDexVerifier
 	// r2 — karantin rasmlarini R2'dan o'qish uchun (`WithR2`). `nil` —
 	// rasm endpointi 503 qaytaradi. `internal/httpapi`'dan MUSTAQIL
 	// nusxa: paket "BUTUNLAY AJRATILGAN" tamoyiliga ko'ra bu yerda
@@ -115,10 +124,39 @@ func (s *Server) Handler() http.Handler {
 	return securityHeaders(mux)
 }
 
-// requireKey — admin kaliti tekshiruvi.
+// WithOnDex — OnDex ID admin tokenini qabul qilish (production adminserver).
+func (s *Server) WithOnDex(v OnDexVerifier) *Server {
+	s.ondex = v
+	return s
+}
+
+// requireKey — admin tekshiruvi: OnDex ID admin tokeni (`Authorization:
+// Bearer`, OnDex'da tekshiriladi) YOKI admin kaliti (`X-API-Key`).
 func (s *Server) requireKey(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if h := r.Header.Get("Authorization"); s.ondex != nil && strings.HasPrefix(h, "Bearer ") {
+			a, err := s.ondex.Verify(r.Context(), strings.TrimPrefix(h, "Bearer "))
+			switch {
+			case errors.Is(err, ondexauth.ErrUnauthorized):
+				fail(w, http.StatusUnauthorized, "OnDex admin sessiyasi qabul qilinmadi — qaytadan kiring")
+				return
+			case err != nil:
+				// Fail closed: OnDex javob bermasa ruxsat YO'Q.
+				fail(w, http.StatusServiceUnavailable, "OnDex tekshiruvi vaqtincha ishlamayapti")
+				return
+			}
+			if r.Method != http.MethodGet {
+				// Kim nima qildi — har bir yozuvchi amal admin nomi bilan.
+				slog.Info("admin amali", "admin", a.UserID, "session", a.SessionID, "method", r.Method, "path", r.URL.Path)
+			}
+			next(w, r)
+			return
+		}
 		if s.keys.Empty() {
+			if s.ondex != nil {
+				fail(w, http.StatusUnauthorized, "OnDex admin tokeni kerak (Authorization: Bearer)")
+				return
+			}
 			// Kalit sozlanmagan bo'lsa vosita OCHILMAYDI. Bo'sh kalit
 			// bilan ishlashga ruxsat berish — yozish huquqini
 			// himoyasiz qoldirish degani.
