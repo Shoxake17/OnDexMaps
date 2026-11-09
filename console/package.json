@@ -11,13 +11,16 @@
   },
   "dependencies": {
     "@scalar/api-reference-react": "^0.8.70",
-    "next": "16.3.5",
+    "next": "16.4.1",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
   "overrides": {
     "@ai-sdk/provider-utils": "^4.0.33",
-    "ts-deepmerge": "^8.0.0"
+    "ts-deepmerge": "^8.0.0",
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "11.0.1"
+    }
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -25,7 +28,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.3.5",
+    "eslint-config-next": "16.4.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
