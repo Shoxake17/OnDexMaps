@@ -24,6 +24,9 @@
 .DS_Store
 *.pem
 
+# npm paketidan nusxa (scripts/copy-maplibre-worker.mjs, predev/prebuild)
+/public/vendor/maplibre-gl-worker.mjs
+
 # debug
 npm-debug.log*
 yarn-debug.log*

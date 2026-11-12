@@ -21,7 +21,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import maplibregl, { type Map as MLMap } from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
+import { type Map as MLMap } from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -154,7 +155,7 @@ function applyBuildings(map: MLMap, is3D: boolean, satellite: boolean) {
     map.setPaintProperty(
       BUILDING.flat,
       "fill-opacity",
-      is3D ? flatOpacity.get(map) : 1,
+      (is3D ? flatOpacity.get(map) : 1) as never,
     );
   }
 }
@@ -176,13 +177,38 @@ export function useMap(): MapContextValue {
   return ctx;
 }
 
-/** PMTiles protokoli global — bir marta ro'yxatdan o'tadi. */
+/**
+ * MapLibre v6 workeri o'z statik manzilimizdan (scripts/copy-maplibre-worker.mjs
+ * predev/prebuild'da `public/vendor/` ga ko'chiradi). Bundle ichidagi
+ * `import.meta.url` Turbopack'da chunk'ga ishora qiladi va worker o'rniga HTML
+ * yuklanib, `load` hech qachon chiqmaydi (2026-10-06 da 6.4.1 bilan shunday
+ * bo'lgan). `?v=` — paket yangilanganda eski worker keshdan olinmasin.
+ * 2026-11-12 (SEC-ZERO, Plane 456): 4.7.1 (GHSA-jrc7-96c5-q579, CRITICAL XSS) dan ko'tarildi.
+ */
+const MAPLIBRE_WORKER_PATH = "/vendor/maplibre-gl-worker.mjs";
+
+/** PMTiles protokoli va worker manzili global — bir marta. */
 let protocolReady = false;
 function ensurePMTilesProtocol() {
   if (protocolReady) return;
+  maplibregl.setWorkerUrl(`${MAPLIBRE_WORKER_PATH}?v=${encodeURIComponent(maplibregl.getVersion())}`);
   maplibregl.addProtocol("pmtiles", new Protocol().tile);
   protocolReady = true;
 }
+
+/**
+ * MapLibre v5+ WebGL2 ni talab qiladi. Busiz `new Map` xato beradi — oq ekran
+ * o'rniga foydalanuvchiga sabab ko'rsatiladi (bu saytda Google zaxirasi yo'q).
+ */
+function hasWebGL2(): boolean {
+  try {
+    return !!document.createElement("canvas").getContext("webgl2");
+  } catch {
+    return false;
+  }
+}
+const NO_WEBGL2_MESSAGE =
+  "Brauzeringiz xaritani chizolmaydi (WebGL2 yo'q yoki o'chirilgan). Chrome, Edge, Firefox yoki Safari'ning yangi versiyasida oching.";
 
 function selectionFilter(id: string | null) {
   return id === null
@@ -300,21 +326,37 @@ export function MapProvider({
     // (bosh sahifa) — foydalanuvchining saqlangan tanlovi.
     wantSatellite.current = initRef.current.satellite ?? prefersSatellite();
 
-    const map = new maplibregl.Map({
-      container: holder.current,
-      style: STYLE_URL,
-      center: initRef.current.center,
-      zoom: initRef.current.zoom,
-      // Boshlang'ich ko'rinish — 3D, va foydalanuvchi 2D ni tanlagan
-      // bo'lsa keyingi kirishda ham 2D. Ilgari bu saqlanmasdi:
-      // 3D ga o'tkazilgan xarita qayta ochilganda o'z holiga qaytardi.
-      pitch: start3D ? 50 : 0,
-      bearing: start3D ? -17 : 0,
-      maxBounds: UZ_BOUNDS,
-      minZoom: 5.5,
-      antialias: true,
-      attributionControl: false,
-    });
+    // Xabar mikrovazifada qo'yiladi: effekt tanasida sinxron setState
+    // kaskad renderga olib keladi (react-hooks/set-state-in-effect).
+    const showNoWebGL = () => queueMicrotask(() => setStyleError(NO_WEBGL2_MESSAGE));
+    if (!hasWebGL2()) {
+      showNoWebGL();
+      return;
+    }
+    let map: MLMap;
+    try {
+      map = new maplibregl.Map({
+        container: holder.current,
+        style: STYLE_URL,
+        center: initRef.current.center,
+        zoom: initRef.current.zoom,
+        // Boshlang'ich ko'rinish — 3D, va foydalanuvchi 2D ni tanlagan
+        // bo'lsa keyingi kirishda ham 2D. Ilgari bu saqlanmasdi:
+        // 3D ga o'tkazilgan xarita qayta ochilganda o'z holiga qaytardi.
+        pitch: start3D ? 50 : 0,
+        bearing: start3D ? -17 : 0,
+        maxBounds: UZ_BOUNDS,
+        minZoom: 5.5,
+        // v6: WebGL konteksti sozlamalari alohida obyektda.
+        canvasContextAttributes: { antialias: true },
+        attributionControl: false,
+      });
+    } catch (e) {
+      // WebGL konteksti yaratilmadi (drayver, xotira) — oq ekran emas, sabab.
+      console.error("[xarita]", e);
+      showNoWebGL();
+      return;
+    }
     setMap(map);
 
     // ⚠️ Uslub yuklanishidan OLDIN ulanadi: `poi-dot` qatlami
@@ -325,21 +367,18 @@ export function MapProvider({
     // talabi — ikki manba endi bu 3 klassda ham farqsiz ko'rinadi).
     // Rasm topilmasa (yoki hali yuklanmagan oraliqda) — generik Lucide
     // belgi (`makePoiIcon`), avvalgidek.
-    map.on("styleimagemissing", (e) => {
-      if (!e.id.startsWith(POI_PREFIX) || map.hasImage(e.id)) return;
-      const cls = e.id.slice(POI_PREFIX.length);
-      const addFallback = () => {
-        if (map.hasImage(e.id)) return;
-        const img = makePoiIcon(cls);
-        if (img) map.addImage(e.id, img, { pixelRatio: POI_PIXEL_RATIO });
-      };
+    //
+    // v6 (2026-11-12): `styleimagemissing` hodisasi endi JORIY so'rov uchun
+    // rasmni qo'sha olmaydi — belgilar chizilmay qolardi. MapLibre resolver
+    // promise'ini KUTADI, shuning uchun asinxron PNG ham to'g'ri ishlaydi.
+    map.setMissingStyleImageResolver(async (id) => {
+      if (!id.startsWith(POI_PREFIX) || map.hasImage(id)) return;
+      const cls = id.slice(POI_PREFIX.length);
       const pending = loadPoiPngIcon(cls);
-      if (!pending) return addFallback();
-      pending.then((img) => {
-        if (map.hasImage(e.id)) return;
-        if (img) map.addImage(e.id, img, { pixelRatio: POI_PIXEL_RATIO });
-        else addFallback();
-      });
+      const png = pending ? await pending : null;
+      if (map.hasImage(id)) return;
+      const img = png ?? makePoiIcon(cls);
+      if (img) map.addImage(id, img, { pixelRatio: POI_PIXEL_RATIO });
     });
 
     // ⚠️ Zoom (+/−), kompas va geolokatsiya tugmalari MapLibre'ning

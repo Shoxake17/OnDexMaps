@@ -10,7 +10,8 @@
  */
 
 import { useEffect, useRef } from "react";
-import maplibregl, { type Map as MLMap, type Marker } from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
+import { type Map as MLMap, type Marker } from "maplibre-gl";
 
 import { logoPinElement } from "@/components/map/logoPin";
 import type { LngLat } from "@/lib/geo";

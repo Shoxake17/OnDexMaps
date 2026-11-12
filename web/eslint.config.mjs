@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // npm paketidan nusxa (scripts/copy-maplibre-worker.mjs) — bizning kod emas.
+    "public/vendor/**",
   ]),
 ]);
 

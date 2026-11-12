@@ -21,7 +21,7 @@
 import { Building2, Droplet, House, MapPin, Milestone, Route, Search, X } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
 
 import { logoPinElement } from "@/components/map/logoPin";
 import { useMap } from "@/components/map/MapProvider";
