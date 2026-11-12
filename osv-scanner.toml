@@ -5,70 +5,12 @@
 # tekshiruv TO'LIQ saqlanadi, faqat ANIQ TEKSHIRILGAN va asoslangan
 # istisnolar qo'shiladi — izohsiz istisno YO'Q.
 # └───────────────────────────────────────────────────────────────────┘
-
-[[IgnoredVulns]]
-id = "GHSA-jrc7-96c5-q579"
-reason = '''
-maplibre-gl <=6.4.0 — kritik XSS (CVE-2026-85061, CVSS 9.6). Tuzatilgan
-zaiflik MapLibre'ning O'Z `AttributionControl`i (`DOM.sanitize()`)
-ichida: ishonchsiz/uchinchi tomon atribut satrlarini HTML sifatida
-kiritganda ekspluatatsiya qilinadi.
-
-OnDexMap'ning O'Z ilovalari bu qatlamni ULAMAYDI: xarita
-`attributionControl: false` bilan yaratiladi
-(`web/src/components/map/MapProvider.tsx:316`,
-`internal/mapui/assets/ondexmap.js:86`), krediti o'zimizning React
-komponenti (`MapCredits.tsx`) orqali chiqadi — u faqat sobit, kodda
-yozilgan matn ko'rsatadi, MapLibre'ning zaif `DOM.sanitize()` yo'liga
-kirmaydi.
-
-⚠️ 2026-09-27 da bu rasm O'ZGARDI va istisno shundan keyin ham
-asoslimi — quyida:
-
-Hujjatlar endi INTEGRATORGA `AttributionControl` ishlatishni aytadi va
-`style.json` dagi `attribution` satri HTML saqlaydi (brend yozuvi).
-Ya'ni zaif kod yo'li endi integrator sahifasida ishlaydi. Shunga
-qaramay istisno kuchda qoladi, chunki:
-
-  * bu faylning vazifasi — OnDexMap REPOSITORIYASIDAGI bog'liqlik;
-    o'z ilovalarimizda zaif yo'l hamon ulanmaydi;
-  * atribut satri BIZNING serverimizdan (`style-chust.json`) keladi,
-    ya'ni ishonchsiz kirish emas — u sobit va kodda yozilgan;
-  * haqiqiy xavf integrator `customAttribution` ga FOYDALANUVCHI
-    matnini qo'shsa paydo bo'ladi. Shuning uchun hujjatga aniq
-    ogohlantirish qo'yildi (`console/src/app/docs/js/general`,
-    «Atribut» bo'limi): atributga foydalanuvchi matni qo'yilmaydi.
-
-⚠️ 2026-09-27, ikkinchi yangilanish — ENDI KOD BILAN QULFLANGAN:
-
-Ogohlantirish yetarli emas edi (hujjat o'qilmasligi mumkin), shuning
-uchun `@ondexmap/sdk` ning `createMap()` funksiyasi `customAttribution`
-ni tekshiradi va skript, `on…=` hodisa atributi yoki `javascript:`
-sxemasi uchrasa `throw` qiladi (`sdk/js/src/map.ts:tekshirAtribut`).
-Advisory'dagi ekspluatatsiya naqshi (`<details open ontoggle=…>`) test
-bilan qamrab olingan (`sdk/js/test/sdk.test.mjs`).
-
-Aniqlik uchun, 4.7.1 haqida O'LCHANGAN fakt: zaif funksiyaning O'ZI bu
-versiyada YO'Q — `dist/maplibre-gl.js` da `sanitize` satri umuman
-uchramaydi (`DOM.sanitize()` keyingi major'da qo'shilgan). Ya'ni
-advisory oralig'i ("<=6.4.0") 4.x ni ham qamrab olgan bo'lsa-da, aynan
-bu bypass 4.7.1 ga tegishli emas. Buning o'rniga 4.x atribut va popup
-HTML'ini UMUMAN sanitizatsiya qilmaydi, shuning uchun himoya yuqoridagi
-uch qatlam bilan ta'minlangan: `attributionControl: false` o'z
-ilovalarimizda, sobit matn, va SDK'dagi tekshiruv.
-
-`Popup.setHTML()` — 4.x dagi ikkinchi sanitizatsiyasiz yo'l — OnDexMap
-kod bazasida umuman ishlatilmaydi (2026-09-27 da butun repo bo'ylab
-tekshirilgan).
-
-Tuzatilgan versiya (6.4.1+) WebGL2'ni MAJBURIY qiladi (WebGL1 qo'llovi
-BUTUNLAY olib tashlangan). 2026-09-23 da sinab ko'rilgan: production'da
-haqiqiy foydalanuvchi brauzerida xarita butunlay OQ (bo'sh) bo'lib
-qoldi — WebGL2 qo'llamaydigan qurilma/brauzer uchun xarita to'liq
-ishlamay qoladi (kod xatosi emas, MapLibre'ning o'z platforma talabi).
-Bu OnDexMap uchun v4.7.1'ni ushlab turishdan KO'RA OG'IRROQ regressiya.
-
-Qayta ko'rib chiqish sharti: (a) 6.x/keyingi minor versiya WebGL1'ni
-qaytarsa, YOKI (b) foydalanuvchilar bazasida WebGL2 qo'llovi 100%
-ekanligi alohida tasdiqlansa.
-'''
+#
+# 2026-11-12 (SEC-ZERO, Plane 456): GHSA-jrc7-96c5-q579 (maplibre-gl <=6.4.0,
+# CRITICAL XSS) istisnosi OLIB TASHLANDI. Hamma nusxa yo'q qilindi:
+#   * web — maplibre-gl 6.18.0 (setWorkerUrl, WebGL2 xabari);
+#   * sdk/js — @ondexmap/sdk 0.2.0, peerDependencies ^6.18.0;
+#   * internal/mapui — 4.7.1 nusxasi bilan birga O'CHIRILDI (hech qayerda
+#     import qilinmagan o'lik paket edi);
+#   * console hujjatlari — dasturchilarga 6.18.0 o'rgatiladi.
+# Hozir istisno YO'Q. Yangi zaiflik = yangilash yoki kodni tuzatish.
