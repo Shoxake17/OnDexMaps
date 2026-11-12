@@ -9,9 +9,13 @@ hujjatdan yoki serverdan jimgina ortda qola olmaydi.
 
 ```bash
 npm install @ondexmap/sdk
-# xarita ham kerak bo'lsa:
-npm install maplibre-gl pmtiles
+# xarita ham kerak bo'lsa (maplibre-gl 6.18+ va pmtiles 4.5+):
+npm install maplibre-gl@^6.18.0 pmtiles@^4.5.0
 ```
+
+> ⚠️ **maplibre-gl 6.18.0 dan eskisini ishlatmang.** 6.4.0 va undan oldingi
+> versiyalarda atribut sanitizatori chetlab o'tiladi (GHSA-jrc7-96c5-q579,
+> CRITICAL XSS). SDK 0.2.0 dan boshlab `peerDependencies` buni talab qiladi.
 
 API kalit: <https://console.ondex.uz>
 
@@ -39,7 +43,7 @@ tushadi.
 ## Xarita
 
 ```js
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import { createMap } from "@ondexmap/sdk";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -51,6 +55,19 @@ const map = createMap({
   center: [69.2401, 41.2995],
   zoom: 12,
 });
+```
+
+> **maplibre-gl 6 — ES modul, default eksport yo'q:** `import * as maplibregl`.
+>
+> **Next.js (Turbopack) va boshqa bundlerlar:** MapLibre 6 o'z ishchisini
+> (`maplibre-gl-worker.mjs`) modul manzilidan topadi; bundle ichida bu manzil
+> buziladi va xarita jimgina yuklanmaydi. Ishchini statik papkaga nusxalang
+> (`node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs` → `public/vendor/`)
+> va xarita yaratishdan oldin aniq manzilni bering:
+
+<!-- kod-tekshirilmaydi -->
+```js
+maplibregl.setWorkerUrl("/vendor/maplibre-gl-worker.mjs");
 ```
 
 `createMap` atributni **o'zi qo'yadi va uni o'chirib bo'lmaydi**. Bu
@@ -65,8 +82,9 @@ O'z brendingizni yoniga qo'shish mumkin:
 createMap({ /* … qolgan parametrlar … */ customAttribution: "© Mening Kompaniyam" });
 ```
 
-> ⚠️ Atribut yorlig'i HTML sifatida joylashtiriladi va MapLibre uni
-> sanitizatsiya qilmaydi. Shuning uchun SDK `customAttribution` ni
+> ⚠️ Atribut yorlig'i HTML sifatida joylashtiriladi. MapLibre 6.18+ uni
+> sanitizatsiya qiladi, lekin bunga yolg'iz tayanmaymiz (6.4 gacha bu himoya
+> chetlab o'tilgan). Shuning uchun SDK `customAttribution` ni
 > tekshiradi: skript, `on…=` hodisasi yoki `javascript:` uchrasa
 > `throw` qiladi. **Bu qiymatni foydalanuvchi kiritmasidan olmang.**
 

@@ -96,7 +96,7 @@ type AttribCtorArgs = [{ compact: boolean; customAttribution?: string }];
 export interface CreateMapOptions<M extends MapLike = MapLike> {
   /** Xarita joylashadigan element yoki uning `id` si. */
   container: HTMLElement | string;
-  /** `import maplibregl from "maplibre-gl"` natijasi. */
+  /** `import * as maplibregl from "maplibre-gl"` natijasi (v6+ da default eksport yo'q). */
   maplibregl: MapLibreLike<M>;
   /** `new Protocol().tile` — `import { Protocol } from "pmtiles"`. */
   pmtilesProtocol?: unknown;
@@ -133,7 +133,7 @@ export interface CreateMapOptions<M extends MapLike = MapLike> {
  * └────────────────────────────────────────────────────────────────────┘
  *
  * @example
- * import maplibregl from "maplibre-gl";
+ * import * as maplibregl from "maplibre-gl";
  * import { Protocol } from "pmtiles";
  * import { createMap } from "@ondexmap/sdk";
  *

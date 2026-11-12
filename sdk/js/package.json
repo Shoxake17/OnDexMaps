@@ -1,6 +1,6 @@
 {
   "name": "@ondexmap/sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "OnDexMap rasmiy JavaScript/TypeScript SDK'si — xarita va REST API.",
   "license": "MIT",
   "homepage": "https://console.ondex.uz/docs/sdk",
@@ -31,8 +31,8 @@
     "prepublishOnly": "npm run verify"
   },
   "peerDependencies": {
-    "maplibre-gl": "^4.7.1",
-    "pmtiles": "^3.2.1"
+    "maplibre-gl": "^6.18.0",
+    "pmtiles": "^4.5.0"
   },
   "peerDependenciesMeta": {
     "maplibre-gl": {
@@ -43,9 +43,9 @@
     }
   },
   "devDependencies": {
-    "maplibre-gl": "4.7.1",
+    "maplibre-gl": "6.18.0",
     "openapi-typescript": "^7.13.0",
-    "pmtiles": "3.2.1",
+    "pmtiles": "4.5.0",
     "typescript": "^5.9.3"
   }
 }
