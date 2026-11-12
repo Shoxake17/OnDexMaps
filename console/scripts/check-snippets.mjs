@@ -95,10 +95,12 @@ for (const f of await sahifalar(ILDIZ)) {
     // To'liq HTML hujjati — sintaksis tekshiruvidan tashqarida.
     if (/^\s*(<!DOCTYPE|<html|<head|<body)/i.test(kod)) continue;
 
-    // `<script>` yoki Vue `<script setup>` ichidagi kodni olamiz.
-    const sc = kod.match(/<script(?:\s+setup)?>([\s\S]*?)<\/script>/);
+    // `<script>`, `<script type="module">` (MapLibre 6 — ES modul) yoki Vue
+    // `<script setup>` ichidagi kodni olamiz. `src` bilan ulangan bo'sh
+    // skriptlar o'tkazib yuboriladi — birinchi MAZMUNLI blok tekshiriladi.
+    const sc = [...kod.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].find((m) => m[1].trim());
     if (sc) kod = sc[1];
-    else if (/<template>/.test(kod)) continue;
+    else if (/<template>|<script/.test(kod)) continue;
 
     // Uch nuqta TO'LDIRUVCHI o'rnida bo'lsa (`source: "…"`,
     // `paint: { … }`) — bu ataylab to'liq bo'lmagan namuna.
