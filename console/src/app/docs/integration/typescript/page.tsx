@@ -20,7 +20,7 @@ export default function TypeScriptPage() {
       />
 
       <H2 id="ornatish">O&apos;rnatish</H2>
-      <Terminal>{`npm install maplibre-gl@4.7.1 pmtiles@3.2.1`}</Terminal>
+      <Terminal>{`npm install maplibre-gl@6.18.0 pmtiles@4.5.0`}</Terminal>
 
       <H2 id="tiplar">Xarita moduli</H2>
       <P>
@@ -31,7 +31,8 @@ export default function TypeScriptPage() {
         files={[
           {
             name: "map.ts",
-            code: `import maplibregl, { type Map as MapLibreMap, type MapOptions } from "maplibre-gl";
+            code: `import * as maplibregl from "maplibre-gl";
+import { type Map as MapLibreMap, type MapOptions } from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import "maplibre-gl/dist/maplibre-gl.css";
 

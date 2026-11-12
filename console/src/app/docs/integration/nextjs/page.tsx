@@ -21,7 +21,40 @@ export default function NextjsPage() {
       />
 
       <H2 id="ornatish">O&apos;rnatish</H2>
-      <Terminal>{`npm install maplibre-gl@4.7.1 pmtiles@3.2.1`}</Terminal>
+      <Terminal>{`npm install maplibre-gl@6.18.0 pmtiles@4.5.0`}</Terminal>
+
+      <H2 id="ishchi">Ishchi fayl (Turbopack) — MAJBURIY</H2>
+      <P>
+        MapLibre 6 o&apos;z ishchisini (<C>maplibre-gl-worker.mjs</C>) modul manzilidan topadi. Next.js
+        bundle&apos;ida bu manzil buziladi: ishchi o&apos;rniga sahifa HTML&apos;i yuklanadi va xarita{" "}
+        <strong className="text-foreground">xato xabarisiz</strong> chizilmay qoladi. Ishchini statik
+        papkaga nusxalang va xarita yaratishdan oldin aniq manzilni bering (pastdagi komponentda{" "}
+        <C>setWorkerUrl</C>):
+      </P>
+      <Tabs
+        files={[
+          {
+            name: "scripts/copy-maplibre-worker.mjs",
+            code: `import { copyFileSync, mkdirSync } from "node:fs";
+
+mkdirSync("public/vendor", { recursive: true });
+copyFileSync(
+  "node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs",
+  "public/vendor/maplibre-gl-worker.mjs",
+);`,
+          },
+          {
+            name: "package.json",
+            lang: "json",
+            code: `"scripts": {
+  "predev": "node scripts/copy-maplibre-worker.mjs",
+  "dev": "next dev",
+  "prebuild": "node scripts/copy-maplibre-worker.mjs",
+  "build": "next build"
+}`,
+          },
+        ]}
+      />
 
       <H2 id="ssr">SSR va SSG</H2>
       <P>Komponentni faqat klientda yuklang:</P>
@@ -51,10 +84,13 @@ export default function Page() {
             name: "components/OnDexMap.tsx",
             code: `"use client";
 import { useEffect, useRef } from "react";
-import maplibregl, { type Map as MapLibreMap } from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
+import { type Map as MapLibreMap } from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import "maplibre-gl/dist/maplibre-gl.css";
 
+// Ishchi — o'z statik manzilingizdan (yuqoridagi "Ishchi fayl" bo'limi).
+maplibregl.setWorkerUrl("/vendor/maplibre-gl-worker.mjs");
 maplibregl.addProtocol("pmtiles", new Protocol().tile);
 
 export default function OnDexMap({

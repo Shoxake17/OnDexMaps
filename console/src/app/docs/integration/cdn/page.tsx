@@ -46,14 +46,16 @@ export default function CdnPage() {
 <html lang="uz">
 <head>
   <meta charset="utf-8" />
-  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
-  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <script src="https://unpkg.com/pmtiles@3.2.1/dist/pmtiles.js"></script>
+  <link href="https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js"></script>
 </head>
 <body>
   <div id="map" style="width: 100%; height: 400px"></div>
 
-  <script>
+  <!-- MapLibre 6 — ES modul: type="module" va import SHART -->
+  <script type="module">
+    import * as maplibregl from "https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.mjs";
+
     maplibregl.addProtocol("pmtiles", new pmtiles.Protocol().tile);
 
     const map = new maplibregl.Map({
@@ -101,8 +103,11 @@ export default function CdnPage() {
             <C key="1">maplibre-gl.css</C>,
             "Boshqaruv tugmalari va markerlar joylashuvi. Ulanmasa ular siljib qoladi",
           ],
-          [<C key="2">maplibre-gl.js</C>, "Xarita kutubxonasi"],
           [<C key="3">pmtiles.js</C>, "Vektor tile fayllarini Range so'rovi bilan o'qiydi"],
+          [
+            <C key="2">maplibre-gl.mjs</C>,
+            "Xarita kutubxonasi — ES modul: faqat <script type=\"module\"> ichida import bilan ulanadi",
+          ],
           [
             <C key="4">addProtocol</C>,
             "Xarita yaratilishidan OLDIN chaqiriladi — aks holda uslubdagi pmtiles:// manbalari yuklanmaydi",
@@ -111,9 +116,12 @@ export default function CdnPage() {
       />
       <Callout kind="warn">
         <p>
-          Versiyalar URL&apos;da qat&apos;iy ko&apos;rsatiladi (<C>@4.7.1</C>, <C>@3.2.1</C>).{" "}
-          <C>@latest</C> yozmang: <C>maplibre-gl</C> 6-versiyasi WebGL2&apos;ni majburiy talab qiladi va
-          uni qo&apos;llab-quvvatlamaydigan qurilmada xarita xato xabarisiz oq qoladi.
+          Versiyalar URL&apos;da qat&apos;iy ko&apos;rsatiladi (<C>@6.18.0</C>, <C>@4.5.0</C>).{" "}
+          <C>@latest</C> yozmang — yangi major versiya kutilmaganda o&apos;zgarishi mumkin.{" "}
+          <C>maplibre-gl</C> ning <strong className="text-foreground">6.4.0 va undan eski</strong>{" "}
+          versiyalarini ishlatmang: ularda kritik XSS zaifligi bor (GHSA-jrc7-96c5-q579).
+          MapLibre 6 WebGL2 talab qiladi — u yo&apos;q brauzerda <C>new Map</C> xato beradi, uni
+          ushlab foydalanuvchiga xabar ko&apos;rsating.
         </p>
       </Callout>
 
@@ -142,7 +150,7 @@ export default function CdnPage() {
       <Panel label="Kerakli talablar">
         <CheckList
           items={[
-            <>WebGL qo&apos;llab-quvvatlaydigan brauzer</>,
+            <>WebGL2 qo&apos;llab-quvvatlaydigan brauzer (Chrome, Edge, Firefox, Safari — yangi versiyalari)</>,
             <>
               Nolga teng bo&apos;lmagan o&apos;lchamli konteyner (<C>#map</C>)
             </>,

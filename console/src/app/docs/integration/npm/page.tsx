@@ -37,15 +37,15 @@ export default function NpmPage() {
       <H2 id="ornatish">O&apos;rnatish</H2>
       <Split>
         <div>
-          <Terminal>{`npm install maplibre-gl@4.7.1 pmtiles@3.2.1`}</Terminal>
+          <Terminal>{`npm install maplibre-gl@6.18.0 pmtiles@4.5.0`}</Terminal>
           <Tabs
             files={[
               {
                 name: "package.json",
                 code: `{
   "dependencies": {
-    "maplibre-gl": "4.7.1",
-    "pmtiles": "3.2.1"
+    "maplibre-gl": "6.18.0",
+    "pmtiles": "4.5.0"
   }
 }`,
               },
@@ -58,16 +58,17 @@ export default function NpmPage() {
               items={[
                 <>Node.js 18 yoki undan yuqori</>,
                 <>ES modullarini qo&apos;llab-quvvatlaydigan bundler</>,
-                <>WebGL qo&apos;llab-quvvatlaydigan brauzer</>,
+                <>WebGL2 qo&apos;llab-quvvatlaydigan brauzer</>,
                 <>Nolga teng bo&apos;lmagan o&apos;lchamli konteyner</>,
               ]}
             />
           </Panel>
           <Callout kind="warn">
             <p>
-              Versiyalar <C>^</C> belgisisiz, qat&apos;iy ko&apos;rsatiladi. <C>maplibre-gl</C>{" "}
-              6-versiyasi WebGL2&apos;ni majburiy talab qiladi va uni qo&apos;llab-quvvatlamaydigan
-              qurilmada xarita xato xabarisiz oq qoladi.
+              Versiyalar <C>^</C> belgisisiz, qat&apos;iy ko&apos;rsatiladi. <C>maplibre-gl</C> ning
+              6.4.0 va undan eski versiyalarini ishlatmang — ularda kritik XSS zaifligi bor
+              (GHSA-jrc7-96c5-q579). MapLibre 6 — ES modul (<C>import * as maplibregl</C>) va
+              WebGL2 talab qiladi.
             </p>
           </Callout>
         </div>
@@ -82,7 +83,7 @@ export default function NpmPage() {
         files={[
           {
             name: "map.js",
-            code: `import maplibregl from "maplibre-gl";
+            code: `import * as maplibregl from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -115,7 +116,7 @@ export function createMap(container, options = {}) {
           {
             name: "main.js",
             code: `import { createMap } from "./map.js";
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
 
 const map = createMap(document.getElementById("map"));
 map.addControl(new maplibregl.NavigationControl(), "top-right");
@@ -176,9 +177,20 @@ map.addControl(new maplibregl.ScaleControl({ unit: "metric" }));`,
       />
       <Callout kind="note">
         <p>
-          Kutubxona tile&apos;larni fon oqimida (web worker) ochadi. Bundler worker&apos;ni{" "}
-          <C>blob:</C> orqali yaratadi — qat&apos;iy CSP bo&apos;lsa <C>worker-src blob:</C> kerak
-          bo&apos;ladi (<A href="/docs/security/csp">CSP va HTTPS</A>).
+          Kutubxona tile&apos;larni fon oqimida (web worker) ochadi — qat&apos;iy CSP bo&apos;lsa{" "}
+          <C>worker-src &apos;self&apos; blob:</C> kerak bo&apos;ladi (
+          <A href="/docs/security/csp">CSP va HTTPS</A>).
+        </p>
+      </Callout>
+      <Callout kind="warn">
+        <p>
+          MapLibre 6 ishchi faylini (<C>maplibre-gl-worker.mjs</C>) o&apos;z modul manzilidan topadi.
+          Bundler kutubxonani boshqa joyga ko&apos;chirsa (masalan Next.js/Turbopack), xarita{" "}
+          <strong className="text-foreground">xato xabarisiz</strong> chizilmaydi —{" "}
+          <C>load</C> hodisasi chiqmaydi. Bunday holda ishchini statik papkaga nusxalab,{" "}
+          <C>maplibregl.setWorkerUrl(&quot;/vendor/maplibre-gl-worker.mjs&quot;)</C> ni xarita
+          yaratishdan oldin chaqiring —{" "}
+          <A href="/docs/integration/nextjs#ishchi">Next.js → Ishchi fayl</A>.
         </p>
       </Callout>
 

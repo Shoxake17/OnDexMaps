@@ -40,7 +40,7 @@ export default function SdkPage() {
           <Terminal>{`npm install @ondexmap/sdk
 
 # xarita ham kerak bo'lsa:
-npm install maplibre-gl@4.7.1 pmtiles@3.2.1`}</Terminal>
+npm install maplibre-gl@6.18.0 pmtiles@4.5.0`}</Terminal>
           <P>
             <C>maplibre-gl</C> va <C>pmtiles</C> — <C>peerDependencies</C>, va ular{" "}
             <b>ixtiyoriy</b>. Faqat REST kerak bo&apos;lsa ularni o&apos;rnatmang: SDK&apos;ning

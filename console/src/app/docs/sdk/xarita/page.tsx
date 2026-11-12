@@ -39,7 +39,7 @@ export default function SdkXaritaPage() {
         files={[
           {
             name: "map.js",
-            code: `import maplibregl from "maplibre-gl";
+            code: `import * as maplibregl from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import { createMap } from "@ondexmap/sdk";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -107,7 +107,7 @@ map.on("moveend", () => console.log(map.getBounds()));`,
             required: true,
             children: (
               <>
-                <C>import maplibregl from &quot;maplibre-gl&quot;</C> natijasi.
+                <C>import * as maplibregl from &quot;maplibre-gl&quot;</C> natijasi (v6 da default eksport yo&apos;q).
               </>
             ),
           },
@@ -226,10 +226,11 @@ curl -I https://maps.ondex.uz/tiles/style.json
 #    (createMap'ga pmtilesProtocol berilmagan bo'lsa — yo'q)`}</Terminal>
       <Callout kind="warn">
         <p>
-          <C>maplibre-gl</C> 6-versiyasi WebGL2&apos;ni majburiy talab qiladi va uni
-          qo&apos;llamaydigan qurilmada xarita <b>xato xabarisiz</b> oq qoladi. SDK{" "}
-          <C>peerDependencies</C>&apos;da <C>^4.7.1</C> ko&apos;rsatilgan — versiyani
-          ko&apos;tarishdan oldin buni hisobga oling.
+          SDK 0.2.0 <C>peerDependencies</C>&apos;da <C>maplibre-gl ^6.18.0</C> talab qiladi: 6.4.0
+          va undan eski versiyalarda kritik XSS zaifligi bor (GHSA-jrc7-96c5-q579). MapLibre 6
+          WebGL2 talab qiladi — u yo&apos;q brauzerda <C>createMap</C> xato beradi, uni ushlab
+          foydalanuvchiga xabar ko&apos;rsating. Next.js (Turbopack) da ishchi faylni{" "}
+          <C>setWorkerUrl</C> bilan bering (SDK README&apos;siga qarang).
         </p>
       </Callout>
 

@@ -20,7 +20,7 @@ export default function VuePage() {
       />
 
       <H2 id="ornatish">O&apos;rnatish</H2>
-      <Terminal>{`npm install maplibre-gl@4.7.1 pmtiles@3.2.1`}</Terminal>
+      <Terminal>{`npm install maplibre-gl@6.18.0 pmtiles@4.5.0`}</Terminal>
 
       <H2 id="komponent">Komponent</H2>
       <Tabs
@@ -30,7 +30,7 @@ export default function VuePage() {
             lang: "js",
             code: `<script setup>
 import { onMounted, onBeforeUnmount, ref, shallowRef } from "vue";
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import "maplibre-gl/dist/maplibre-gl.css";
 

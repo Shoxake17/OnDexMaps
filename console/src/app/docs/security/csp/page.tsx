@@ -29,8 +29,19 @@ export default function CspPage() {
   worker-src  'self' blob:;
   img-src     'self' data: blob:;
   connect-src 'self' https://maps.ondex.uz https://tiles.ondex.uz;`}</Code>
-      <P>CDN orqali ulaganda skript manbasini ham qo&apos;shing:</P>
-      <Code lang="csp">{`  script-src 'self' https://unpkg.com;`}</Code>
+      <P>
+        CDN orqali ulaganda skript manbasini <strong className="text-foreground">va ishchi
+        manbasini</strong> ham qo&apos;shing — MapLibre 6 ishchisi (<C>maplibre-gl-worker.mjs</C>)
+        CDN&apos;dan yuklanadi:
+      </P>
+      <Code lang="csp">{`  script-src 'self' https://unpkg.com;
+  worker-src 'self' blob: https://unpkg.com;`}</Code>
+      <Callout kind="warn">
+        <p>
+          <C>worker-src</C> ga CDN qo&apos;shilmasa xarita &quot;Worker failed to load&quot; xatosi bilan
+          chizilmaydi (MapLibre 6.18 bilan Chrome&apos;da o&apos;lchangan, 2026-11-12).
+        </p>
+      </Callout>
 
       <H2 id="nega">Har bir direktiva nega kerak</H2>
       <Table
@@ -38,9 +49,9 @@ export default function CspPage() {
         rows={[
           [
             <code key="1" className="whitespace-nowrap font-mono text-xs text-brand">
-              worker-src blob:
+              worker-src &apos;self&apos; blob:
             </code>,
-            "Tile'lar fon oqimida (web worker) ochiladi, worker esa blob'dan yaratiladi",
+            "Tile'lar fon oqimida (web worker) ochiladi; MapLibre 6 ishchisi alohida modul fayli (o'z domeningiz yoki CDN)",
             "Xarita bo'sh: hech qanday tile chizilmaydi",
           ],
           [
@@ -138,6 +149,13 @@ connect-src 'self' https://maps.ondex.uz https://tiles.ondex.uz;`}</Code>
             <C key="1">Refused to create a worker</C>,
             <>
               <C>worker-src &apos;self&apos; blob:</C>
+            </>,
+          ],
+          [
+            <C key="1b">Worker failed to load</C>,
+            <>
+              CDN orqali: <C>worker-src</C> ga <C>https://unpkg.com</C>; bundler orqali:{" "}
+              <C>setWorkerUrl</C> (<A href="/docs/integration/nextjs#ishchi">Next.js → Ishchi fayl</A>)
             </>,
           ],
           [

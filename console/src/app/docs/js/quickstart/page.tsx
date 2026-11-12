@@ -52,15 +52,21 @@ export default function QuickstartPage() {
 
       <H2 id="qadam-2">2. Kutubxonalarni ulang</H2>
       <P>
-        Sahifaning <C>&lt;head&gt;</C> qismiga MapLibre GL JS va PMTiles kutubxonalarini qo&apos;shing:
+        Sahifaning <C>&lt;head&gt;</C> qismiga MapLibre uslubini va PMTiles kutubxonasini qo&apos;shing.
+        MapLibre&apos;ning o&apos;zi ES modul — u 4-qadamda <C>import</C> bilan ulanadi:
       </P>
       <Code lang="html">{`<head>
-  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
-  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <script src="https://unpkg.com/pmtiles@3.2.1/dist/pmtiles.js"></script>
+  <link href="https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js"></script>
 </head>`}</Code>
       <P>Bundler ishlatayotgan bo&apos;lsangiz, o&apos;rniga paketlarni o&apos;rnating:</P>
-      <Terminal>{`npm install maplibre-gl@4.7.1 pmtiles@3.2.1`}</Terminal>
+      <Terminal>{`npm install maplibre-gl@6.18.0 pmtiles@4.5.0`}</Terminal>
+      <Callout kind="warn">
+        <p>
+          <C>maplibre-gl</C> ning 6.4.0 va undan eski versiyalarini ishlatmang — ularda kritik XSS
+          zaifligi bor (GHSA-jrc7-96c5-q579). MapLibre 6 WebGL2 talab qiladi.
+        </p>
+      </Callout>
 
       <H2 id="qadam-3">3. Konteyner yarating</H2>
       <P>
@@ -78,7 +84,9 @@ export default function QuickstartPage() {
         manzillari shu orqali o&apos;qiladi), so&apos;ng xaritani yarating:
       </P>
       <Split>
-        <Code lang="js">{`<script>
+        <Code lang="js">{`<script type="module">
+  import * as maplibregl from "https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.mjs";
+
   // PMTiles protokoli — usiz tile manbalari yuklanmaydi
   maplibregl.addProtocol("pmtiles", new pmtiles.Protocol().tile);
 
@@ -154,9 +162,8 @@ qidir("Chust bozori");`}</Code>
 <head>
   <meta charset="utf-8" />
   <title>OnDexMap — Quick Start</title>
-  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
-  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <script src="https://unpkg.com/pmtiles@3.2.1/dist/pmtiles.js"></script>
+  <link href="https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js"></script>
   <style>
     html, body { margin: 0; height: 100% }
     #map { width: 100%; height: 100% }
@@ -164,7 +171,9 @@ qidir("Chust bozori");`}</Code>
 </head>
 <body>
   <div id="map"></div>
-  <script>
+  <script type="module">
+    import * as maplibregl from "https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.mjs";
+
     maplibregl.addProtocol("pmtiles", new pmtiles.Protocol().tile);
 
     const map = new maplibregl.Map({

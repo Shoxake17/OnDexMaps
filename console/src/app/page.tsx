@@ -25,10 +25,11 @@ export const metadata = {
  * └────────────────────────────────────────────────────────────────────┘
  */
 
-const NAMUNA = `<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script src="https://unpkg.com/pmtiles@3.2.1/dist/pmtiles.js"></script>
+const NAMUNA = `<script src="https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js"></script>
 
-<script>
+<script type="module">
+  import * as maplibregl from "https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.mjs";
+
   maplibregl.addProtocol("pmtiles", new pmtiles.Protocol().tile);
 
   const map = new maplibregl.Map({

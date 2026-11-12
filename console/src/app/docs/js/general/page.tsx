@@ -44,14 +44,20 @@ export default function GeneralPage() {
       </Callout>
 
       <H2 id="versiyalar">Versiyalar</H2>
-      <Code lang="terminal">{`maplibre-gl  4.7.1
-pmtiles      3.2.1`}</Code>
+      <Code lang="terminal">{`maplibre-gl  6.18.0
+pmtiles      4.5.0`}</Code>
       <Callout kind="warn">
         <p>
           Qo&apos;llab-quvvatlanadigan versiya —{" "}
-          <strong className="text-foreground">MapLibre GL JS 4.7.x</strong>. 6-versiya WebGL2&apos;ni
-          majburiy talab qiladi va uni qo&apos;llab-quvvatlamaydigan qurilmalarda xarita xato xabarisiz oq
-          qoladi.
+          <strong className="text-foreground">MapLibre GL JS 6.18 va yangilari</strong>. 6.4.0 va undan
+          eski versiyalarda kritik XSS zaifligi bor (
+          <A href="https://github.com/advisories/GHSA-jrc7-96c5-q579">GHSA-jrc7-96c5-q579</A>) — ularni
+          ishlatmang.
+        </p>
+        <p className="mt-2">
+          MapLibre 6 — ES modul (<C>import * as maplibregl</C>, default eksport yo&apos;q) va WebGL2 talab
+          qiladi. WebGL2 yo&apos;q brauzerda <C>new maplibregl.Map</C> xato beradi — uni ushlab,
+          foydalanuvchiga tushunarli xabar ko&apos;rsating (oq ekran qoldirmang).
         </p>
       </Callout>
       <P>
@@ -127,7 +133,7 @@ map.addControl(
 );`}</Code>
       <Callout kind="warn">
         <p>
-          Haqiqiy brauzerda o&apos;lchangan (MapLibre 4.7.1, xarita 420px kenglikda):
+          Haqiqiy brauzerda o&apos;lchangan (xarita 420px kenglikda):
         </p>
         <Table
           head={["Sozlama", "Boshida", "Foydalanuvchi surganidan keyin"]}
@@ -224,9 +230,10 @@ map.addControl(
         <p>
           <C>customAttribution</C> ga{" "}
           <strong className="text-foreground">foydalanuvchi matnini qo&apos;ymang</strong>. MapLibre
-          bu satrni HTML sifatida kiritadi va 4.7.1 uni tozalamaydi — ya&apos;ni{" "}
-          <C>&lt;img onerror=...&gt;</C> ishlab ketadi (
-          <A href="https://github.com/advisories/GHSA-jrc7-96c5-q579">GHSA-jrc7-96c5-q579</A>).
+          bu satrni HTML sifatida kiritadi. 6.18+ uni tozalaydi, lekin 6.4.0 gacha bu himoya chetlab
+          o&apos;tilgan va <C>&lt;img onerror=...&gt;</C> ishlab ketgan (
+          <A href="https://github.com/advisories/GHSA-jrc7-96c5-q579">GHSA-jrc7-96c5-q579</A>) —
+          sanitizatorga yolg&apos;iz tayanmang.
         </p>
         <p className="mt-2">
           Faqat kodda yozilgan, sobit matn bering. Nomni ma&apos;lumotlar bazasidan yoki URL
